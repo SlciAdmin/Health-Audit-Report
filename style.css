@@ -361,9 +361,11 @@ input.error { border-color: var(--red) !important; }
 .opt-row.wrap { flex-wrap: wrap; }
 
 .opt {
-  flex: 1;
-  min-width: 90px; /* Prevent squishing */
+  /* FIX: Changed flex to allow natural sizing while maintaining alignment */
+  flex: 1 1 auto; 
+  max-width: 100%;
   cursor: pointer;
+  margin-bottom: 0.5rem; /* Extra space for wrapping */
 }
 .opt input[type="radio"] { display: none; }
 .opt span {
@@ -969,7 +971,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .card { padding: 1.25rem; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .opt-row { flex-wrap: wrap; }
-  .opt { min-width: 0; flex: 1 1 45%; /* Better distribution on mobile */ }
+  .opt {
+      flex: 1 1 48%; /* Make options take roughly half width */
+      margin-bottom: 0.5rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -978,4 +983,5 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .hero-title { font-size: 2rem; }
   .nav-pill { padding: 0.35rem 0.75rem; font-size: 0.75rem; }
   .m-score-bar { flex-direction: column; text-align: center; }
+  .opt { flex: 1 1 100%; /* Full width on tiny screens */ }
 }

@@ -1,7 +1,7 @@
-/* =============================================
-   LABOURSHIELD — PROFESSIONAL COMPLIANCE AUDIT
-   script.js
-   ============================================= */
+// ============================================================
+// LABOURSHIELD — PROFESSIONAL COMPLIANCE AUDIT
+// script.js
+// ============================================================
 
 // ===== DATA STORE =====
 let submissions = JSON.parse(localStorage.getItem('ls_submissions') || '[]');

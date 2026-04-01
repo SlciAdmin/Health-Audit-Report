@@ -302,7 +302,7 @@ select {
   font-weight: 500;
   transition: border-color 0.2s, background 0.2s;
   outline: none;
-  width: 100%;
+  width: 100%; /* Ensure full width */
 }
 input:focus, select:focus {
   border-color: var(--gold);
@@ -312,7 +312,7 @@ input::placeholder { color: var(--text2); font-weight: 400; }
 select option { background: var(--bg3); color: var(--white); }
 input.error { border-color: var(--red) !important; }
 
-.solo-input { max-width: 360px; }
+.solo-input { max-width: 100%; }
 
 /* SECTION LABEL */
 .sec-label {
@@ -356,13 +356,13 @@ input.error { border-color: var(--red) !important; }
 .opt-row {
   display: flex;
   gap: 0.6rem;
-  flex-wrap: wrap;
+  flex-wrap: wrap; /* Crucial for mobile */
 }
 .opt-row.wrap { flex-wrap: wrap; }
 
 .opt {
   flex: 1;
-  min-width: 100px;
+  min-width: 90px; /* Prevent squishing */
   cursor: pointer;
 }
 .opt input[type="radio"] { display: none; }
@@ -960,13 +960,16 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 @media (max-width: 768px) {
   nav { padding: 0 1rem; }
   .nav-right { display: none; }
-  .fgrid { grid-template-columns: 1fr; }
+  
+  /* Form Grid Fix for Mobile */
+  .fgrid { grid-template-columns: 1fr; } 
+  
   .fg.full { grid-column: 1; }
   .form-shell { padding: 1.5rem 1rem 3rem; }
   .card { padding: 1.25rem; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .opt-row { flex-wrap: wrap; }
-  .opt { min-width: 0; }
+  .opt { min-width: 0; flex: 1 1 45%; /* Better distribution on mobile */ }
 }
 
 @media (max-width: 480px) {

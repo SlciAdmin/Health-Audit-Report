@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LabourShield — Business Compliance Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- NOISE OVERLAY -->
+<div class="noise"></div>
+
+<!-- ===== NAVIGATION ===== -->
+<nav id="mainNav">
+  <div class="nav-left">
+    <div class="nav-logo">
+      <span class="logo-icon">⚖</span>
+      <span class="logo-text">Labour<strong>Shield</strong></span>
+    </div>
+  </div>
+  <div class="nav-center">
+    <button class="nav-pill active" id="navForm" onclick="showView('form')">
+      <span class="pill-icon">✦</span> New Audit
+    </button>
+    <button class="nav-pill" id="navDash" onclick="showView('dashboard')">
+      <span class="pill-icon">◈</span> Dashboard
+    </button>
+  </div>
+  <div class="nav-right">
+    <div class="nav-badge" id="navBadge">0 Audits</div>
+  </div>
+</nav>
+
+<!-- ===== FORM VIEW ===== -->
+<div id="view-form" class="view active">
+
+  <!-- HERO STRIP -->
+  <div class="form-hero">
+    <div class="hero-tag">COMPLIANCE ASSESSMENT TOOL</div>
+    <h1 class="hero-title">Business Health<br><em>Check Audit</em></h1>
+    <p class="hero-sub">Comprehensive 21-question labour law assessment across 11 key areas. Get your instant compliance score.</p>
+    <div class="hero-timer">⚡ Estimated Time: 5 Minutes</div>
+  </div>
+
+  <div class="form-shell">
+
+    <!-- PROGRESS -->
+    <div class="step-track">
+      <div class="step-item" id="si1">
+        <div class="step-dot active" id="sd1"><span>1</span></div>
+        <div class="step-info">
+          <div class="step-name">Profile</div>
+          <div class="step-desc">Business details</div>
+        </div>
+      </div>
+      <div class="step-rail" id="sr1"></div>
+      <div class="step-item" id="si2">
+        <div class="step-dot" id="sd2"><span>2</span></div>
+        <div class="step-info">
+          <div class="step-name">Audit</div>
+          <div class="step-desc">Q1 – Q21</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PAGE 1 ===== -->
+    <div id="pg1">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">01</div>
+          <div>
+            <div class="card-title">Business Profile & Registration</div>
+            <div class="card-sub">Identify your organisation and legal standing</div>
+          </div>
+        </div>
+
+        <div class="fgrid">
+          <div class="fg">
+            <label>Full Name <span class="req">*</span></label>
+            <input type="text" id="name" placeholder="e.g. Rajesh Kumar">
+          </div>
+          <div class="fg">
+            <label>Contact Number <span class="req">*</span></label>
+            <input type="tel" id="contact" placeholder="+91 98765 43210">
+          </div>
+          <div class="fg">
+            <label>State <span class="req">*</span></label>
+            <select id="state">
+              <option value="">— Select State —</option>
+              <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
+              <option>Bihar</option><option>Chhattisgarh</option><option>Delhi</option><option>Goa</option>
+              <option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option>
+              <option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+              <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option>
+              <option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option>
+              <option>Odisha</option><option>Punjab</option><option>Rajasthan</option>
+              <option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
+              <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option>
+              <option>West Bengal</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>City / Location <span class="req">*</span></label>
+            <input type="text" id="location" placeholder="e.g. Mumbai, Pune">
+          </div>
+          <div class="fg full">
+            <label>Company Name <span class="req">*</span></label>
+            <input type="text" id="companyName" placeholder="e.g. Acme Industries Pvt Ltd">
+          </div>
+          <div class="fg">
+            <label>Number of Employees <span class="req">*</span></label>
+            <select id="employees">
+              <option value="">— Select Range —</option>
+              <option value="1–10">1 to 10</option><option value="11–20">11 to 20</option>
+              <option value="21–50">21 to 50</option><option value="51–100">51 to 100</option>
+              <option value="101–150">101 to 150</option><option value="151–200">151 to 200</option>
+              <option value="201–300">201 to 300</option><option value="301–400">301 to 400</option>
+              <option value="401–500">401 to 500</option><option value="500+">500+</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Industry / Field <span class="req">*</span></label>
+            <select id="field">
+              <option value="">— Select Industry —</option>
+              <option>Manufacturing</option><option>IT & Software</option><option>Retail & Trade</option>
+              <option>Healthcare</option><option>Education</option><option>Construction</option>
+              <option>Logistics & Transport</option><option>Finance & Banking</option>
+              <option>Hospitality</option><option>Agriculture</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <div class="btn-hint">All fields marked <span class="req">*</span> are required</div>
+        <button class="btn btn-gold" onclick="goPage2()">Next: Audit Questions <span>→</span></button>
+      </div>
+    </div>
+
+    <!-- ===== PAGE 2 ===== -->
+    <div id="pg2" style="display:none">
+
+      <!-- S1: Business Setup -->
+      <div class="sec-label"><span class="sec-num">S1</span> Business Setup</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q1 &nbsp;—&nbsp; What type of establishment best describes your business?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q1" value="Factory"><span>🏭 Factory</span></label>
+            <label class="opt"><input type="radio" name="q1" value="Office"><span>🏢 Office</span></label>
+            <label class="opt"><input type="radio" name="q1" value="Shop"><span>🛒 Shop</span></label>
+            <label class="opt"><input type="radio" name="q1" value="Combination"><span>⚙ Combination</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">Q2 &nbsp;—&nbsp; Which license or registration has your business obtained?</div>
+          <div class="opt-row wrap">
+            <label class="opt"><input type="radio" name="q2" value="Factory License"><span>Factory License</span></label>
+            <label class="opt"><input type="radio" name="q2" value="Shops & Establishment License"><span>Shops & Estab.</span></label>
+            <label class="opt"><input type="radio" name="q2" value="Both"><span>Both</span></label>
+            <label class="opt"><input type="radio" name="q2" value="Applied"><span>Applied / In Process</span></label>
+            <label class="opt"><input type="radio" name="q2" value="Not Yet Taken"><span>Not Yet Taken</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S2: Employee Mgmt -->
+      <div class="sec-label"><span class="sec-num">S2</span> Employee Management</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q3 &nbsp;—&nbsp; Do you maintain basic employee records (ID proof, joining details)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q3" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q3" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="q3" value="In Progress"><span>🔄 In Progress</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">Q4 &nbsp;—&nbsp; Do you issue appointment letters / joining confirmation?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q4" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q4" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S3: Salary -->
+      <div class="sec-label"><span class="sec-num">S3</span> Salary Practices</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q5 &nbsp;—&nbsp; Typical starting salary for helpers / support staff (₹)</div>
+          <input type="number" id="q5" placeholder="e.g. 12000" class="solo-input">
+        </div>
+        <div class="qblock">
+          <div class="qlabel">Q6 &nbsp;—&nbsp; Do you follow a structured salary format (Basic + Allowances)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q6" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q6" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="q6" value="Not Sure"><span>🤷 Not Sure</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">Q7 &nbsp;—&nbsp; Are salaries paid on time (on or before 7th of month)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q7" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q7" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">Q8 &nbsp;—&nbsp; Do you provide statutory benefits (PF, ESI, etc.)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q8" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q8" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="q8" value="Partial"><span>⚖ Partial</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S4: Benefits -->
+      <div class="sec-label"><span class="sec-num">S4</span> Employee Benefits</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q9 &nbsp;—&nbsp; Retirement / Savings benefits such as PF?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q9" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q9" value="Not Yet"><span>🗑 Not Yet</span></label>
+            <label class="opt"><input type="radio" name="q9" value="In Progress"><span>🔄 In Progress</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">Q10 &nbsp;—&nbsp; Medical / Insurance benefits such as ESI?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q10" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q10" value="Not Yet"><span>🗑 Not Yet</span></label>
+            <label class="opt"><input type="radio" name="q10" value="Not Applicable"><span>— N/A</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S5: Leave -->
+      <div class="sec-label"><span class="sec-num">S5</span> Leave & Working Conditions</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q11 &nbsp;—&nbsp; Do employees get leaves or time-off?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q11" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q11" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">Q12 &nbsp;—&nbsp; How many leaves annually?</div>
+          <input type="text" id="q12" placeholder="e.g. 18 Casual + 12 Privilege" class="solo-input">
+        </div>
+      </div>
+
+      <!-- S6: Bonus -->
+      <div class="sec-label"><span class="sec-num">S6</span> Bonus & Payments</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q13 &nbsp;—&nbsp; Do you provide statutory / festive bonus (e.g. Diwali)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q13" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q13" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S7: Practices -->
+      <div class="sec-label"><span class="sec-num">S7</span> Workplace Practices</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q14 &nbsp;—&nbsp; Is there a formal system for employees to raise complaints?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q14" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q14" value="Informal System"><span>🗣 Informal</span></label>
+            <label class="opt"><input type="radio" name="q14" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S8: POSH -->
+      <div class="sec-label"><span class="sec-num">S8</span> POSH — Prevention of Sexual Harassment</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q15 &nbsp;—&nbsp; Do you conduct POSH awareness sessions?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q15" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q15" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">Q16 &nbsp;—&nbsp; Is there a designated Internal Committee (ICC)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q16" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q16" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S9: Policies -->
+      <div class="sec-label"><span class="sec-num">S9</span> HR & Policies</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q17 &nbsp;—&nbsp; Do you maintain written HR policies / guidelines?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q17" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q17" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="q17" value="Partial"><span>📄 Partial</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">Q18 &nbsp;—&nbsp; Do you review / update practices regularly?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q18" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q18" value="Occasionally"><span>🔁 Occasionally</span></label>
+            <label class="opt"><input type="radio" name="q18" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S10: Engagement -->
+      <div class="sec-label"><span class="sec-num">S10</span> Engagement</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q19 &nbsp;—&nbsp; Would you like a detailed improvement report?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q19" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q19" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S11: Legal -->
+      <div class="sec-label"><span class="sec-num">S11</span> Legal Awareness</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">Q20 &nbsp;—&nbsp; Are you aware your business must file returns under labour laws?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="q20" value="Yes" id="q20y"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="q20" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+
+        <div id="q21box" style="display:none" class="qblock q21-box">
+          <div class="qlabel q21-label">Q21 &nbsp;—&nbsp; Under which labour laws are you currently filing returns?</div>
+          <div class="cbx-list">
+            <label class="cbx-item"><input type="checkbox" name="q21" value="Labour Code on Wages"><span>Labour Code on Wages</span></label>
+            <label class="cbx-item"><input type="checkbox" name="q21" value="Labour Code on Social Security"><span>Labour Code on Social Security</span></label>
+            <label class="cbx-item"><input type="checkbox" name="q21" value="Occupational Safety Code"><span>Occupational Safety, Health & Working Conditions Code</span></label>
+            <label class="cbx-item"><input type="checkbox" name="q21" value="Not Sure"><span>Not Sure / None of the above</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="goPage1()">← Back to Profile</button>
+        <button class="btn btn-gold" onclick="submitAudit()">Submit Audit ✦</button>
+      </div>
+    </div>
+
+    <!-- SUCCESS PAGE -->
+    <div id="pgSuccess" style="display:none">
+      <div class="success-card">
+        <div class="success-ring">
+          <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="226" class="ring-anim"/><path d="M24 41l12 12 20-22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="success-title">Audit Submitted!</div>
+        <div class="success-sub">Your compliance report has been generated and saved to the dashboard.</div>
+        <div id="successScoreBox"></div>
+        <div class="success-btns">
+          <button class="btn btn-gold" onclick="showView('dashboard')">View Dashboard ◈</button>
+          <button class="btn btn-ghost" onclick="resetForm()">+ New Audit</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /form-shell -->
+</div>
+
+<!-- ===== DASHBOARD VIEW ===== -->
+<div id="view-dashboard" class="view">
+  <div class="dash-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <div class="sidebar-title">All Audits</div>
+        <div class="sidebar-count" id="sidebarCount">0</div>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" id="sideSearch" placeholder="🔍 Search…" oninput="renderSidebar()">
+      </div>
+      <div class="sidebar-list" id="sidebarList">
+        <div class="sidebar-empty">No audits yet.<br>Submit your first audit.</div>
+      </div>
+    </aside>
+
+    <!-- MAIN DASH -->
+    <main class="dash-main">
+      <!-- TOP BAR -->
+      <div class="dash-topbar">
+        <div>
+          <div class="dash-title">Compliance Dashboard</div>
+          <div class="dash-sub" id="dashSub">Overview of all submissions</div>
+        </div>
+        <div class="dash-actions">
+          <select class="ds-select" id="stateFilter" onchange="renderDashboard()">
+            <option value="">All States</option>
+          </select>
+          <button class="btn btn-ghost" onclick="showView('form')">+ New Audit</button>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-tile"><div class="st-val" id="st0">0</div><div class="st-lbl">Total Submissions</div></div>
+        <div class="stat-tile"><div class="st-val gold" id="st1">—</div><div class="st-lbl">Avg Compliance Score</div></div>
+        <div class="stat-tile"><div class="st-val green" id="st2">—</div><div class="st-lbl">PF / Savings Compliant</div></div>
+        <div class="stat-tile"><div class="st-val blue" id="st3">—</div><div class="st-lbl">ESI / Medical Compliant</div></div>
+        <div class="stat-tile"><div class="st-val red" id="st4">—</div><div class="st-lbl">POSH Active</div></div>
+      </div>
+
+      <!-- CHARTS ROW 1 -->
+      <div class="charts-row">
+        <div class="chart-tile">
+          <div class="ct-title">Statutory Compliance %</div>
+          <div class="ct-body"><canvas id="chartBar"></canvas></div>
+        </div>
+        <div class="chart-tile">
+          <div class="ct-title">Establishment Distribution</div>
+          <div class="ct-body"><canvas id="chartDough"></canvas></div>
+        </div>
+      </div>
+
+      <!-- CHARTS ROW 2 -->
+      <div class="charts-row">
+        <div class="chart-tile">
+          <div class="ct-title">Company Size Breakdown</div>
+          <div class="ct-body"><canvas id="chartEmp"></canvas></div>
+        </div>
+        <div class="chart-tile">
+          <div class="ct-title">HR Policy Coverage</div>
+          <div class="ct-body"><canvas id="chartPie"></canvas></div>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="tbl-tile">
+        <div class="tbl-head">
+          <div class="tbl-title">Submission Records</div>
+          <input class="ds-search" id="tblSearch" type="text" placeholder="🔍 Filter companies…" oninput="renderTable()">
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Company</th>
+                <th>State</th>
+                <th>Industry</th>
+                <th>Employees</th>
+                <th>Type</th>
+                <th>Score</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody">
+              <tr><td colspan="8" class="empty-td">No submissions yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ===== DETAIL MODAL ===== -->
+<div id="modal" class="modal-bg" onclick="closeModal(event)">
+  <div class="modal-box" id="modalBox">
+    <button class="modal-x" onclick="closeModal(true)">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- MOBILE SIDEBAR TOGGLE -->
+<button class="fab-sidebar" onclick="toggleSidebar()" id="fabBtn">☰</button>
+
+<script src="script.js"></script>
+</body>
+</html>

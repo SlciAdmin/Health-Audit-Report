@@ -1,10 +1,19 @@
 // ============================================================
-// LABOURSHIELD — PROFESSIONAL COMPLIANCE AUDIT
+// LABOURSHIELD — FULL CODE
 // script.js
 // ============================================================
 
-// ===== DATA STORE =====
+// ===== AUTH & INIT =====
 let submissions = JSON.parse(localStorage.getItem('ls_submissions') || '[]');
+const currentUser = (() => {
+  let uid = localStorage.getItem('ls_current_user_id');
+  if (!uid) {
+    uid = 'user_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('ls_current_user_id', uid);
+  }
+  return uid;
+})();
+
 let charts = {};
 let activeDetailId = null;
 
@@ -14,18 +23,27 @@ function saveData() {
 }
 
 function updateNavBadge() {
-  document.getElementById('navBadge').textContent = submissions.length + ' Audit' + (submissions.length !== 1 ? 's' : '');
+  const count = submissions.length;
+  document.getElementById('navBadge').textContent = count + ' Audit' + (count !== 1 ? 's' : '');
 }
 
 // ===== VIEW SWITCHING =====
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
+  
+  // Toggle Pills
   document.getElementById('navForm').classList.toggle('active', name === 'form');
   document.getElementById('navDash').classList.toggle('active', name === 'dashboard');
+  document.getElementById('navAdmin').classList.toggle('active', name === 'admin');
+
+  // Init specific view logic
   if (name === 'dashboard') {
     setTimeout(renderDashboard, 50);
+  } else if (name === 'admin') {
+    setTimeout(renderAdminDashboard, 50);
   }
+  
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -43,7 +61,6 @@ function goPage2() {
   document.getElementById('pg1').style.display = 'none';
   document.getElementById('pg2').style.display = 'block';
 
-  // Progress
   const sd1 = document.getElementById('sd1');
   sd1.classList.remove('active');
   sd1.classList.add('done');
@@ -90,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateNavBadge();
 });
 
-// ===== COMPLIANCE SCORE =====
+// ===== COMPLIANCE SCORE LOGIC =====
 function calcScore(d) {
   const checks = [
     d.q1 !== '',
@@ -116,7 +133,6 @@ function calcScore(d) {
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
-// ===== GAP ANALYSIS =====
 function getGaps(d) {
   const gaps = [];
   if (d.q2 === 'Not Yet Taken' || d.q2 === '') gaps.push('No valid business license obtained');
@@ -172,6 +188,7 @@ function submitAudit() {
 
   const d = {
     id: Date.now(),
+    userId: currentUser, // ATTACH USER ID HERE
     submittedAt: new Date().toISOString(),
     name: document.getElementById('name').value,
     contact: document.getElementById('contact').value,
@@ -246,40 +263,41 @@ function showToast(msg, color = 'gold') {
   setTimeout(() => t.remove(), 3000);
 }
 
-// ===== DASHBOARD =====
+// ========================================================
+// USER DASHBOARD RENDER (Filtered by User)
+// ========================================================
 function renderDashboard() {
-  const stateF = document.getElementById('stateFilter').value;
-  const states = [...new Set(submissions.map(s => s.state))].sort();
-  const sel = document.getElementById('stateFilter');
-  sel.innerHTML = '<option value="">All States</option>' + states.map(s => `<option ${s === stateF ? 'selected' : ''}>${s}</option>`).join('');
-
-  const data = stateF ? submissions.filter(s => s.state === stateF) : submissions;
-
+  // FILTER FOR CURRENT USER ONLY
+  const userData = submissions.filter(s => s.userId === currentUser);
+  
   // Stats
-  document.getElementById('st0').textContent = data.length;
-  const avg = data.length ? Math.round(data.reduce((a,b) => a+b.score, 0) / data.length) : 0;
-  document.getElementById('st1').textContent = data.length ? avg + '%' : '—';
-  document.getElementById('st2').textContent = data.length ? Math.round(data.filter(s=>s.q9==='Yes').length/data.length*100)+'%' : '—';
-  document.getElementById('st3').textContent = data.length ? Math.round(data.filter(s=>s.q10==='Yes').length/data.length*100)+'%' : '—';
-  document.getElementById('st4').textContent = data.length ? Math.round(data.filter(s=>s.q15==='Yes').length/data.length*100)+'%' : '—';
+  document.getElementById('st0').textContent = userData.length;
+  const avg = userData.length ? Math.round(userData.reduce((a,b) => a+b.score, 0) / userData.length) : 0;
+  document.getElementById('st1').textContent = userData.length ? avg + '%' : '—';
+  document.getElementById('st2').textContent = userData.length ? Math.round(userData.filter(s=>s.q9==='Yes').length/userData.length*100)+'%' : '—';
+  document.getElementById('st3').textContent = userData.length ? Math.round(userData.filter(s=>s.q10==='Yes').length/userData.length*100)+'%' : '—';
+  document.getElementById('st4').textContent = userData.length ? Math.round(userData.filter(s=>s.q15==='Yes').length/userData.length*100)+'%' : '—';
 
-  renderSidebar();
-  renderCharts(data);
-  renderTable();
+  renderSidebar(userData);
+  renderCharts(userData);
+  renderTable(userData);
 }
 
-// ===== SIDEBAR =====
-function renderSidebar() {
+// Sidebar for User
+function renderSidebar(dataToUse) {
   const q = (document.getElementById('sideSearch').value || '').toLowerCase();
-  const filtered = submissions.filter(s =>
+  const filtered = dataToUse.filter(s =>
     (s.companyName || '').toLowerCase().includes(q) ||
     (s.name || '').toLowerCase().includes(q)
   );
-  document.getElementById('sidebarCount').textContent = submissions.length;
+  
+  // Only update count for user sidebar
+  document.getElementById('sidebarCount').textContent = dataToUse.length;
+  
   const list = document.getElementById('sidebarList');
 
   if (!filtered.length) {
-    list.innerHTML = '<div class="sidebar-empty">No results found.</div>';
+    list.innerHTML = '<div class="sidebar-empty">No results found for you.</div>';
     return;
   }
 
@@ -297,12 +315,101 @@ function renderSidebar() {
   }).join('');
 }
 
-// ===== CHARTS =====
-function renderCharts(data) {
-  const pct = (key, val) => data.length ? Math.round(data.filter(s => s[key] === val).length / data.length * 100) : 0;
+// Tables for User
+function renderTable(dataToUse) {
+  const q = (document.getElementById('tblSearch').value || '').toLowerCase();
+  const data = dataToUse
+    .filter(s => (s.companyName || '').toLowerCase().includes(q) || (s.name || '').toLowerCase().includes(q));
 
-  const gridColor = 'rgba(255,255,255,0.05)';
+  const tbody = document.getElementById('tblBody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-td">No submissions found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map((s, i) => {
+    const sc = s.score;
+    const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
+    return `<tr>
+      <td style="color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:0.75rem">${String(i+1).padStart(2,'0')}</td>
+      <td>
+        <div style="font-weight:700;color:var(--white);font-size:0.85rem">${s.companyName}</div>
+        <div style="font-size:0.72rem;color:var(--text2)">${s.name}</div>
+      </td>
+      <td>${s.state}</td>
+      <td><span class="badge info">${s.employees}</span></td>
+      <td style="font-size:0.8rem">${s.q1 || '—'}</td>
+      <td><span class="badge ${cls}">${sc}%</span></td>
+      <td>
+        <button class="btn btn-gold" style="padding:0.35rem 0.75rem;font-size:0.75rem" onclick="showDetail(${s.id})">View Report</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ========================================================
+// ADMIN DASHBOARD RENDER (ALL DATA)
+// ========================================================
+function renderAdminDashboard() {
+  const allData = submissions; // GET EVERYTHING
+  
+  // Admin Stats
+  document.getElementById('adminTotal').textContent = allData.length;
+  
+  const goodCount = allData.filter(s => s.score >= 70).length;
+  const critCount = allData.filter(s => s.score < 40).length;
+  const midCount = allData.filter(s => s.score >= 40 && s.score < 70).length;
+  const pendingLic = allData.filter(s => s.q2 === 'Not Yet Taken' || s.q2 === '').length;
+
+  document.getElementById('adminCrit').textContent = critCount;
+  document.getElementById('adminMid').textContent = midCount;
+  document.getElementById('adminGood').textContent = goodCount;
+  document.getElementById('adminPending').textContent = pendingLic;
+  document.getElementById('totalAdminCount').textContent = allData.length + " Companies";
+
+  // Render Global Elements
+  renderGlobalSidebar(allData);
+  renderAdminCharts(allData);
+  renderAdminTable(allData);
+}
+
+function renderGlobalSidebar(dataToUse) {
+  const q = (document.getElementById('globalSearch').value || '').toLowerCase();
+  const filtered = dataToUse.filter(s =>
+    (s.companyName || '').toLowerCase().includes(q) ||
+    (s.name || '').toLowerCase().includes(q) ||
+    (s.state || '').toLowerCase().includes(q)
+  );
+
+  const list = document.getElementById('adminSidebarList');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="sidebar-empty">No matches found globally.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(s => {
+    const sc = s.score;
+    const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
+    return `<div class="sidebar-card" onclick="showDetail(${s.id})">
+      <div class="sc-name">${s.companyName}</div>
+      <div class="sc-meta">
+        <span>${s.state}</span>
+        <span class="sc-score ${cls}">${sc}%</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Chart Logic Helper for Admin
+function dc(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function pct(key, val) { return submissions.length ? Math.round(submissions.filter(s => s[key] === val).length / submissions.length * 100) : 0; }
+
+function renderAdminCharts(allData) {
   const tickColor = '#7a8299';
+  const gridColor = 'rgba(255,255,255,0.05)';
   const fontFam = 'Syne';
 
   const baseOpts = {
@@ -317,9 +424,9 @@ function renderCharts(data) {
     }
   };
 
-  // 1. Bar — Compliance
-  dc('chartBar');
-  charts.bar = new Chart(document.getElementById('chartBar'), {
+  // 1. Bar — National Compliance
+  dc('chartGlobalBar');
+  charts.bar = new Chart(document.getElementById('chartGlobalBar'), {
     type: 'bar',
     data: {
       labels: ['Licensing', 'Records', 'Salary Struct.', 'Timely Pay', 'PF/Savings', 'ESI/Medical', 'Leave', 'POSH'],
@@ -338,116 +445,125 @@ function renderCharts(data) {
     options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } } }
   });
 
-  // 2. Doughnut — Establishment
-  const estCount = {};
-  data.forEach(s => { if (s.q1) estCount[s.q1] = (estCount[s.q1] || 0) + 1; });
-  const estLabels = Object.keys(estCount).length ? Object.keys(estCount) : ['No Data'];
-  const estVals = Object.keys(estCount).length ? Object.values(estCount) : [1];
-  dc('chartDough');
-  charts.dough = new Chart(document.getElementById('chartDough'), {
+  // 2. Donut — Risk Distribution
+  dc('chartGlobalDonut');
+  charts.donut = new Chart(document.getElementById('chartGlobalDonut'), {
     type: 'doughnut',
     data: {
-      labels: estLabels,
-      datasets: [{ data: estVals, backgroundColor: ['#d4a843','#2ecc8a','#4e8cff','#a78bfa','#e05555'], borderWidth: 0, hoverOffset: 10 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      cutout: '68%',
-      plugins: { legend: { position: 'bottom', labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 10 } } }
-    }
-  });
-
-  // 3. Bar — Employee size
-  const sizes = ['1–10','11–20','21–50','51–100','101–150','151–200','201–300','301–400','401–500','500+'];
-  const sizeCounts = {};
-  sizes.forEach(s => sizeCounts[s] = 0);
-  data.forEach(s => { if (s.employees) sizeCounts[s.employees] = (sizeCounts[s.employees] || 0) + 1; });
-  dc('chartEmp');
-  charts.emp = new Chart(document.getElementById('chartEmp'), {
-    type: 'bar',
-    data: {
-      labels: sizes,
-      datasets: [{ label: 'Companies', data: sizes.map(s => sizeCounts[s]), backgroundColor: '#4e8cff', borderRadius: 6, borderSkipped: false }]
-    },
-    options: {
-      ...baseOpts,
-      scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, max: undefined, beginAtZero: true } },
-      plugins: { ...baseOpts.plugins, legend: { display: false } }
-    }
-  });
-
-  // 4. Pie — HR coverage
-  dc('chartPie');
-  charts.pie = new Chart(document.getElementById('chartPie'), {
-    type: 'pie',
-    data: {
-      labels: ['HR Policies', 'POSH Aware', 'Emp. Records'],
+      labels: ['Good (>70)', 'Moderate (40-70)', 'Critical (<40)'],
       datasets: [{
-        data: [pct('q17', 'Yes'), pct('q15', 'Yes'), pct('q3', 'Yes')],
-        backgroundColor: ['#2ecc8a','#4e8cff','#d4a843'],
-        borderWidth: 0, hoverOffset: 8
+        data: [
+          allData.filter(s=>s.score>=70).length,
+          allData.filter(s=>s.score>=40 && s.score<70).length,
+          allData.filter(s=>s.score<40).length
+        ],
+        backgroundColor: ['#2ecc8a','#4e8cff','#e05555'],
+        borderWidth: 0, hoverOffset: 10
       }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
+      cutout: '70%',
       plugins: { legend: { position: 'bottom', labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 10 } } }
+    }
+  });
+
+  // 3. Pie — Industry Breakdown
+  dc('chartGlobalPie');
+  const indCounts = {};
+  allData.forEach(s => { if(s.field) indCounts[s.field] = (indCounts[s.field]||0)+1; });
+  const labels = Object.keys(indCounts).slice(0, 5);
+  const values = labels.map(l => indCounts[l]);
+  
+  charts.ind = new Chart(document.getElementById('chartGlobalPie'), {
+    type: 'pie',
+    data: {
+      labels: labels.length ? labels : ['None'],
+      datasets: [{ data: values.length ? values : [1], backgroundColor: ['#d4a843','#2ecc8a','#4e8cff','#a78bfa'] }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 10 } } }
+    }
+  });
+
+  // 4. Polar — License Status
+  dc('chartGlobalPolar');
+  licenses = ['Licensed', 'Applied', 'Missing'];
+  licVals = [
+    allData.filter(s => s.q2 !== '' && s.q2 !== 'Not Yet Taken').length,
+    allData.filter(s => s.q2 === 'Applied').length,
+    allData.filter(s => s.q2 === 'Not Yet Taken').length
+  ];
+  charts.pol = new Chart(document.getElementById('chartGlobalPolar'), {
+    type: 'polarArea',
+    data: {
+      labels: licenses,
+      datasets: [{ data: licVals, backgroundColor: ['#2ecc8a','#d4a843','#e05555'], borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { r: { ticks: { display: false, backdropColor: 'transparent' }, grid: { color: gridColor } } },
+      plugins: { legend: { position: 'right', labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 10 } } }
     }
   });
 }
 
-function dc(id) {
-  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
-}
-
-// ===== TABLE =====
-function renderTable() {
-  const stateF = document.getElementById('stateFilter').value;
+function renderAdminTable(allData) {
   const q = (document.getElementById('tblSearch').value || '').toLowerCase();
-  const data = submissions
-    .filter(s => !stateF || s.state === stateF)
-    .filter(s => (s.companyName || '').toLowerCase().includes(q) || (s.name || '').toLowerCase().includes(q));
+  const data = allData.filter(s =>
+    (s.companyName || '').toLowerCase().includes(q) ||
+    (s.name || '').toLowerCase().includes(q) ||
+    (s.state || '').toLowerCase().includes(q)
+  );
 
-  const tbody = document.getElementById('tblBody');
+  const tbody = document.getElementById('adminTblBody');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-td">No submissions found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-td">No submissions found.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = data.map((s, i) => {
+  tbody.innerHTML = data.map(s => {
     const sc = s.score;
     const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
+    const verdict = sc >= 70 ? 'Compliant' : sc >= 40 ? 'Monitor' : 'Alert';
+    
     return `<tr>
-      <td style="color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:0.75rem">${String(i+1).padStart(2,'0')}</td>
+      <td><span class="badge info">#${String(s.id).slice(-4)}</span></td>
       <td>
-        <div style="font-weight:700;color:var(--white);font-size:0.85rem">${s.companyName}</div>
-        <div style="font-size:0.72rem;color:var(--text2)">${s.name}</div>
+        <div style="font-weight:700;color:var(--white)">${s.companyName}</div>
+        <div style="font-size:0.7rem;color:var(--text2)">${s.field}</div>
       </td>
+      <td>${s.name}<br><small style="color:var(--text2)">${s.contact}</small></td>
       <td>${s.state}</td>
-      <td style="font-size:0.78rem">${s.field}</td>
-      <td><span class="badge info">${s.employees}</span></td>
-      <td style="font-size:0.8rem">${s.q1 || '—'}</td>
+      <td>${s.employees}</td>
+      <td style="font-size:0.8rem">${s.q1 || '-'}</td>
       <td><span class="badge ${cls}">${sc}%</span></td>
+      <td><span class="badge ${cls === 'low' ? 'low' : cls === 'mid' ? 'info' : 'good'}">${verdict}</span></td>
+      <td style="font-size:0.75rem;color:var(--text2)">${verdict}</td>
       <td>
-        <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
-          <button class="btn btn-ghost" style="padding:0.35rem 0.75rem;font-size:0.75rem" onclick="showDetail(${s.id})">👁 View</button>
-          <button class="btn btn-blue" style="padding:0.35rem 0.75rem;font-size:0.75rem" onclick="downloadPDF(${s.id})">⬇ PDF</button>
-        </div>
+        <button class="btn btn-ghost" style="padding:0.35rem 0.6rem;font-size:0.7rem" onclick="showDetail(${s.id})">View</button>
       </td>
     </tr>`;
   }).join('');
 }
 
-// ===== DETAIL MODAL =====
+// ========================================================
+// MODAL & PDF (Shared)
+// ========================================================
 function showDetail(id) {
   const s = submissions.find(x => x.id === id);
   if (!s) return;
   activeDetailId = id;
-  renderSidebar(); // highlight active
+  
+  // Find which sidebar needs update
+  if(document.getElementById('view-dashboard').classList.contains('active')) renderSidebar(submissions.filter(x=>x.userId===currentUser));
+  else if(document.getElementById('view-admin').classList.contains('active')) renderGlobalSidebar(submissions);
 
   const sc = s.score;
   const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
   const color = sc >= 70 ? 'var(--green)' : sc >= 40 ? 'var(--blue)' : 'var(--red)';
-  const verdict = sc >= 70 ? 'Strong compliance posture. Continue maintaining documentation and annual reviews.'
+  const verdict = sc >= 70 ? 'Strong compliance posture. Continue maintaining documentation.'
     : sc >= 40 ? 'Moderate compliance. Address highlighted gaps to avoid regulatory risk.'
     : 'Critical compliance gaps detected. Immediate corrective action required.';
   const date = new Date(s.submittedAt).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
@@ -483,53 +599,17 @@ function showDetail(id) {
       <div class="m-item"><div class="m-item-label">Location</div><div class="m-item-val">${s.location}, ${s.state}</div></div>
       <div class="m-item"><div class="m-item-label">Estab. Type</div><div class="m-item-val">${s.q1 || '—'}</div></div>
       <div class="m-item"><div class="m-item-label">License</div><div class="m-item-val">${s.q2 || '—'}</div></div>
-      <div class="m-item"><div class="m-item-label">Starting Salary</div><div class="m-item-val">${s.q5 ? '₹' + s.q5 : '—'}</div></div>
     </div>
 
-    <div class="m-section">👥 Employee & Salary Practices</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">Employee Records</div>${yn(s.q3)}</div>
-      <div class="m-item"><div class="m-item-label">Appointment Letters</div>${yn(s.q4)}</div>
-      <div class="m-item"><div class="m-item-label">Structured Salary</div>${yn(s.q6)}</div>
-      <div class="m-item"><div class="m-item-label">Timely Payment</div>${yn(s.q7)}</div>
-      <div class="m-item"><div class="m-item-label">Statutory Benefits</div>${yn(s.q8)}</div>
-      <div class="m-item"><div class="m-item-label">Leave Policy</div>${yn(s.q11)}</div>
-    </div>
-
-    <div class="m-section">🏦 Benefits & Welfare</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">PF / Savings</div>${yn(s.q9)}</div>
-      <div class="m-item"><div class="m-item-label">ESI / Medical</div>${yn(s.q10)}</div>
-      <div class="m-item"><div class="m-item-label">Bonus Paid</div>${yn(s.q13)}</div>
-      <div class="m-item"><div class="m-item-label">Leaves/Year</div><div class="m-item-val">${s.q12 || '—'}</div></div>
-      <div class="m-item"><div class="m-item-label">Grievance System</div>${yn(s.q14)}</div>
-      <div class="m-item"><div class="m-item-label">Policy Reviews</div>${yn(s.q18)}</div>
-    </div>
-
-    <div class="m-section">👩‍⚖️ POSH & HR Governance</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">POSH Sessions</div>${yn(s.q15)}</div>
-      <div class="m-item"><div class="m-item-label">ICC Constituted</div>${yn(s.q16)}</div>
-      <div class="m-item"><div class="m-item-label">Written HR Policy</div>${yn(s.q17)}</div>
-    </div>
-
-    <div class="m-section">⚖️ Legal Awareness</div>
-    <div style="margin-bottom:1rem">
-      <div class="m-item" style="margin-bottom:0.5rem"><div class="m-item-label">Labour Law Awareness</div>${yn(s.q20)}</div>
-      ${s.q21 && s.q21.length ? `<div class="m-laws">${s.q21.map(l => `<div class="m-law-item">✦ ${l}</div>`).join('')}</div>` : ''}
-    </div>
-
-    ${gaps.length ? `
     <div class="m-section">⚠️ Compliance Gaps Identified (${gaps.length})</div>
     <div class="m-gaps">
       ${gaps.map(g => `<div class="m-gap-item"><span class="m-gap-icon">⚠</span><span>${g}</span></div>`).join('')}
-    </div>` : ''}
+    </div>
 
-    ${recs.length ? `
     <div class="m-section">✅ Recommended Actions</div>
     <div class="m-recs">
       ${recs.map(r => `<div class="m-rec-item"><span class="m-rec-icon">→</span><span>${r}</span></div>`).join('')}
-    </div>` : ''}
+    </div>
 
     <div class="m-actions">
       <button class="btn btn-gold" onclick="downloadPDF(${s.id})">⬇ Download PDF Report</button>
@@ -547,7 +627,7 @@ function closeModal(force) {
   }
 }
 
-// ===== PDF =====
+// PDF Generation (Shared)
 async function downloadPDF(id) {
   const s = submissions.find(x => x.id === id);
   if (!s) return;
@@ -557,48 +637,55 @@ async function downloadPDF(id) {
   let y = 0;
 
   const BG   = [8,9,13];
-  const BG2  = [14,16,24];
   const GOLD = [212,168,67];
   const GREEN= [46,204,138];
   const RED  = [224,85,85];
-  const BLUE = [78,140,255];
   const WHITE= [238,240,245];
   const MUTED= [122,130,153];
 
   const scoreColor = s.score >= 70 ? GREEN : s.score >= 40 ? BLUE : RED;
   const date = new Date(s.submittedAt).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
 
-  const addPage = () => {
-    doc.addPage();
-    doc.setFillColor(...BG);
-    doc.rect(0, 0, 210, 297, 'F');
-    y = 18;
+  const sec = (title) => {
+    if (y > 265) { doc.addPage(); y = 18; }
+    doc.setFillColor(...[14,16,24]);
+    doc.rect(ml, y, pw - ml - mr, 8, 'F');
+    doc.setFillColor(...GOLD);
+    doc.rect(ml, y, 3, 8, 'F');
+    doc.setTextColor(...GOLD);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title.toUpperCase(), ml + 6, y + 5.5);
+    y += 12;
   };
 
-  // PAGE 1 BG
+  const row = (label, val, color) => {
+    if (y > 270) { doc.addPage(); y = 18; }
+    doc.setTextColor(...MUTED);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(label, ml + 2, y);
+    doc.setTextColor(...(color || WHITE));
+    doc.setFont('helvetica', 'bold');
+    doc.text(val || '—', ml + 90, y);
+    y += 6.5;
+  };
+
+  // PAGE SETUP
   doc.setFillColor(...BG);
   doc.rect(0, 0, 210, 297, 'F');
-
-  // HEADER
-  doc.setFillColor(...BG2);
+  doc.setFillColor(...[14,16,24]);
   doc.rect(0, 0, 210, 55, 'F');
   doc.setFillColor(...GOLD);
   doc.rect(0, 0, 210, 2, 'F');
-
   doc.setTextColor(...GOLD);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.text('LABOURSHIELD  ·  COMPLIANCE AUDIT REPORT', 105, 14, { align: 'center' });
-
   doc.setTextColor(...WHITE);
   doc.setFontSize(18);
   doc.text(s.companyName.toUpperCase(), 105, 27, { align: 'center' });
-
-  doc.setTextColor(...MUTED);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${s.field}  ·  ${s.state}  ·  ${s.employees} employees  ·  Date: ${date}`, 105, 36, { align: 'center' });
-
+  
   // SCORE BOX
   const sc = s.score;
   const verdict = sc >= 70 ? 'GOOD STANDING' : sc >= 40 ? 'NEEDS IMPROVEMENT' : 'CRITICAL ATTENTION';
@@ -611,43 +698,7 @@ async function downloadPDF(id) {
 
   y = 65;
 
-  // SECTION helper
-  const sec = (title) => {
-    if (y > 265) { addPage(); }
-    doc.setFillColor(...BG2);
-    doc.rect(ml, y, pw - ml - mr, 8, 'F');
-    doc.setFillColor(...GOLD);
-    doc.rect(ml, y, 3, 8, 'F');
-    doc.setTextColor(...GOLD);
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title.toUpperCase(), ml + 6, y + 5.5);
-    y += 12;
-  };
-
-  // ROW helper
-  const row = (label, val, color) => {
-    if (y > 270) { addPage(); }
-    doc.setTextColor(...MUTED);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(label, ml + 2, y);
-    doc.setTextColor(...(color || WHITE));
-    doc.setFont('helvetica', 'bold');
-    const valText = val || '—';
-    doc.text(valText, ml + 90, y);
-    y += 6.5;
-  };
-
-  const yn = (v) => {
-    if (v === 'Yes') return { t: 'Yes', c: GREEN };
-    if (v === 'No') return { t: 'No', c: RED };
-    if (v === 'Partial' || v === 'In Progress' || v === 'Occasionally') return { t: v, c: GOLD };
-    return { t: v || '—', c: WHITE };
-  };
-
   sec('Business Profile');
-  row('Company Name', s.companyName);
   row('Contact Person', s.name);
   row('Phone', s.contact);
   row('Location', `${s.location}, ${s.state}`);
@@ -655,93 +706,64 @@ async function downloadPDF(id) {
   row('Employees', s.employees);
   row('Establishment Type', s.q1);
   row('License Held', s.q2);
-  row('Starting Salary (Helpers)', s.q5 ? '₹' + s.q5 : '—');
-  y += 2;
 
-  sec('Employee & Salary Practices');
-  let r;
-  r = yn(s.q3); row('Employee Records Maintained?', r.t, r.c);
-  r = yn(s.q4); row('Appointment Letters Issued?', r.t, r.c);
-  r = yn(s.q6); row('Structured Salary Format?', r.t, r.c);
-  r = yn(s.q7); row('Salaries Paid On Time?', r.t, r.c);
-  r = yn(s.q8); row('Statutory Benefits (PF/ESI)?', r.t, r.c);
-  y += 2;
-
-  sec('Employee Benefits & Welfare');
-  r = yn(s.q9); row('Retirement / PF Savings?', r.t, r.c);
-  r = yn(s.q10); row('Medical / ESI Coverage?', r.t, r.c);
-  r = yn(s.q11); row('Leave Policy in Place?', r.t, r.c);
-  row('Annual Leaves Count', s.q12 || '—');
-  r = yn(s.q13); row('Bonus Provided?', r.t, r.c);
-  r = yn(s.q14); row('Grievance System?', r.t, r.c);
-  y += 2;
-
-  sec('POSH & HR Governance');
-  r = yn(s.q15); row('POSH Awareness Sessions?', r.t, r.c);
-  r = yn(s.q16); row('ICC Constituted?', r.t, r.c);
-  r = yn(s.q17); row('Written HR Policies?', r.t, r.c);
-  r = yn(s.q18); row('Regular Policy Review?', r.t, r.c);
-  y += 2;
-
-  sec('Legal Awareness');
-  r = yn(s.q20); row('Labour Law Awareness?', r.t, r.c);
-  if (s.q21 && s.q21.length) {
-    row('Labour Laws Filed Under:', '');
-    s.q21.forEach(l => { row('  →  ' + l, ''); });
-  }
-  y += 2;
+  sec('Audit Answers');
+  const yn = (v) => {
+    if (v === 'Yes') return { t: 'Yes', c: GREEN };
+    if (v === 'No') return { t: 'No', c: RED };
+    if (v === 'Partial' || v === 'In Progress') return { t: v, c: GOLD };
+    return { t: v || '—', c: WHITE };
+  };
+  row('Employee Records Maintained?', yn(s.q3).t, yn(s.q3).c);
+  row('Appointment Letters Issued?', yn(s.q4).t, yn(s.q4).c);
+  row('Structured Salary Format?', yn(s.q6).t, yn(s.q6).c);
+  row('Salaries Paid On Time?', yn(s.q7).t, yn(s.q7).c);
+  row('Statutory Benefits (PF/ESI)?', yn(s.q8).t, yn(s.q8).c);
+  row('Retirement / PF Savings?', yn(s.q9).t, yn(s.q9).c);
+  row('Medical / ESI Coverage?', yn(s.q10).t, yn(s.q10).c);
+  row('Leave Policy in Place?', yn(s.q11).t, yn(s.q11).c);
+  row('Bonus Provided?', yn(s.q13).t, yn(s.q13).c);
+  row('POSH Sessions Conducted?', yn(s.q15).t, yn(s.q15).c);
+  row('ICC Constituted?', yn(s.q16).t, yn(s.q16).c);
+  row('Written HR Policies?', yn(s.q17).t, yn(s.q17).c);
 
   if (s.gaps && s.gaps.length) {
-    sec(`Compliance Gaps Identified (${s.gaps.length})`);
+    sec(`Gaps (${s.gaps.length})`);
     s.gaps.forEach(g => {
-      if (y > 270) addPage();
-      doc.setTextColor(...RED);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize('⚠  ' + g, pw - ml - mr - 8);
-      lines.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
+       if (y > 270) doc.addPage();
+       doc.setTextColor(...RED);
+       doc.setFontSize(8);
+       const lines = doc.splitTextToSize(g, pw - ml - mr - 8);
+       lines.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
     });
-    y += 2;
   }
 
   if (s.recs && s.recs.length) {
-    sec('Recommended Actions');
+    sec('Recommendations');
     s.recs.forEach(r => {
-      if (y > 270) addPage();
-      doc.setTextColor(...GREEN);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize('→  ' + r, pw - ml - mr - 8);
-      lines.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
+       if (y > 270) doc.addPage();
+       doc.setTextColor(...GREEN);
+       doc.setFontSize(8);
+       const lines = doc.splitTextToSize(r, pw - ml - mr - 8);
+       lines.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
     });
-    y += 2;
-  }
-
-  // FOOTER
-  const totalPages = doc.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    doc.setFillColor(...BG2);
-    doc.rect(0, 285, 210, 12, 'F');
-    doc.setFillColor(...GOLD);
-    doc.rect(0, 285, 210, 0.8, 'F');
-    doc.setTextColor(...MUTED);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text('LabourShield · Business Compliance Audit Portal', ml, 292);
-    doc.text(`Page ${i} of ${totalPages}`, 210 - mr, 292, { align: 'right' });
   }
 
   doc.save(`LabourShield_${s.companyName.replace(/\s+/g,'_')}_Report.pdf`);
   showToast('PDF downloaded!', 'green');
 }
 
-// ===== MOBILE SIDEBAR =====
+// Helper for PDF export all
+function downloadAllReports() {
+  alert('Feature: In a real app, this would loop through submissions and zip them or export a master CSV.');
+}
+
+// Mobile Sidebar
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
 }
 
-// ===== INIT =====
+// Init
 window.onload = () => {
   updateNavBadge();
   renderDashboard();

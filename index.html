@@ -28,7 +28,10 @@
       <span class="pill-icon">✦</span> New Audit
     </button>
     <button class="nav-pill" id="navDash" onclick="showView('dashboard')">
-      <span class="pill-icon">◈</span> Dashboard
+      <span class="pill-icon">◈</span> My Dashboard
+    </button>
+    <button class="nav-pill" id="navAdmin" onclick="showView('admin')">
+      <span class="pill-icon">🛡️</span> Admin Monitor
     </button>
   </div>
   <div class="nav-right">
@@ -370,10 +373,10 @@
           <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="226" class="ring-anim"/><path d="M24 41l12 12 20-22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <div class="success-title">Audit Submitted!</div>
-        <div class="success-sub">Your compliance report has been generated and saved to the dashboard.</div>
+        <div class="success-sub">Your compliance report has been generated and saved.</div>
         <div id="successScoreBox"></div>
         <div class="success-btns">
-          <button class="btn btn-gold" onclick="showView('dashboard')">View Dashboard ◈</button>
+          <button class="btn btn-gold" onclick="showView('dashboard')">View My Report ◈</button>
           <button class="btn btn-ghost" onclick="resetForm()">+ New Audit</button>
         </div>
       </div>
@@ -382,18 +385,18 @@
   </div><!-- /form-shell -->
 </div>
 
-<!-- ===== DASHBOARD VIEW ===== -->
+<!-- ===== USER DASHBOARD VIEW ===== -->
 <div id="view-dashboard" class="view">
   <div class="dash-layout">
 
-    <!-- SIDEBAR -->
+    <!-- SIDEBAR (User Specific List) -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-head">
-        <div class="sidebar-title">All Audits</div>
+        <div class="sidebar-title">My Reports</div>
         <div class="sidebar-count" id="sidebarCount">0</div>
       </div>
       <div class="sidebar-search">
-        <input type="text" id="sideSearch" placeholder="🔍 Search…" oninput="renderSidebar()">
+        <input type="text" id="sideSearch" placeholder="🔍 Search..." oninput="renderSidebar()">
       </div>
       <div class="sidebar-list" id="sidebarList">
         <div class="sidebar-empty">No audits yet.<br>Submit your first audit.</div>
@@ -405,23 +408,20 @@
       <!-- TOP BAR -->
       <div class="dash-topbar">
         <div>
-          <div class="dash-title">Compliance Dashboard</div>
-          <div class="dash-sub" id="dashSub">Overview of all submissions</div>
+          <div class="dash-title">My Compliance Overview</div>
+          <div class="dash-sub">Detailed analytics for your company</div>
         </div>
         <div class="dash-actions">
-          <select class="ds-select" id="stateFilter" onchange="renderDashboard()">
-            <option value="">All States</option>
-          </select>
-          <button class="btn btn-ghost" onclick="showView('form')">+ New Audit</button>
+          <button class="btn btn-gold" onclick="showView('form')">+ New Audit</button>
         </div>
       </div>
 
       <!-- STATS -->
       <div class="stats-grid" id="statsGrid">
-        <div class="stat-tile"><div class="st-val" id="st0">0</div><div class="st-lbl">Total Submissions</div></div>
-        <div class="stat-tile"><div class="st-val gold" id="st1">—</div><div class="st-lbl">Avg Compliance Score</div></div>
-        <div class="stat-tile"><div class="st-val green" id="st2">—</div><div class="st-lbl">PF / Savings Compliant</div></div>
-        <div class="stat-tile"><div class="st-val blue" id="st3">—</div><div class="st-lbl">ESI / Medical Compliant</div></div>
+        <div class="stat-tile"><div class="st-val" id="st0">0</div><div class="st-lbl">Total Audits</div></div>
+        <div class="stat-tile"><div class="st-val gold" id="st1">—</div><div class="st-lbl">Avg Score</div></div>
+        <div class="stat-tile"><div class="st-val green" id="st2">—</div><div class="st-lbl">PF Compliant</div></div>
+        <div class="stat-tile"><div class="st-val blue" id="st3">—</div><div class="st-lbl">ESI Compliant</div></div>
         <div class="stat-tile"><div class="st-val red" id="st4">—</div><div class="st-lbl">POSH Active</div></div>
       </div>
 
@@ -432,7 +432,7 @@
           <div class="ct-body"><canvas id="chartBar"></canvas></div>
         </div>
         <div class="chart-tile">
-          <div class="ct-title">Establishment Distribution</div>
+          <div class="ct-title">Establishment Type</div>
           <div class="ct-body"><canvas id="chartDough"></canvas></div>
         </div>
       </div>
@@ -440,11 +440,11 @@
       <!-- CHARTS ROW 2 -->
       <div class="charts-row">
         <div class="chart-tile">
-          <div class="ct-title">Company Size Breakdown</div>
+          <div class="ct-title">Employee Size</div>
           <div class="ct-body"><canvas id="chartEmp"></canvas></div>
         </div>
         <div class="chart-tile">
-          <div class="ct-title">HR Policy Coverage</div>
+          <div class="ct-title">HR Coverage</div>
           <div class="ct-body"><canvas id="chartPie"></canvas></div>
         </div>
       </div>
@@ -453,7 +453,7 @@
       <div class="tbl-tile">
         <div class="tbl-head">
           <div class="tbl-title">Submission Records</div>
-          <input class="ds-search" id="tblSearch" type="text" placeholder="🔍 Filter companies…" oninput="renderTable()">
+          <input class="ds-search" id="tblSearch" type="text" placeholder="🔍 Filter..." oninput="renderTable()">
         </div>
         <div class="tbl-wrap">
           <table>
@@ -462,7 +462,6 @@
                 <th>#</th>
                 <th>Company</th>
                 <th>State</th>
-                <th>Industry</th>
                 <th>Employees</th>
                 <th>Type</th>
                 <th>Score</th>
@@ -470,7 +469,108 @@
               </tr>
             </thead>
             <tbody id="tblBody">
-              <tr><td colspan="8" class="empty-td">No submissions yet.</td></tr>
+              <tr><td colspan="7" class="empty-td">No submissions yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+
+<!-- ===== ADMIN DASHBOARD VIEW ===== -->
+<div id="view-admin" class="view">
+  <div class="dash-layout">
+
+    <!-- ADMIN SIDEBAR -->
+    <aside class="sidebar sidebar-admin" id="sidebarAdmin">
+      <div class="sidebar-head">
+        <div class="sidebar-title">Global Monitor</div>
+        <div class="sidebar-count" id="totalAdminCount">0 Companies</div>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" id="globalSearch" placeholder="🔍 Search All..." oninput="renderGlobalSidebar()">
+      </div>
+      <div class="sidebar-list" id="adminSidebarList">
+        <div class="sidebar-empty">No data available.</div>
+      </div>
+    </aside>
+
+    <!-- ADMIN MAIN -->
+    <main class="dash-main dash-main-admin">
+      <!-- TOP BAR -->
+      <div class="dash-topbar">
+        <div>
+          <div class="dash-title">National Compliance Monitor</div>
+          <div class="dash-sub">Live feed of all submitted audits</div>
+        </div>
+        <div class="dash-actions">
+           <div class="badge badge-red">Live Mode</div>
+           <button class="btn btn-ghost" onclick="showView('dashboard')">Back to My View</button>
+        </div>
+      </div>
+
+      <!-- ADMIN STATS GRID -->
+      <div class="stats-grid stats-grid-large" id="statsGrid">
+        <div class="stat-tile stat-alert"><div class="st-val red" id="adminCrit">0</div><div class="st-lbl">Critical Risk</div></div>
+        <div class="stat-tile stat-alert"><div class="st-val blue" id="adminMid">0</div><div class="st-lbl">Needs Review</div></div>
+        <div class="stat-tile"><div class="st-val" id="adminTotal">0</div><div class="st-lbl">Total Businesses</div></div>
+        <div class="stat-tile"><div class="st-val green" id="adminGood">0</div><div class="st-lbl">Fully Compliant</div></div>
+        <div class="stat-tile stat-alert"><div class="st-val gold" id="adminPending">0</div><div class="st-lbl">License Pending</div></div>
+      </div>
+
+      <!-- GLOBAL CHARTS -->
+      <div class="charts-row charts-global">
+        <div class="chart-tile chart-wide">
+          <div class="ct-title">National Compliance Trend</div>
+          <div class="ct-body"><canvas id="chartGlobalBar"></canvas></div>
+        </div>
+        <div class="chart-tile">
+          <div class="ct-title">Risk Distribution</div>
+          <div class="ct-body"><canvas id="chartGlobalDonut"></canvas></div>
+        </div>
+      </div>
+
+      <div class="charts-row charts-global">
+        <div class="chart-tile">
+          <div class="ct-title">Industry Breakdown</div>
+          <div class="ct-body"><canvas id="chartGlobalPie"></canvas></div>
+        </div>
+        <div class="chart-tile">
+          <div class="ct-title">License Status</div>
+          <div class="ct-body"><canvas id="chartGlobalPolar"></canvas></div>
+        </div>
+      </div>
+
+      <!-- GLOBAL DATA TABLE -->
+      <div class="tbl-tile tbl-admin">
+        <div class="tbl-head tbl-head-full">
+          <div class="tbl-title">Master Submission Log</div>
+          <div class="search-group">
+             <input class="ds-search" id="tblSearch" type="text" placeholder="🔍 Filter companies..." oninput="renderAdminTable()" style="width:250px;">
+             <button class="btn btn-blue" onclick="downloadAllReports()">⬇ Export All CSV</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Entity</th>
+                <th>Contact</th>
+                <th>State</th>
+                <th>Employees</th>
+                <th>Estab. Type</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Verdict</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminTblBody">
+               <tr><td colspan="10" class="empty-td">No submissions found in database.</td></tr>
             </tbody>
           </table>
         </div>

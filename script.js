@@ -1,21 +1,19 @@
 // ============================================================
-// LABOURSHIELD — FULL CODE
-// script.js
+// LABOURSHIELD — PROFESSIONAL COMPLIANCE AUDIT
+// script.js — Complete with User Dashboard & Admin Dashboard
 // ============================================================
 
-// ===== AUTH & INIT =====
+// ===== DATA STORE =====
 let submissions = JSON.parse(localStorage.getItem('ls_submissions') || '[]');
-const currentUser = (() => {
-  let uid = localStorage.getItem('ls_current_user_id');
-  if (!uid) {
-    uid = 'user_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('ls_current_user_id', uid);
-  }
-  return uid;
-})();
-
+let isAdmin = false;
 let charts = {};
+let uCharts = {};
 let activeDetailId = null;
+let currentUserSubmission = null; // Tracks the LAST submission by this browser session
+
+// Admin credentials (in production, this would be server-side)
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'labourshield@2024';
 
 function saveData() {
   localStorage.setItem('ls_submissions', JSON.stringify(submissions));
@@ -31,20 +29,68 @@ function updateNavBadge() {
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
-  
-  // Toggle Pills
-  document.getElementById('navForm').classList.toggle('active', name === 'form');
-  document.getElementById('navDash').classList.toggle('active', name === 'dashboard');
-  document.getElementById('navAdmin').classList.toggle('active', name === 'admin');
 
-  // Init specific view logic
-  if (name === 'dashboard') {
-    setTimeout(renderDashboard, 50);
-  } else if (name === 'admin') {
+  document.getElementById('navForm').classList.toggle('active', name === 'form');
+  document.getElementById('navUserDash').classList.toggle('active', name === 'user-dashboard');
+  const adminPill = document.getElementById('navAdminDash');
+  if (adminPill) adminPill.classList.toggle('active', name === 'admin-dashboard');
+
+  if (name === 'user-dashboard') {
+    setTimeout(renderUserDashboard, 50);
+  }
+  if (name === 'admin-dashboard') {
+    if (!isAdmin) {
+      showView('form');
+      showToast('Admin access required.', 'red');
+      return;
+    }
     setTimeout(renderAdminDashboard, 50);
   }
-  
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ===== ADMIN LOGIN =====
+function toggleAdminLogin() {
+  if (isAdmin) {
+    logoutAdmin();
+    return;
+  }
+  document.getElementById('adminLoginModal').classList.add('open');
+  document.getElementById('adminLoginError').style.display = 'none';
+  document.getElementById('adminUser').value = '';
+  document.getElementById('adminPass').value = '';
+}
+
+function doAdminLogin() {
+  const user = document.getElementById('adminUser').value.trim();
+  const pass = document.getElementById('adminPass').value.trim();
+  if (user === ADMIN_USER && pass === ADMIN_PASS) {
+    isAdmin = true;
+    document.getElementById('adminLoginModal').classList.remove('open');
+    document.getElementById('navAdminDash').style.display = 'flex';
+    document.getElementById('navAdminDash').classList.add('admin-pill');
+    document.getElementById('adminToggleBtn').textContent = '🔓 Logout Admin';
+    document.getElementById('adminToggleBtn').classList.add('active-admin');
+    showToast('Admin login successful!', 'green');
+    showView('admin-dashboard');
+  } else {
+    document.getElementById('adminLoginError').style.display = 'block';
+  }
+}
+
+function logoutAdmin() {
+  isAdmin = false;
+  document.getElementById('navAdminDash').style.display = 'none';
+  document.getElementById('adminToggleBtn').textContent = 'Admin Login';
+  document.getElementById('adminToggleBtn').classList.remove('active-admin');
+  showToast('Logged out from admin.', 'gold');
+  showView('form');
+}
+
+function closeAdminModal(force) {
+  if (force === true || (force && force.target === document.getElementById('adminLoginModal'))) {
+    document.getElementById('adminLoginModal').classList.remove('open');
+  }
 }
 
 // ===== PAGE NAVIGATION =====
@@ -91,7 +137,6 @@ function getCbx(name) {
   return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(e => e.value);
 }
 
-// Q20 → Q21 conditional
 document.addEventListener('DOMContentLoaded', () => {
   document.body.addEventListener('change', e => {
     if (e.target.name === 'q20') {
@@ -105,9 +150,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   updateNavBadge();
+  // Check if there's a saved admin session
+  if (localStorage.getItem('ls_admin_session') === 'true') {
+    isAdmin = true;
+    document.getElementById('navAdminDash').style.display = 'flex';
+    document.getElementById('navAdminDash').classList.add('admin-pill');
+    document.getElementById('adminToggleBtn').textContent = '🔓 Logout Admin';
+    document.getElementById('adminToggleBtn').classList.add('active-admin');
+  }
+  // Restore last user submission ID
+  const lastId = localStorage.getItem('ls_last_submission_id');
+  if (lastId) {
+    currentUserSubmission = submissions.find(s => s.id === parseInt(lastId));
+  }
 });
 
-// ===== COMPLIANCE SCORE LOGIC =====
+// ===== COMPLIANCE SCORE =====
 function calcScore(d) {
   const checks = [
     d.q1 !== '',
@@ -133,6 +191,7 @@ function calcScore(d) {
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
+// ===== GAP ANALYSIS =====
 function getGaps(d) {
   const gaps = [];
   if (d.q2 === 'Not Yet Taken' || d.q2 === '') gaps.push('No valid business license obtained');
@@ -183,12 +242,10 @@ function submitAudit() {
   const required = ['q1','q2','q3','q4','q6','q7','q8','q9','q10','q11','q13','q14','q15','q16','q17','q18','q19','q20'];
   let ok = true;
   required.forEach(n => { if (!getRadio(n)) ok = false; });
-
   if (!ok) { showToast('Please answer all required questions (Q1–Q20).', 'red'); return; }
 
   const d = {
     id: Date.now(),
-    userId: currentUser, // ATTACH USER ID HERE
     submittedAt: new Date().toISOString(),
     name: document.getElementById('name').value,
     contact: document.getElementById('contact').value,
@@ -214,9 +271,10 @@ function submitAudit() {
   d.recs = getRecs(d.gaps);
 
   submissions.unshift(d);
+  currentUserSubmission = d;
+  localStorage.setItem('ls_last_submission_id', d.id.toString());
   saveData();
 
-  // Show success
   document.getElementById('pg2').style.display = 'none';
   const sc = d.score;
   const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
@@ -237,7 +295,7 @@ function resetForm() {
   document.getElementById('q21box').style.display = 'none';
   document.querySelectorAll('input, select').forEach(el => {
     if (el.type === 'radio' || el.type === 'checkbox') el.checked = false;
-    else el.value = '';
+    else if (el.id !== 'adminUser' && el.id !== 'adminPass') el.value = '';
   });
   goPage1();
 }
@@ -263,41 +321,344 @@ function showToast(msg, color = 'gold') {
   setTimeout(() => t.remove(), 3000);
 }
 
-// ========================================================
-// USER DASHBOARD RENDER (Filtered by User)
-// ========================================================
-function renderDashboard() {
-  // FILTER FOR CURRENT USER ONLY
-  const userData = submissions.filter(s => s.userId === currentUser);
-  
-  // Stats
-  document.getElementById('st0').textContent = userData.length;
-  const avg = userData.length ? Math.round(userData.reduce((a,b) => a+b.score, 0) / userData.length) : 0;
-  document.getElementById('st1').textContent = userData.length ? avg + '%' : '—';
-  document.getElementById('st2').textContent = userData.length ? Math.round(userData.filter(s=>s.q9==='Yes').length/userData.length*100)+'%' : '—';
-  document.getElementById('st3').textContent = userData.length ? Math.round(userData.filter(s=>s.q10==='Yes').length/userData.length*100)+'%' : '—';
-  document.getElementById('st4').textContent = userData.length ? Math.round(userData.filter(s=>s.q15==='Yes').length/userData.length*100)+'%' : '—';
+// ===================================================================
+// ===== USER DASHBOARD — Shows ONLY the current user's report =====
+// ===================================================================
 
-  renderSidebar(userData);
-  renderCharts(userData);
-  renderTable(userData);
+function renderUserDashboard() {
+  // Try to get last submission by this browser
+  const lastId = localStorage.getItem('ls_last_submission_id');
+  if (lastId) {
+    currentUserSubmission = submissions.find(s => s.id === parseInt(lastId));
+  }
+
+  if (!currentUserSubmission) {
+    document.getElementById('udashEmpty').style.display = 'block';
+    document.getElementById('udashReport').style.display = 'none';
+    document.getElementById('udashTitle').textContent = 'Your Audit Report';
+    document.getElementById('udashSub').textContent = 'Submit an audit to view your personalised compliance report.';
+    return;
+  }
+
+  const s = currentUserSubmission;
+  document.getElementById('udashEmpty').style.display = 'none';
+  document.getElementById('udashReport').style.display = 'block';
+  document.getElementById('udashTitle').textContent = s.companyName;
+  document.getElementById('udashSub').textContent = `${s.field} · ${s.state} · Submitted on ${new Date(s.submittedAt).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' })}`;
+
+  const sc = s.score;
+  const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
+  const verdict = sc >= 70 ? 'Strong Compliance Posture ✦' : sc >= 40 ? 'Moderate — Action Required' : 'Critical Gaps — Immediate Action!';
+
+  const scoreNumEl = document.getElementById('udashScoreNum');
+  scoreNumEl.textContent = sc + '%';
+  scoreNumEl.className = 'udash-score-num ' + cls;
+  document.getElementById('udashVerdict').textContent = verdict;
+  document.getElementById('udashScoreBar').style.width = sc + '%';
+  document.getElementById('udashScoreMeta').textContent = `${s.gaps.length} compliance gap${s.gaps.length !== 1 ? 's' : ''} identified out of 17 checks`;
+
+  // Stat items
+  const yn = (v, el) => {
+    const e = document.getElementById(el);
+    if (v === 'Yes') { e.textContent = 'Yes ✅'; e.className = 'ust-val yes'; }
+    else if (v === 'No') { e.textContent = 'No ❌'; e.className = 'ust-val no'; }
+    else { e.textContent = v || '—'; e.className = 'ust-val partial'; }
+  };
+  yn(s.q9, 'ustPF');
+  yn(s.q10, 'ustESI');
+  yn(s.q15, 'ustPOSH');
+  yn(s.q11, 'ustLeave');
+  yn(s.q17, 'ustHR');
+  yn(s.q13, 'ustBonus');
+
+  // Charts
+  renderUserCharts(s);
+
+  // Profile grid
+  document.getElementById('udashProfile').innerHTML = [
+    ['Company Name', s.companyName],
+    ['Contact Person', s.name],
+    ['Phone', s.contact],
+    ['Location', `${s.location}, ${s.state}`],
+    ['Industry', s.field],
+    ['Employees', s.employees],
+    ['Est. Type', s.q1 || '—'],
+    ['License', s.q2 || '—'],
+    ['Starting Salary', s.q5 ? '₹' + s.q5 : '—'],
+  ].map(([l, v]) => `<div class="m-item"><div class="m-item-label">${l}</div><div class="m-item-val">${v}</div></div>`).join('');
+
+  // Employee & Salary
+  document.getElementById('udashEmployeeSalary').innerHTML = [
+    ['Employee Records', s.q3],
+    ['Appointment Letters', s.q4],
+    ['Structured Salary', s.q6],
+    ['Timely Payment', s.q7],
+    ['Statutory Benefits', s.q8],
+    ['Leave Policy', s.q11],
+  ].map(([l, v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+
+  // Benefits
+  document.getElementById('udashBenefits').innerHTML = [
+    ['PF / Savings', s.q9],
+    ['ESI / Medical', s.q10],
+    ['Bonus Paid', s.q13],
+    ['Leaves/Year', s.q12 || '—'],
+    ['Grievance System', s.q14],
+    ['Policy Reviews', s.q18],
+  ].map(([l, v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+
+  // POSH
+  document.getElementById('udashPOSH').innerHTML = [
+    ['POSH Sessions', s.q15],
+    ['ICC Constituted', s.q16],
+    ['Written HR Policy', s.q17],
+  ].map(([l, v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+
+  // Legal
+  let legalHtml = [
+    ['Labour Law Awareness', s.q20],
+    ['Detailed Report Wanted', s.q19],
+  ].map(([l, v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+  if (s.q21 && s.q21.length) {
+    legalHtml += `<div class="m-item" style="grid-column:1/-1"><div class="m-item-label">Labour Laws Filed Under</div><div class="m-laws" style="margin-top:0.4rem">${s.q21.map(l => `<div class="m-law-item">✦ ${l}</div>`).join('')}</div></div>`;
+  }
+  document.getElementById('udashLegal').innerHTML = legalHtml;
+
+  // Gaps
+  if (s.gaps && s.gaps.length) {
+    document.getElementById('udashGapsSection').style.display = 'block';
+    document.getElementById('udashGaps').innerHTML = s.gaps.map(g =>
+      `<div class="m-gap-item"><span class="m-gap-icon">⚠</span><span>${g}</span></div>`
+    ).join('');
+  } else {
+    document.getElementById('udashGapsSection').style.display = 'none';
+  }
+
+  // Recs
+  if (s.recs && s.recs.length) {
+    document.getElementById('udashRecsSection').style.display = 'block';
+    document.getElementById('udashRecs').innerHTML = s.recs.map(r =>
+      `<div class="m-rec-item"><span class="m-rec-icon">→</span><span>${r}</span></div>`
+    ).join('');
+  } else {
+    document.getElementById('udashRecsSection').style.display = 'none';
+  }
+
+  // PDF button
+  document.getElementById('udashPDFBtn').onclick = () => downloadPDF(s.id);
 }
 
-// Sidebar for User
-function renderSidebar(dataToUse) {
-  const q = (document.getElementById('sideSearch').value || '').toLowerCase();
-  const filtered = dataToUse.filter(s =>
+function ynHtml(v) {
+  if (v === 'Yes') return '<div class="m-item-val yes">✅ Yes</div>';
+  if (v === 'No') return '<div class="m-item-val no">❌ No</div>';
+  if (v === 'Partial') return '<div class="m-item-val partial">⚖ Partial</div>';
+  if (v === 'In Progress') return '<div class="m-item-val partial">🔄 In Progress</div>';
+  if (v === 'Occasionally') return '<div class="m-item-val partial">🔁 Sometimes</div>';
+  if (v === 'Not Yet') return '<div class="m-item-val no">🗑 Not Yet</div>';
+  if (v === 'Not Applicable') return '<div class="m-item-val partial">— N/A</div>';
+  return `<div class="m-item-val">${v || '—'}</div>`;
+}
+
+function renderUserCharts(s) {
+  const tickColor = '#7a8299';
+  const fontFam = 'Syne';
+
+  // Destroy old user charts
+  ['uChartRadar','uChartDough','uChartBar','uChartPolar'].forEach(id => {
+    if (uCharts[id]) { uCharts[id].destroy(); delete uCharts[id]; }
+  });
+
+  // 1. Radar - Compliance Areas
+  const radarLabels = ['Licensing', 'Records', 'Salary', 'Benefits', 'Leave', 'POSH', 'HR Policy', 'Legal'];
+  const radarData = [
+    s.q2 !== 'Not Yet Taken' && s.q2 !== '' ? 100 : 0,
+    s.q3 === 'Yes' ? 100 : (s.q3 === 'In Progress' ? 50 : 0),
+    (s.q6 === 'Yes' ? 33 : 0) + (s.q7 === 'Yes' ? 34 : 0) + (s.q8 === 'Yes' ? 33 : s.q8 === 'Partial' ? 17 : 0),
+    (s.q9 === 'Yes' ? 50 : 0) + (s.q10 === 'Yes' ? 50 : 0),
+    s.q11 === 'Yes' ? 100 : 0,
+    (s.q15 === 'Yes' ? 50 : 0) + (s.q16 === 'Yes' ? 50 : 0),
+    (s.q17 === 'Yes' ? 50 : s.q17 === 'Partial' ? 25 : 0) + (s.q18 === 'Yes' ? 50 : s.q18 === 'Occasionally' ? 25 : 0),
+    s.q20 === 'Yes' ? 100 : 0
+  ];
+
+  uCharts['uChartRadar'] = new Chart(document.getElementById('uChartRadar'), {
+    type: 'radar',
+    data: {
+      labels: radarLabels,
+      datasets: [{
+        label: 'Your Compliance',
+        data: radarData,
+        backgroundColor: 'rgba(212,168,67,0.15)',
+        borderColor: '#d4a843',
+        pointBackgroundColor: '#d4a843',
+        pointBorderColor: '#d4a843',
+        borderWidth: 2,
+        pointRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { color: tickColor, font: { family: fontFam, size: 9 }, stepSize: 25, backdropColor: 'transparent' },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          pointLabels: { color: tickColor, font: { family: fontFam, size: 10 } }
+        }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 2. Doughnut - Statutory Benefits
+  const benefitLabels = ['PF Active', 'ESI Active', 'POSH Active', 'Bonus Active', 'Not Compliant'];
+  const benefitData = [
+    s.q9 === 'Yes' ? 1 : 0,
+    s.q10 === 'Yes' ? 1 : 0,
+    s.q15 === 'Yes' ? 1 : 0,
+    s.q13 === 'Yes' ? 1 : 0,
+    0
+  ];
+  const activeCount = benefitData.reduce((a,b) => a+b, 0);
+  const benefitDataFinal = [...benefitData.slice(0,4), Math.max(0, 4 - activeCount)];
+
+  uCharts['uChartDough'] = new Chart(document.getElementById('uChartDough'), {
+    type: 'doughnut',
+    data: {
+      labels: benefitLabels,
+      datasets: [{
+        data: benefitDataFinal,
+        backgroundColor: ['#2ecc8a','#4e8cff','#d4a843','#a78bfa','rgba(224,85,85,0.4)'],
+        borderWidth: 0,
+        hoverOffset: 10
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: tickColor, font: { family: fontFam, size: 10 }, padding: 8 } }
+      }
+    }
+  });
+
+  // 3. Bar - Key Metrics
+  const barLabels = ['Emp Records', 'Appt Letters', 'Salary Struct.', 'Timely Pay', 'Leave Policy', 'Grievance Sys', 'HR Policies', 'Policy Review'];
+  const barMap = {
+    'Emp Records': s.q3 === 'Yes' ? 100 : (s.q3 === 'In Progress' ? 50 : 0),
+    'Appt Letters': s.q4 === 'Yes' ? 100 : 0,
+    'Salary Struct.': s.q6 === 'Yes' ? 100 : (s.q6 === 'Not Sure' ? 30 : 0),
+    'Timely Pay': s.q7 === 'Yes' ? 100 : 0,
+    'Leave Policy': s.q11 === 'Yes' ? 100 : 0,
+    'Grievance Sys': s.q14 === 'Yes' ? 100 : (s.q14 === 'Informal System' ? 50 : 0),
+    'HR Policies': s.q17 === 'Yes' ? 100 : (s.q17 === 'Partial' ? 60 : 0),
+    'Policy Review': s.q18 === 'Yes' ? 100 : (s.q18 === 'Occasionally' ? 50 : 0),
+  };
+  const barColors = barLabels.map(l => barMap[l] >= 80 ? '#2ecc8a' : barMap[l] >= 50 ? '#d4a843' : '#e05555');
+
+  uCharts['uChartBar'] = new Chart(document.getElementById('uChartBar'), {
+    type: 'bar',
+    data: {
+      labels: barLabels,
+      datasets: [{
+        label: '% Score',
+        data: barLabels.map(l => barMap[l]),
+        backgroundColor: barColors,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: tickColor, font: { family: fontFam, size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: tickColor, font: { family: fontFam, size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true, max: 100 }
+      }
+    }
+  });
+
+  // 4. Polar Area - HR Governance
+  uCharts['uChartPolar'] = new Chart(document.getElementById('uChartPolar'), {
+    type: 'polarArea',
+    data: {
+      labels: ['POSH Awareness', 'ICC Committee', 'HR Written Policy', 'Policy Review', 'Grievance System'],
+      datasets: [{
+        data: [
+          s.q15 === 'Yes' ? 100 : 0,
+          s.q16 === 'Yes' ? 100 : 0,
+          s.q17 === 'Yes' ? 100 : (s.q17 === 'Partial' ? 60 : 0),
+          s.q18 === 'Yes' ? 100 : (s.q18 === 'Occasionally' ? 50 : 0),
+          s.q14 === 'Yes' ? 100 : (s.q14 === 'Informal System' ? 50 : 0),
+        ],
+        backgroundColor: ['rgba(212,168,67,0.5)','rgba(78,140,255,0.5)','rgba(46,204,138,0.5)','rgba(167,139,250,0.5)','rgba(46,204,138,0.35)'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        r: {
+          ticks: { color: tickColor, font: { family: fontFam, size: 9 }, backdropColor: 'transparent' },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          min: 0, max: 100
+        }
+      },
+      plugins: { legend: { position: 'bottom', labels: { color: tickColor, font: { family: fontFam, size: 9 }, padding: 8 } } }
+    }
+  });
+}
+
+// ===================================================================
+// ===== ADMIN DASHBOARD — Shows ALL submissions & full monitoring =====
+// ===================================================================
+
+function renderAdminDashboard() {
+  const stateF = document.getElementById('adminStateFilter').value;
+  const industryF = document.getElementById('adminIndustryFilter').value;
+
+  // Populate state filter
+  const states = [...new Set(submissions.map(s => s.state))].sort();
+  const stateSel = document.getElementById('adminStateFilter');
+  stateSel.innerHTML = '<option value="">All States</option>' + states.map(s => `<option ${s === stateF ? 'selected' : ''}>${s}</option>`).join('');
+
+  // Populate industry filter
+  const industries = [...new Set(submissions.map(s => s.field))].sort();
+  const industrySel = document.getElementById('adminIndustryFilter');
+  industrySel.innerHTML = '<option value="">All Industries</option>' + industries.map(i => `<option ${i === industryF ? 'selected' : ''}>${i}</option>`).join('');
+
+  const data = submissions
+    .filter(s => !stateF || s.state === stateF)
+    .filter(s => !industryF || s.field === industryF);
+
+  // Stats
+  document.getElementById('ast0').textContent = data.length;
+  const avg = data.length ? Math.round(data.reduce((a,b) => a+b.score, 0) / data.length) : 0;
+  document.getElementById('ast1').textContent = data.length ? avg + '%' : '—';
+  document.getElementById('ast2').textContent = data.length ? Math.round(data.filter(s=>s.q9==='Yes').length/data.length*100)+'%' : '—';
+  document.getElementById('ast3').textContent = data.length ? Math.round(data.filter(s=>s.q10==='Yes').length/data.length*100)+'%' : '—';
+  document.getElementById('ast4').textContent = data.length ? Math.round(data.filter(s=>s.q15==='Yes').length/data.length*100)+'%' : '—';
+  document.getElementById('ast5').textContent = data.length ? data.filter(s=>s.score>=70).length : '—';
+  document.getElementById('ast6').textContent = data.length ? data.filter(s=>s.score>=40&&s.score<70).length : '—';
+  document.getElementById('ast7').textContent = data.length ? data.filter(s=>s.score<40).length : '—';
+
+  renderAdminSidebar();
+  renderAdminCharts(data);
+  renderAdminTable();
+}
+
+function renderAdminSidebar() {
+  const q = (document.getElementById('adminSideSearch').value || '').toLowerCase();
+  const filtered = submissions.filter(s =>
     (s.companyName || '').toLowerCase().includes(q) ||
-    (s.name || '').toLowerCase().includes(q)
+    (s.name || '').toLowerCase().includes(q) ||
+    (s.state || '').toLowerCase().includes(q)
   );
-  
-  // Only update count for user sidebar
-  document.getElementById('sidebarCount').textContent = dataToUse.length;
-  
-  const list = document.getElementById('sidebarList');
+  document.getElementById('adminSidebarCount').textContent = submissions.length;
+  const list = document.getElementById('adminSidebarList');
 
   if (!filtered.length) {
-    list.innerHTML = '<div class="sidebar-empty">No results found for you.</div>';
+    list.innerHTML = '<div class="sidebar-empty">No results found.</div>';
     return;
   }
 
@@ -315,15 +676,170 @@ function renderSidebar(dataToUse) {
   }).join('');
 }
 
-// Tables for User
-function renderTable(dataToUse) {
-  const q = (document.getElementById('tblSearch').value || '').toLowerCase();
-  const data = dataToUse
+function renderAdminCharts(data) {
+  const pct = (key, val) => data.length ? Math.round(data.filter(s => s[key] === val).length / data.length * 100) : 0;
+  const gridColor = 'rgba(255,255,255,0.05)';
+  const tickColor = '#7a8299';
+  const fontFam = 'Syne';
+
+  const baseOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 12 } } },
+    scales: {
+      x: { ticks: { color: tickColor, font: { family: fontFam, size: 10 } }, grid: { color: gridColor } },
+      y: { ticks: { color: tickColor, font: { family: fontFam, size: 10 } }, grid: { color: gridColor }, beginAtZero: true, max: 100 }
+    }
+  };
+
+  // Destroy old admin charts
+  ['adminChartBar','adminChartDough','adminChartEmp','adminChartPie','adminChartScore','adminChartIndustry'].forEach(id => {
+    if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  });
+
+  // 1. Bar — Statutory Compliance
+  charts['adminChartBar'] = new Chart(document.getElementById('adminChartBar'), {
+    type: 'bar',
+    data: {
+      labels: ['Licensing', 'Records', 'Salary Struct.', 'Timely Pay', 'PF/Savings', 'ESI/Medical', 'Leave', 'POSH', 'HR Policy', 'Bonus'],
+      datasets: [{
+        label: '% Compliant Across All',
+        data: [
+          data.length ? Math.round(data.filter(s=>s.q2!=='Not Yet Taken'&&s.q2!=='').length/data.length*100) : 0,
+          pct('q3', 'Yes'), pct('q6', 'Yes'), pct('q7', 'Yes'),
+          pct('q9', 'Yes'), pct('q10', 'Yes'), pct('q11', 'Yes'), pct('q15', 'Yes'),
+          data.length ? Math.round(data.filter(s=>s.q17==='Yes'||s.q17==='Partial').length/data.length*100) : 0,
+          pct('q13', 'Yes')
+        ],
+        backgroundColor: ['#d4a843','#2ecc8a','#4e8cff','#a78bfa','#2ecc8a','#d4a843','#4e8cff','#e05555','#2ecc8a','#d4a843'],
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } } }
+  });
+
+  // 2. Doughnut — Establishment
+  const estCount = {};
+  data.forEach(s => { if (s.q1) estCount[s.q1] = (estCount[s.q1] || 0) + 1; });
+  const estLabels = Object.keys(estCount).length ? Object.keys(estCount) : ['No Data'];
+  const estVals = Object.keys(estCount).length ? Object.values(estCount) : [1];
+  charts['adminChartDough'] = new Chart(document.getElementById('adminChartDough'), {
+    type: 'doughnut',
+    data: {
+      labels: estLabels,
+      datasets: [{ data: estVals, backgroundColor: ['#d4a843','#2ecc8a','#4e8cff','#a78bfa','#e05555'], borderWidth: 0, hoverOffset: 10 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: { legend: { position: 'bottom', labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 10 } } }
+    }
+  });
+
+  // 3. Bar — Employee size
+  const sizes = ['1–10','11–20','21–50','51–100','101–150','151–200','201–300','301–400','401–500','500+'];
+  const sizeCounts = {};
+  sizes.forEach(s => sizeCounts[s] = 0);
+  data.forEach(s => { if (s.employees) sizeCounts[s.employees] = (sizeCounts[s.employees] || 0) + 1; });
+  charts['adminChartEmp'] = new Chart(document.getElementById('adminChartEmp'), {
+    type: 'bar',
+    data: {
+      labels: sizes,
+      datasets: [{ label: 'Companies', data: sizes.map(s => sizeCounts[s]), backgroundColor: '#4e8cff', borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      ...baseOpts,
+      scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, max: undefined, beginAtZero: true } },
+      plugins: { ...baseOpts.plugins, legend: { display: false } }
+    }
+  });
+
+  // 4. Pie — HR Coverage
+  charts['adminChartPie'] = new Chart(document.getElementById('adminChartPie'), {
+    type: 'pie',
+    data: {
+      labels: ['HR Policies', 'POSH Aware', 'Emp. Records', 'ICC Active'],
+      datasets: [{
+        data: [pct('q17', 'Yes'), pct('q15', 'Yes'), pct('q3', 'Yes'), pct('q16', 'Yes')],
+        backgroundColor: ['#2ecc8a','#4e8cff','#d4a843','#a78bfa'],
+        borderWidth: 0, hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 10 } } }
+    }
+  });
+
+  // 5. Bar — Score Distribution
+  const scoreRanges = { '0–20%': 0, '21–40%': 0, '41–60%': 0, '61–80%': 0, '81–100%': 0 };
+  data.forEach(s => {
+    if (s.score <= 20) scoreRanges['0–20%']++;
+    else if (s.score <= 40) scoreRanges['21–40%']++;
+    else if (s.score <= 60) scoreRanges['41–60%']++;
+    else if (s.score <= 80) scoreRanges['61–80%']++;
+    else scoreRanges['81–100%']++;
+  });
+  charts['adminChartScore'] = new Chart(document.getElementById('adminChartScore'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(scoreRanges),
+      datasets: [{
+        label: 'Number of Companies',
+        data: Object.values(scoreRanges),
+        backgroundColor: ['#e05555','#e05555','#d4a843','#2ecc8a','#2ecc8a'],
+        borderRadius: 6, borderSkipped: false
+      }]
+    },
+    options: {
+      ...baseOpts,
+      scales: { ...baseOpts.scales, y: { ...baseOpts.scales.y, max: undefined, beginAtZero: true } },
+      plugins: { ...baseOpts.plugins, legend: { display: false } }
+    }
+  });
+
+  // 6. Horizontal Bar — Industry Distribution
+  const industryCounts = {};
+  data.forEach(s => { if (s.field) industryCounts[s.field] = (industryCounts[s.field] || 0) + 1; });
+  const industryLabels = Object.keys(industryCounts);
+  const industryVals = Object.values(industryCounts);
+  charts['adminChartIndustry'] = new Chart(document.getElementById('adminChartIndustry'), {
+    type: 'bar',
+    data: {
+      labels: industryLabels.length ? industryLabels : ['No Data'],
+      datasets: [{
+        label: 'Submissions',
+        data: industryVals.length ? industryVals : [0],
+        backgroundColor: '#a78bfa',
+        borderRadius: 6, borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { ...baseOpts.plugins, legend: { display: false } },
+      scales: {
+        x: { ticks: { color: tickColor, font: { family: fontFam, size: 9 } }, grid: { color: gridColor }, beginAtZero: true },
+        y: { ticks: { color: tickColor, font: { family: fontFam, size: 9 } }, grid: { color: gridColor } }
+      }
+    }
+  });
+}
+
+function renderAdminTable() {
+  const stateF = document.getElementById('adminStateFilter').value;
+  const industryF = document.getElementById('adminIndustryFilter').value;
+  const q = (document.getElementById('adminTblSearch').value || '').toLowerCase();
+
+  const data = submissions
+    .filter(s => !stateF || s.state === stateF)
+    .filter(s => !industryF || s.field === industryF)
     .filter(s => (s.companyName || '').toLowerCase().includes(q) || (s.name || '').toLowerCase().includes(q));
 
-  const tbody = document.getElementById('tblBody');
+  const tbody = document.getElementById('adminTblBody');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-td">No submissions found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-td">No submissions found.</td></tr>';
     return;
   }
 
@@ -334,236 +850,49 @@ function renderTable(dataToUse) {
       <td style="color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:0.75rem">${String(i+1).padStart(2,'0')}</td>
       <td>
         <div style="font-weight:700;color:var(--white);font-size:0.85rem">${s.companyName}</div>
-        <div style="font-size:0.72rem;color:var(--text2)">${s.name}</div>
+        <div style="font-size:0.72rem;color:var(--text2)">${s.field}</div>
+      </td>
+      <td>
+        <div style="font-size:0.82rem">${s.name}</div>
+        <div style="font-size:0.7rem;color:var(--text2)">${s.contact}</div>
       </td>
       <td>${s.state}</td>
+      <td style="font-size:0.78rem">${s.field}</td>
       <td><span class="badge info">${s.employees}</span></td>
       <td style="font-size:0.8rem">${s.q1 || '—'}</td>
       <td><span class="badge ${cls}">${sc}%</span></td>
+      <td><span class="badge ${s.gaps.length > 5 ? 'low' : s.gaps.length > 2 ? 'mid' : 'good'}">${s.gaps.length} gaps</span></td>
       <td>
-        <button class="btn btn-gold" style="padding:0.35rem 0.75rem;font-size:0.75rem" onclick="showDetail(${s.id})">View Report</button>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+          <button class="btn btn-ghost" style="padding:0.35rem 0.75rem;font-size:0.75rem" onclick="showDetail(${s.id})">👁 View</button>
+          <button class="btn btn-blue" style="padding:0.35rem 0.75rem;font-size:0.75rem" onclick="downloadPDF(${s.id})">⬇ PDF</button>
+          <button class="btn btn-red" style="padding:0.35rem 0.75rem;font-size:0.75rem" onclick="deleteSubmission(${s.id})">🗑</button>
+        </div>
       </td>
     </tr>`;
   }).join('');
 }
 
-// ========================================================
-// ADMIN DASHBOARD RENDER (ALL DATA)
-// ========================================================
-function renderAdminDashboard() {
-  const allData = submissions; // GET EVERYTHING
-  
-  // Admin Stats
-  document.getElementById('adminTotal').textContent = allData.length;
-  
-  const goodCount = allData.filter(s => s.score >= 70).length;
-  const critCount = allData.filter(s => s.score < 40).length;
-  const midCount = allData.filter(s => s.score >= 40 && s.score < 70).length;
-  const pendingLic = allData.filter(s => s.q2 === 'Not Yet Taken' || s.q2 === '').length;
-
-  document.getElementById('adminCrit').textContent = critCount;
-  document.getElementById('adminMid').textContent = midCount;
-  document.getElementById('adminGood').textContent = goodCount;
-  document.getElementById('adminPending').textContent = pendingLic;
-  document.getElementById('totalAdminCount').textContent = allData.length + " Companies";
-
-  // Render Global Elements
-  renderGlobalSidebar(allData);
-  renderAdminCharts(allData);
-  renderAdminTable(allData);
+// ===== DELETE SUBMISSION (Admin Only) =====
+function deleteSubmission(id) {
+  if (!isAdmin) { showToast('Admin access required.', 'red'); return; }
+  if (!confirm('Delete this submission permanently?')) return;
+  submissions = submissions.filter(s => s.id !== id);
+  saveData();
+  renderAdminDashboard();
+  showToast('Submission deleted.', 'gold');
 }
 
-function renderGlobalSidebar(dataToUse) {
-  const q = (document.getElementById('globalSearch').value || '').toLowerCase();
-  const filtered = dataToUse.filter(s =>
-    (s.companyName || '').toLowerCase().includes(q) ||
-    (s.name || '').toLowerCase().includes(q) ||
-    (s.state || '').toLowerCase().includes(q)
-  );
-
-  const list = document.getElementById('adminSidebarList');
-  if (!filtered.length) {
-    list.innerHTML = '<div class="sidebar-empty">No matches found globally.</div>';
-    return;
-  }
-
-  list.innerHTML = filtered.map(s => {
-    const sc = s.score;
-    const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
-    return `<div class="sidebar-card" onclick="showDetail(${s.id})">
-      <div class="sc-name">${s.companyName}</div>
-      <div class="sc-meta">
-        <span>${s.state}</span>
-        <span class="sc-score ${cls}">${sc}%</span>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// Chart Logic Helper for Admin
-function dc(id) {
-  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
-}
-
-function pct(key, val) { return submissions.length ? Math.round(submissions.filter(s => s[key] === val).length / submissions.length * 100) : 0; }
-
-function renderAdminCharts(allData) {
-  const tickColor = '#7a8299';
-  const gridColor = 'rgba(255,255,255,0.05)';
-  const fontFam = 'Syne';
-
-  const baseOpts = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 12 } }
-    },
-    scales: {
-      x: { ticks: { color: tickColor, font: { family: fontFam, size: 10 } }, grid: { color: gridColor } },
-      y: { ticks: { color: tickColor, font: { family: fontFam, size: 10 } }, grid: { color: gridColor }, beginAtZero: true, max: 100 }
-    }
-  };
-
-  // 1. Bar — National Compliance
-  dc('chartGlobalBar');
-  charts.bar = new Chart(document.getElementById('chartGlobalBar'), {
-    type: 'bar',
-    data: {
-      labels: ['Licensing', 'Records', 'Salary Struct.', 'Timely Pay', 'PF/Savings', 'ESI/Medical', 'Leave', 'POSH'],
-      datasets: [{
-        label: '% Compliant',
-        data: [
-          pct('q2', 'Factory License') + pct('q2', 'Shops & Establishment License') + pct('q2', 'Both'),
-          pct('q3', 'Yes'), pct('q6', 'Yes'), pct('q7', 'Yes'),
-          pct('q9', 'Yes'), pct('q10', 'Yes'), pct('q11', 'Yes'), pct('q15', 'Yes')
-        ],
-        backgroundColor: ['#d4a843','#2ecc8a','#4e8cff','#a78bfa','#2ecc8a','#d4a843','#4e8cff','#e05555'],
-        borderRadius: 6,
-        borderSkipped: false,
-      }]
-    },
-    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: false } } }
-  });
-
-  // 2. Donut — Risk Distribution
-  dc('chartGlobalDonut');
-  charts.donut = new Chart(document.getElementById('chartGlobalDonut'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Good (>70)', 'Moderate (40-70)', 'Critical (<40)'],
-      datasets: [{
-        data: [
-          allData.filter(s=>s.score>=70).length,
-          allData.filter(s=>s.score>=40 && s.score<70).length,
-          allData.filter(s=>s.score<40).length
-        ],
-        backgroundColor: ['#2ecc8a','#4e8cff','#e05555'],
-        borderWidth: 0, hoverOffset: 10
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      cutout: '70%',
-      plugins: { legend: { position: 'bottom', labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 10 } } }
-    }
-  });
-
-  // 3. Pie — Industry Breakdown
-  dc('chartGlobalPie');
-  const indCounts = {};
-  allData.forEach(s => { if(s.field) indCounts[s.field] = (indCounts[s.field]||0)+1; });
-  const labels = Object.keys(indCounts).slice(0, 5);
-  const values = labels.map(l => indCounts[l]);
-  
-  charts.ind = new Chart(document.getElementById('chartGlobalPie'), {
-    type: 'pie',
-    data: {
-      labels: labels.length ? labels : ['None'],
-      datasets: [{ data: values.length ? values : [1], backgroundColor: ['#d4a843','#2ecc8a','#4e8cff','#a78bfa'] }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'right', labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 10 } } }
-    }
-  });
-
-  // 4. Polar — License Status
-  dc('chartGlobalPolar');
-  licenses = ['Licensed', 'Applied', 'Missing'];
-  licVals = [
-    allData.filter(s => s.q2 !== '' && s.q2 !== 'Not Yet Taken').length,
-    allData.filter(s => s.q2 === 'Applied').length,
-    allData.filter(s => s.q2 === 'Not Yet Taken').length
-  ];
-  charts.pol = new Chart(document.getElementById('chartGlobalPolar'), {
-    type: 'polarArea',
-    data: {
-      labels: licenses,
-      datasets: [{ data: licVals, backgroundColor: ['#2ecc8a','#d4a843','#e05555'], borderWidth: 0 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      scales: { r: { ticks: { display: false, backdropColor: 'transparent' }, grid: { color: gridColor } } },
-      plugins: { legend: { position: 'right', labels: { color: tickColor, font: { family: fontFam, size: 11 }, padding: 10 } } }
-    }
-  });
-}
-
-function renderAdminTable(allData) {
-  const q = (document.getElementById('tblSearch').value || '').toLowerCase();
-  const data = allData.filter(s =>
-    (s.companyName || '').toLowerCase().includes(q) ||
-    (s.name || '').toLowerCase().includes(q) ||
-    (s.state || '').toLowerCase().includes(q)
-  );
-
-  const tbody = document.getElementById('adminTblBody');
-  if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="empty-td">No submissions found.</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = data.map(s => {
-    const sc = s.score;
-    const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
-    const verdict = sc >= 70 ? 'Compliant' : sc >= 40 ? 'Monitor' : 'Alert';
-    
-    return `<tr>
-      <td><span class="badge info">#${String(s.id).slice(-4)}</span></td>
-      <td>
-        <div style="font-weight:700;color:var(--white)">${s.companyName}</div>
-        <div style="font-size:0.7rem;color:var(--text2)">${s.field}</div>
-      </td>
-      <td>${s.name}<br><small style="color:var(--text2)">${s.contact}</small></td>
-      <td>${s.state}</td>
-      <td>${s.employees}</td>
-      <td style="font-size:0.8rem">${s.q1 || '-'}</td>
-      <td><span class="badge ${cls}">${sc}%</span></td>
-      <td><span class="badge ${cls === 'low' ? 'low' : cls === 'mid' ? 'info' : 'good'}">${verdict}</span></td>
-      <td style="font-size:0.75rem;color:var(--text2)">${verdict}</td>
-      <td>
-        <button class="btn btn-ghost" style="padding:0.35rem 0.6rem;font-size:0.7rem" onclick="showDetail(${s.id})">View</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-// ========================================================
-// MODAL & PDF (Shared)
-// ========================================================
+// ===== DETAIL MODAL =====
 function showDetail(id) {
   const s = submissions.find(x => x.id === id);
   if (!s) return;
   activeDetailId = id;
-  
-  // Find which sidebar needs update
-  if(document.getElementById('view-dashboard').classList.contains('active')) renderSidebar(submissions.filter(x=>x.userId===currentUser));
-  else if(document.getElementById('view-admin').classList.contains('active')) renderGlobalSidebar(submissions);
+  if (isAdmin) renderAdminSidebar();
 
   const sc = s.score;
-  const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
   const color = sc >= 70 ? 'var(--green)' : sc >= 40 ? 'var(--blue)' : 'var(--red)';
-  const verdict = sc >= 70 ? 'Strong compliance posture. Continue maintaining documentation.'
+  const verdict = sc >= 70 ? 'Strong compliance posture. Continue maintaining documentation and annual reviews.'
     : sc >= 40 ? 'Moderate compliance. Address highlighted gaps to avoid regulatory risk.'
     : 'Critical compliance gaps detected. Immediate corrective action required.';
   const date = new Date(s.submittedAt).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
@@ -599,17 +928,53 @@ function showDetail(id) {
       <div class="m-item"><div class="m-item-label">Location</div><div class="m-item-val">${s.location}, ${s.state}</div></div>
       <div class="m-item"><div class="m-item-label">Estab. Type</div><div class="m-item-val">${s.q1 || '—'}</div></div>
       <div class="m-item"><div class="m-item-label">License</div><div class="m-item-val">${s.q2 || '—'}</div></div>
+      <div class="m-item"><div class="m-item-label">Starting Salary</div><div class="m-item-val">${s.q5 ? '₹' + s.q5 : '—'}</div></div>
     </div>
 
+    <div class="m-section">👥 Employee & Salary Practices</div>
+    <div class="m-grid">
+      <div class="m-item"><div class="m-item-label">Employee Records</div>${yn(s.q3)}</div>
+      <div class="m-item"><div class="m-item-label">Appointment Letters</div>${yn(s.q4)}</div>
+      <div class="m-item"><div class="m-item-label">Structured Salary</div>${yn(s.q6)}</div>
+      <div class="m-item"><div class="m-item-label">Timely Payment</div>${yn(s.q7)}</div>
+      <div class="m-item"><div class="m-item-label">Statutory Benefits</div>${yn(s.q8)}</div>
+      <div class="m-item"><div class="m-item-label">Leave Policy</div>${yn(s.q11)}</div>
+    </div>
+
+    <div class="m-section">🏦 Benefits & Welfare</div>
+    <div class="m-grid">
+      <div class="m-item"><div class="m-item-label">PF / Savings</div>${yn(s.q9)}</div>
+      <div class="m-item"><div class="m-item-label">ESI / Medical</div>${yn(s.q10)}</div>
+      <div class="m-item"><div class="m-item-label">Bonus Paid</div>${yn(s.q13)}</div>
+      <div class="m-item"><div class="m-item-label">Leaves/Year</div><div class="m-item-val">${s.q12 || '—'}</div></div>
+      <div class="m-item"><div class="m-item-label">Grievance System</div>${yn(s.q14)}</div>
+      <div class="m-item"><div class="m-item-label">Policy Reviews</div>${yn(s.q18)}</div>
+    </div>
+
+    <div class="m-section">👩‍⚖️ POSH & HR Governance</div>
+    <div class="m-grid">
+      <div class="m-item"><div class="m-item-label">POSH Sessions</div>${yn(s.q15)}</div>
+      <div class="m-item"><div class="m-item-label">ICC Constituted</div>${yn(s.q16)}</div>
+      <div class="m-item"><div class="m-item-label">Written HR Policy</div>${yn(s.q17)}</div>
+    </div>
+
+    <div class="m-section">⚖️ Legal Awareness</div>
+    <div style="margin-bottom:1rem">
+      <div class="m-item" style="margin-bottom:0.5rem"><div class="m-item-label">Labour Law Awareness</div>${yn(s.q20)}</div>
+      ${s.q21 && s.q21.length ? `<div class="m-laws">${s.q21.map(l => `<div class="m-law-item">✦ ${l}</div>`).join('')}</div>` : ''}
+    </div>
+
+    ${gaps.length ? `
     <div class="m-section">⚠️ Compliance Gaps Identified (${gaps.length})</div>
     <div class="m-gaps">
       ${gaps.map(g => `<div class="m-gap-item"><span class="m-gap-icon">⚠</span><span>${g}</span></div>`).join('')}
-    </div>
+    </div>` : ''}
 
+    ${recs.length ? `
     <div class="m-section">✅ Recommended Actions</div>
     <div class="m-recs">
       ${recs.map(r => `<div class="m-rec-item"><span class="m-rec-icon">→</span><span>${r}</span></div>`).join('')}
-    </div>
+    </div>` : ''}
 
     <div class="m-actions">
       <button class="btn btn-gold" onclick="downloadPDF(${s.id})">⬇ Download PDF Report</button>
@@ -627,7 +992,7 @@ function closeModal(force) {
   }
 }
 
-// PDF Generation (Shared)
+// ===== PDF DOWNLOAD =====
 async function downloadPDF(id) {
   const s = submissions.find(x => x.id === id);
   if (!s) return;
@@ -637,56 +1002,46 @@ async function downloadPDF(id) {
   let y = 0;
 
   const BG   = [8,9,13];
+  const BG2  = [14,16,24];
   const GOLD = [212,168,67];
   const GREEN= [46,204,138];
   const RED  = [224,85,85];
+  const BLUE = [78,140,255];
   const WHITE= [238,240,245];
   const MUTED= [122,130,153];
 
   const scoreColor = s.score >= 70 ? GREEN : s.score >= 40 ? BLUE : RED;
   const date = new Date(s.submittedAt).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
 
-  const sec = (title) => {
-    if (y > 265) { doc.addPage(); y = 18; }
-    doc.setFillColor(...[14,16,24]);
-    doc.rect(ml, y, pw - ml - mr, 8, 'F');
-    doc.setFillColor(...GOLD);
-    doc.rect(ml, y, 3, 8, 'F');
-    doc.setTextColor(...GOLD);
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title.toUpperCase(), ml + 6, y + 5.5);
-    y += 12;
+  const addPage = () => {
+    doc.addPage();
+    doc.setFillColor(...BG);
+    doc.rect(0, 0, 210, 297, 'F');
+    y = 18;
   };
 
-  const row = (label, val, color) => {
-    if (y > 270) { doc.addPage(); y = 18; }
-    doc.setTextColor(...MUTED);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(label, ml + 2, y);
-    doc.setTextColor(...(color || WHITE));
-    doc.setFont('helvetica', 'bold');
-    doc.text(val || '—', ml + 90, y);
-    y += 6.5;
-  };
-
-  // PAGE SETUP
   doc.setFillColor(...BG);
   doc.rect(0, 0, 210, 297, 'F');
-  doc.setFillColor(...[14,16,24]);
+
+  doc.setFillColor(...BG2);
   doc.rect(0, 0, 210, 55, 'F');
   doc.setFillColor(...GOLD);
   doc.rect(0, 0, 210, 2, 'F');
+
   doc.setTextColor(...GOLD);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.text('LABOURSHIELD  ·  COMPLIANCE AUDIT REPORT', 105, 14, { align: 'center' });
+
   doc.setTextColor(...WHITE);
   doc.setFontSize(18);
   doc.text(s.companyName.toUpperCase(), 105, 27, { align: 'center' });
-  
-  // SCORE BOX
+
+  doc.setTextColor(...MUTED);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${s.field}  ·  ${s.state}  ·  ${s.employees} employees  ·  Date: ${date}`, 105, 36, { align: 'center' });
+
   const sc = s.score;
   const verdict = sc >= 70 ? 'GOOD STANDING' : sc >= 40 ? 'NEEDS IMPROVEMENT' : 'CRITICAL ATTENTION';
   doc.setFillColor(...scoreColor);
@@ -698,7 +1053,40 @@ async function downloadPDF(id) {
 
   y = 65;
 
+  const sec = (title) => {
+    if (y > 265) { addPage(); }
+    doc.setFillColor(...BG2);
+    doc.rect(ml, y, pw - ml - mr, 8, 'F');
+    doc.setFillColor(...GOLD);
+    doc.rect(ml, y, 3, 8, 'F');
+    doc.setTextColor(...GOLD);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title.toUpperCase(), ml + 6, y + 5.5);
+    y += 12;
+  };
+
+  const row = (label, val, color) => {
+    if (y > 270) { addPage(); }
+    doc.setTextColor(...MUTED);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(label, ml + 2, y);
+    doc.setTextColor(...(color || WHITE));
+    doc.setFont('helvetica', 'bold');
+    doc.text(val || '—', ml + 90, y);
+    y += 6.5;
+  };
+
+  const yn = (v) => {
+    if (v === 'Yes') return { t: 'Yes', c: GREEN };
+    if (v === 'No') return { t: 'No', c: RED };
+    if (v === 'Partial' || v === 'In Progress' || v === 'Occasionally') return { t: v, c: GOLD };
+    return { t: v || '—', c: WHITE };
+  };
+
   sec('Business Profile');
+  row('Company Name', s.companyName);
   row('Contact Person', s.name);
   row('Phone', s.contact);
   row('Location', `${s.location}, ${s.state}`);
@@ -706,65 +1094,98 @@ async function downloadPDF(id) {
   row('Employees', s.employees);
   row('Establishment Type', s.q1);
   row('License Held', s.q2);
+  row('Starting Salary (Helpers)', s.q5 ? '₹' + s.q5 : '—');
+  y += 2;
 
-  sec('Audit Answers');
-  const yn = (v) => {
-    if (v === 'Yes') return { t: 'Yes', c: GREEN };
-    if (v === 'No') return { t: 'No', c: RED };
-    if (v === 'Partial' || v === 'In Progress') return { t: v, c: GOLD };
-    return { t: v || '—', c: WHITE };
-  };
-  row('Employee Records Maintained?', yn(s.q3).t, yn(s.q3).c);
-  row('Appointment Letters Issued?', yn(s.q4).t, yn(s.q4).c);
-  row('Structured Salary Format?', yn(s.q6).t, yn(s.q6).c);
-  row('Salaries Paid On Time?', yn(s.q7).t, yn(s.q7).c);
-  row('Statutory Benefits (PF/ESI)?', yn(s.q8).t, yn(s.q8).c);
-  row('Retirement / PF Savings?', yn(s.q9).t, yn(s.q9).c);
-  row('Medical / ESI Coverage?', yn(s.q10).t, yn(s.q10).c);
-  row('Leave Policy in Place?', yn(s.q11).t, yn(s.q11).c);
-  row('Bonus Provided?', yn(s.q13).t, yn(s.q13).c);
-  row('POSH Sessions Conducted?', yn(s.q15).t, yn(s.q15).c);
-  row('ICC Constituted?', yn(s.q16).t, yn(s.q16).c);
-  row('Written HR Policies?', yn(s.q17).t, yn(s.q17).c);
+  sec('Employee & Salary Practices');
+  let r;
+  r = yn(s.q3); row('Employee Records Maintained?', r.t, r.c);
+  r = yn(s.q4); row('Appointment Letters Issued?', r.t, r.c);
+  r = yn(s.q6); row('Structured Salary Format?', r.t, r.c);
+  r = yn(s.q7); row('Salaries Paid On Time?', r.t, r.c);
+  r = yn(s.q8); row('Statutory Benefits (PF/ESI)?', r.t, r.c);
+  y += 2;
+
+  sec('Employee Benefits & Welfare');
+  r = yn(s.q9); row('Retirement / PF Savings?', r.t, r.c);
+  r = yn(s.q10); row('Medical / ESI Coverage?', r.t, r.c);
+  r = yn(s.q11); row('Leave Policy in Place?', r.t, r.c);
+  row('Annual Leaves Count', s.q12 || '—');
+  r = yn(s.q13); row('Bonus Provided?', r.t, r.c);
+  r = yn(s.q14); row('Grievance System?', r.t, r.c);
+  y += 2;
+
+  sec('POSH & HR Governance');
+  r = yn(s.q15); row('POSH Awareness Sessions?', r.t, r.c);
+  r = yn(s.q16); row('ICC Constituted?', r.t, r.c);
+  r = yn(s.q17); row('Written HR Policies?', r.t, r.c);
+  r = yn(s.q18); row('Regular Policy Review?', r.t, r.c);
+  y += 2;
+
+  sec('Legal Awareness');
+  r = yn(s.q20); row('Labour Law Awareness?', r.t, r.c);
+  if (s.q21 && s.q21.length) {
+    row('Labour Laws Filed Under:', '');
+    s.q21.forEach(l => { row('  →  ' + l, ''); });
+  }
+  y += 2;
 
   if (s.gaps && s.gaps.length) {
-    sec(`Gaps (${s.gaps.length})`);
+    sec(`Compliance Gaps Identified (${s.gaps.length})`);
     s.gaps.forEach(g => {
-       if (y > 270) doc.addPage();
-       doc.setTextColor(...RED);
-       doc.setFontSize(8);
-       const lines = doc.splitTextToSize(g, pw - ml - mr - 8);
-       lines.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
+      if (y > 270) addPage();
+      doc.setTextColor(...RED);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const lines = doc.splitTextToSize('⚠  ' + g, pw - ml - mr - 8);
+      lines.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
     });
+    y += 2;
   }
 
   if (s.recs && s.recs.length) {
-    sec('Recommendations');
+    sec('Recommended Actions');
     s.recs.forEach(r => {
-       if (y > 270) doc.addPage();
-       doc.setTextColor(...GREEN);
-       doc.setFontSize(8);
-       const lines = doc.splitTextToSize(r, pw - ml - mr - 8);
-       lines.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
+      if (y > 270) addPage();
+      doc.setTextColor(...GREEN);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const lines = doc.splitTextToSize('→  ' + r, pw - ml - mr - 8);
+      lines.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
     });
+    y += 2;
+  }
+
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFillColor(...BG2);
+    doc.rect(0, 285, 210, 12, 'F');
+    doc.setFillColor(...GOLD);
+    doc.rect(0, 285, 210, 0.8, 'F');
+    doc.setTextColor(...MUTED);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('LabourShield · Business Compliance Audit Portal', ml, 292);
+    doc.text(`Page ${i} of ${totalPages}`, 210 - mr, 292, { align: 'right' });
   }
 
   doc.save(`LabourShield_${s.companyName.replace(/\s+/g,'_')}_Report.pdf`);
   showToast('PDF downloaded!', 'green');
 }
 
-// Helper for PDF export all
-function downloadAllReports() {
-  alert('Feature: In a real app, this would loop through submissions and zip them or export a master CSV.');
-}
-
-// Mobile Sidebar
+// ===== MOBILE SIDEBAR =====
 function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
+  const sidebar = document.getElementById('adminSidebar');
+  if (sidebar) sidebar.classList.toggle('open');
 }
 
-// Init
+// ===== INIT =====
 window.onload = () => {
   updateNavBadge();
-  renderDashboard();
+  // Restore last user submission
+  const lastId = localStorage.getItem('ls_last_submission_id');
+  if (lastId) {
+    currentUserSubmission = submissions.find(s => s.id === parseInt(lastId));
+  }
 };

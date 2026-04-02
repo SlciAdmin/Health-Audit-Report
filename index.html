@@ -12,7 +12,6 @@
 </head>
 <body>
 
-<!-- NOISE OVERLAY -->
 <div class="noise"></div>
 
 <!-- ===== NAVIGATION ===== -->
@@ -23,26 +22,53 @@
       <span class="logo-text">Labour<strong>Shield</strong></span>
     </div>
   </div>
-  <div class="nav-center">
+  <div class="nav-center" id="navCenter">
     <button class="nav-pill active" id="navForm" onclick="showView('form')">
       <span class="pill-icon">✦</span> New Audit
     </button>
-    <button class="nav-pill" id="navDash" onclick="showView('dashboard')">
-      <span class="pill-icon">◈</span> My Dashboard
+    <button class="nav-pill" id="navUserDash" onclick="showView('user-dashboard')">
+      <span class="pill-icon">◈</span> My Report
     </button>
-    <button class="nav-pill" id="navAdmin" onclick="showView('admin')">
-      <span class="pill-icon">🛡️</span> Admin Monitor
+    <button class="nav-pill admin-only" id="navAdminDash" onclick="showView('admin-dashboard')" style="display:none">
+      <span class="pill-icon">🛡</span> Admin Panel
     </button>
   </div>
   <div class="nav-right">
     <div class="nav-badge" id="navBadge">0 Audits</div>
+    <button class="btn-admin-toggle" id="adminToggleBtn" onclick="toggleAdminLogin()">Admin Login</button>
   </div>
 </nav>
+
+<!-- ===== ADMIN LOGIN MODAL ===== -->
+<div id="adminLoginModal" class="modal-bg" onclick="closeAdminModal(event)">
+  <div class="modal-box admin-login-box">
+    <button class="modal-x" onclick="closeAdminModal(true)">✕</button>
+    <div class="admin-login-header">
+      <div class="admin-login-icon">🛡</div>
+      <div class="admin-login-title">Admin Access</div>
+      <div class="admin-login-sub">Enter admin credentials to access the full monitoring panel</div>
+    </div>
+    <div class="admin-login-form">
+      <div class="fg">
+        <label>Username</label>
+        <input type="text" id="adminUser" placeholder="admin">
+      </div>
+      <div class="fg" style="margin-top:1rem">
+        <label>Password</label>
+        <input type="password" id="adminPass" placeholder="••••••••">
+      </div>
+      <div id="adminLoginError" class="admin-error" style="display:none">❌ Invalid credentials</div>
+      <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+        <button class="btn btn-gold" style="flex:1" onclick="doAdminLogin()">Login as Admin</button>
+        <button class="btn btn-ghost" onclick="closeAdminModal(true)">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ===== FORM VIEW ===== -->
 <div id="view-form" class="view active">
 
-  <!-- HERO STRIP -->
   <div class="form-hero">
     <div class="hero-tag">COMPLIANCE ASSESSMENT TOOL</div>
     <h1 class="hero-title">Business Health<br><em>Check Audit</em></h1>
@@ -52,7 +78,6 @@
 
   <div class="form-shell">
 
-    <!-- PROGRESS -->
     <div class="step-track">
       <div class="step-item" id="si1">
         <div class="step-dot active" id="sd1"><span>1</span></div>
@@ -71,7 +96,7 @@
       </div>
     </div>
 
-    <!-- ===== PAGE 1 ===== -->
+    <!-- PAGE 1 -->
     <div id="pg1">
       <div class="card">
         <div class="card-header">
@@ -81,7 +106,6 @@
             <div class="card-sub">Identify your organisation and legal standing</div>
           </div>
         </div>
-
         <div class="fgrid">
           <div class="fg">
             <label>Full Name <span class="req">*</span></label>
@@ -138,17 +162,15 @@
           </div>
         </div>
       </div>
-
       <div class="btn-row">
         <div class="btn-hint">All fields marked <span class="req">*</span> are required</div>
         <button class="btn btn-gold" onclick="goPage2()">Next: Audit Questions <span>→</span></button>
       </div>
     </div>
 
-    <!-- ===== PAGE 2 ===== -->
+    <!-- PAGE 2 -->
     <div id="pg2" style="display:none">
 
-      <!-- S1: Business Setup -->
       <div class="sec-label"><span class="sec-num">S1</span> Business Setup</div>
       <div class="card">
         <div class="qblock">
@@ -172,7 +194,6 @@
         </div>
       </div>
 
-      <!-- S2: Employee Mgmt -->
       <div class="sec-label"><span class="sec-num">S2</span> Employee Management</div>
       <div class="card">
         <div class="qblock">
@@ -192,7 +213,6 @@
         </div>
       </div>
 
-      <!-- S3: Salary -->
       <div class="sec-label"><span class="sec-num">S3</span> Salary Practices</div>
       <div class="card">
         <div class="qblock">
@@ -224,7 +244,6 @@
         </div>
       </div>
 
-      <!-- S4: Benefits -->
       <div class="sec-label"><span class="sec-num">S4</span> Employee Benefits</div>
       <div class="card">
         <div class="qblock">
@@ -245,7 +264,6 @@
         </div>
       </div>
 
-      <!-- S5: Leave -->
       <div class="sec-label"><span class="sec-num">S5</span> Leave & Working Conditions</div>
       <div class="card">
         <div class="qblock">
@@ -261,7 +279,6 @@
         </div>
       </div>
 
-      <!-- S6: Bonus -->
       <div class="sec-label"><span class="sec-num">S6</span> Bonus & Payments</div>
       <div class="card">
         <div class="qblock">
@@ -273,7 +290,6 @@
         </div>
       </div>
 
-      <!-- S7: Practices -->
       <div class="sec-label"><span class="sec-num">S7</span> Workplace Practices</div>
       <div class="card">
         <div class="qblock">
@@ -286,7 +302,6 @@
         </div>
       </div>
 
-      <!-- S8: POSH -->
       <div class="sec-label"><span class="sec-num">S8</span> POSH — Prevention of Sexual Harassment</div>
       <div class="card">
         <div class="qblock">
@@ -305,7 +320,6 @@
         </div>
       </div>
 
-      <!-- S9: Policies -->
       <div class="sec-label"><span class="sec-num">S9</span> HR & Policies</div>
       <div class="card">
         <div class="qblock">
@@ -326,7 +340,6 @@
         </div>
       </div>
 
-      <!-- S10: Engagement -->
       <div class="sec-label"><span class="sec-num">S10</span> Engagement</div>
       <div class="card">
         <div class="qblock">
@@ -338,7 +351,6 @@
         </div>
       </div>
 
-      <!-- S11: Legal -->
       <div class="sec-label"><span class="sec-num">S11</span> Legal Awareness</div>
       <div class="card">
         <div class="qblock">
@@ -348,7 +360,6 @@
             <label class="opt"><input type="radio" name="q20" value="No"><span>❌ No</span></label>
           </div>
         </div>
-
         <div id="q21box" style="display:none" class="qblock q21-box">
           <div class="qlabel q21-label">Q21 &nbsp;—&nbsp; Under which labour laws are you currently filing returns?</div>
           <div class="cbx-list">
@@ -373,87 +384,217 @@
           <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="226" class="ring-anim"/><path d="M24 41l12 12 20-22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <div class="success-title">Audit Submitted!</div>
-        <div class="success-sub">Your compliance report has been generated and saved.</div>
+        <div class="success-sub">Your compliance report has been generated and saved to your dashboard.</div>
         <div id="successScoreBox"></div>
         <div class="success-btns">
-          <button class="btn btn-gold" onclick="showView('dashboard')">View My Report ◈</button>
+          <button class="btn btn-gold" onclick="showView('user-dashboard')">View My Report ◈</button>
           <button class="btn btn-ghost" onclick="resetForm()">+ New Audit</button>
         </div>
       </div>
     </div>
 
-  </div><!-- /form-shell -->
+  </div>
 </div>
 
 <!-- ===== USER DASHBOARD VIEW ===== -->
-<div id="view-dashboard" class="view">
+<div id="view-user-dashboard" class="view">
+  <div class="udash-hero">
+    <div class="udash-hero-inner">
+      <div class="udash-hero-tag">MY COMPLIANCE REPORT</div>
+      <h2 class="udash-hero-title" id="udashTitle">Your Audit Report</h2>
+      <p class="udash-hero-sub" id="udashSub">Submit an audit to view your personalised compliance report below.</p>
+    </div>
+  </div>
+
+  <div class="udash-shell" id="udashShell">
+    <!-- Empty state shown if no submission -->
+    <div id="udashEmpty" class="udash-empty">
+      <div class="udash-empty-icon">📋</div>
+      <div class="udash-empty-title">No Audit Submitted Yet</div>
+      <div class="udash-empty-sub">Fill in the audit form to generate your personalised compliance report with detailed graphs and recommendations.</div>
+      <button class="btn btn-gold" onclick="showView('form')" style="margin-top:1.5rem">Start Audit Now ✦</button>
+    </div>
+
+    <!-- Report shown after submission -->
+    <div id="udashReport" style="display:none">
+
+      <!-- Score Card -->
+      <div class="udash-score-row">
+        <div class="udash-score-main">
+          <div class="udash-score-label">Overall Compliance Score</div>
+          <div class="udash-score-num" id="udashScoreNum">—</div>
+          <div class="udash-score-verdict" id="udashVerdict">—</div>
+          <div class="udash-score-bar-wrap">
+            <div class="udash-score-bar" id="udashScoreBar"></div>
+          </div>
+          <div class="udash-score-meta" id="udashScoreMeta">—</div>
+        </div>
+        <div class="udash-score-stats">
+          <div class="udash-stat-item" id="ust0"><div class="ust-val" id="ustPF">—</div><div class="ust-lbl">PF / Savings</div></div>
+          <div class="udash-stat-item" id="ust1"><div class="ust-val" id="ustESI">—</div><div class="ust-lbl">ESI / Medical</div></div>
+          <div class="udash-stat-item" id="ust2"><div class="ust-val" id="ustPOSH">—</div><div class="ust-lbl">POSH</div></div>
+          <div class="udash-stat-item" id="ust3"><div class="ust-val" id="ustLeave">—</div><div class="ust-lbl">Leave Policy</div></div>
+          <div class="udash-stat-item" id="ust4"><div class="ust-val" id="ustHR">—</div><div class="ust-lbl">HR Policy</div></div>
+          <div class="udash-stat-item" id="ust5"><div class="ust-val" id="ustBonus">—</div><div class="ust-lbl">Bonus</div></div>
+        </div>
+      </div>
+
+      <!-- User Charts Row 1 -->
+      <div class="udash-charts-row">
+        <div class="chart-tile">
+          <div class="ct-title">Compliance Area Breakdown</div>
+          <div class="ct-body"><canvas id="uChartRadar"></canvas></div>
+        </div>
+        <div class="chart-tile">
+          <div class="ct-title">Statutory Benefits Status</div>
+          <div class="ct-body"><canvas id="uChartDough"></canvas></div>
+        </div>
+      </div>
+
+      <!-- User Charts Row 2 -->
+      <div class="udash-charts-row">
+        <div class="chart-tile">
+          <div class="ct-title">Key Compliance Metrics</div>
+          <div class="ct-body"><canvas id="uChartBar"></canvas></div>
+        </div>
+        <div class="chart-tile">
+          <div class="ct-title">HR Governance Score</div>
+          <div class="ct-body"><canvas id="uChartPolar"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Company Details -->
+      <div class="udash-section-title">📋 Business Profile</div>
+      <div class="m-grid" id="udashProfile"></div>
+
+      <!-- Employee & Salary -->
+      <div class="udash-section-title">👥 Employee & Salary Practices</div>
+      <div class="m-grid" id="udashEmployeeSalary"></div>
+
+      <!-- Benefits -->
+      <div class="udash-section-title">🏦 Benefits & Welfare</div>
+      <div class="m-grid" id="udashBenefits"></div>
+
+      <!-- POSH -->
+      <div class="udash-section-title">👩‍⚖️ POSH & HR Governance</div>
+      <div class="m-grid" id="udashPOSH"></div>
+
+      <!-- Legal -->
+      <div class="udash-section-title">⚖️ Legal Awareness</div>
+      <div class="m-grid" id="udashLegal"></div>
+
+      <!-- Gaps -->
+      <div id="udashGapsSection" style="display:none">
+        <div class="udash-section-title">⚠️ Compliance Gaps Identified</div>
+        <div class="m-gaps" id="udashGaps"></div>
+      </div>
+
+      <!-- Recommendations -->
+      <div id="udashRecsSection" style="display:none">
+        <div class="udash-section-title">✅ Recommended Actions</div>
+        <div class="m-recs" id="udashRecs"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="udash-actions">
+        <button class="btn btn-gold" id="udashPDFBtn">⬇ Download PDF Report</button>
+        <button class="btn btn-ghost" onclick="showView('form')">+ Submit New Audit</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN DASHBOARD VIEW ===== -->
+<div id="view-admin-dashboard" class="view">
   <div class="dash-layout">
 
-    <!-- SIDEBAR (User Specific List) -->
-    <aside class="sidebar" id="sidebar">
+    <!-- ADMIN SIDEBAR -->
+    <aside class="sidebar" id="adminSidebar">
       <div class="sidebar-head">
-        <div class="sidebar-title">My Reports</div>
-        <div class="sidebar-count" id="sidebarCount">0</div>
+        <div class="sidebar-title">All Submissions</div>
+        <div class="sidebar-count" id="adminSidebarCount">0</div>
       </div>
       <div class="sidebar-search">
-        <input type="text" id="sideSearch" placeholder="🔍 Search..." oninput="renderSidebar()">
+        <input type="text" id="adminSideSearch" placeholder="🔍 Search…" oninput="renderAdminSidebar()">
       </div>
-      <div class="sidebar-list" id="sidebarList">
-        <div class="sidebar-empty">No audits yet.<br>Submit your first audit.</div>
+      <div class="sidebar-list" id="adminSidebarList">
+        <div class="sidebar-empty">No audits yet.</div>
       </div>
     </aside>
 
-    <!-- MAIN DASH -->
+    <!-- ADMIN MAIN -->
     <main class="dash-main">
-      <!-- TOP BAR -->
       <div class="dash-topbar">
         <div>
-          <div class="dash-title">My Compliance Overview</div>
-          <div class="dash-sub">Detailed analytics for your company</div>
+          <div class="admin-title-badge">🛡 ADMIN PANEL</div>
+          <div class="dash-title">Full Monitoring Dashboard</div>
+          <div class="dash-sub">Complete oversight of all submissions across all businesses</div>
         </div>
         <div class="dash-actions">
-          <button class="btn btn-gold" onclick="showView('form')">+ New Audit</button>
+          <select class="ds-select" id="adminStateFilter" onchange="renderAdminDashboard()">
+            <option value="">All States</option>
+          </select>
+          <select class="ds-select" id="adminIndustryFilter" onchange="renderAdminDashboard()">
+            <option value="">All Industries</option>
+          </select>
+          <button class="btn btn-ghost" onclick="logoutAdmin()">🔓 Logout Admin</button>
         </div>
       </div>
 
-      <!-- STATS -->
-      <div class="stats-grid" id="statsGrid">
-        <div class="stat-tile"><div class="st-val" id="st0">0</div><div class="st-lbl">Total Audits</div></div>
-        <div class="stat-tile"><div class="st-val gold" id="st1">—</div><div class="st-lbl">Avg Score</div></div>
-        <div class="stat-tile"><div class="st-val green" id="st2">—</div><div class="st-lbl">PF Compliant</div></div>
-        <div class="stat-tile"><div class="st-val blue" id="st3">—</div><div class="st-lbl">ESI Compliant</div></div>
-        <div class="stat-tile"><div class="st-val red" id="st4">—</div><div class="st-lbl">POSH Active</div></div>
+      <!-- ADMIN STATS -->
+      <div class="stats-grid admin-stats-grid">
+        <div class="stat-tile"><div class="st-val" id="ast0">0</div><div class="st-lbl">Total Submissions</div></div>
+        <div class="stat-tile"><div class="st-val gold" id="ast1">—</div><div class="st-lbl">Avg Compliance Score</div></div>
+        <div class="stat-tile"><div class="st-val green" id="ast2">—</div><div class="st-lbl">PF Compliant</div></div>
+        <div class="stat-tile"><div class="st-val blue" id="ast3">—</div><div class="st-lbl">ESI Compliant</div></div>
+        <div class="stat-tile"><div class="st-val red" id="ast4">—</div><div class="st-lbl">POSH Active</div></div>
+        <div class="stat-tile"><div class="st-val gold" id="ast5">—</div><div class="st-lbl">High Compliance (70%+)</div></div>
+        <div class="stat-tile"><div class="st-val blue" id="ast6">—</div><div class="st-lbl">Medium (40–69%)</div></div>
+        <div class="stat-tile"><div class="st-val red" id="ast7">—</div><div class="st-lbl">Critical (&lt;40%)</div></div>
       </div>
 
-      <!-- CHARTS ROW 1 -->
+      <!-- ADMIN CHARTS ROW 1 -->
       <div class="charts-row">
         <div class="chart-tile">
-          <div class="ct-title">Statutory Compliance %</div>
-          <div class="ct-body"><canvas id="chartBar"></canvas></div>
+          <div class="ct-title">Overall Statutory Compliance % Across All Businesses</div>
+          <div class="ct-body"><canvas id="adminChartBar"></canvas></div>
         </div>
         <div class="chart-tile">
-          <div class="ct-title">Establishment Type</div>
-          <div class="ct-body"><canvas id="chartDough"></canvas></div>
+          <div class="ct-title">Establishment Type Distribution</div>
+          <div class="ct-body"><canvas id="adminChartDough"></canvas></div>
         </div>
       </div>
 
-      <!-- CHARTS ROW 2 -->
+      <!-- ADMIN CHARTS ROW 2 -->
       <div class="charts-row">
         <div class="chart-tile">
-          <div class="ct-title">Employee Size</div>
-          <div class="ct-body"><canvas id="chartEmp"></canvas></div>
+          <div class="ct-title">Company Size Breakdown</div>
+          <div class="ct-body"><canvas id="adminChartEmp"></canvas></div>
         </div>
         <div class="chart-tile">
-          <div class="ct-title">HR Coverage</div>
-          <div class="ct-body"><canvas id="chartPie"></canvas></div>
+          <div class="ct-title">HR Policy Coverage</div>
+          <div class="ct-body"><canvas id="adminChartPie"></canvas></div>
         </div>
       </div>
 
-      <!-- TABLE -->
+      <!-- ADMIN CHARTS ROW 3 -->
+      <div class="charts-row">
+        <div class="chart-tile">
+          <div class="ct-title">Compliance Score Distribution</div>
+          <div class="ct-body"><canvas id="adminChartScore"></canvas></div>
+        </div>
+        <div class="chart-tile">
+          <div class="ct-title">Industry-wise Submissions</div>
+          <div class="ct-body"><canvas id="adminChartIndustry"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ADMIN TABLE -->
       <div class="tbl-tile">
         <div class="tbl-head">
-          <div class="tbl-title">Submission Records</div>
-          <input class="ds-search" id="tblSearch" type="text" placeholder="🔍 Filter..." oninput="renderTable()">
+          <div class="tbl-title">All Submission Records</div>
+          <input class="ds-search" id="adminTblSearch" type="text" placeholder="🔍 Filter companies…" oninput="renderAdminTable()">
         </div>
         <div class="tbl-wrap">
           <table>
@@ -461,116 +602,18 @@
               <tr>
                 <th>#</th>
                 <th>Company</th>
+                <th>Contact</th>
                 <th>State</th>
+                <th>Industry</th>
                 <th>Employees</th>
                 <th>Type</th>
                 <th>Score</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="tblBody">
-              <tr><td colspan="7" class="empty-td">No submissions yet.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </main>
-  </div>
-</div>
-
-
-<!-- ===== ADMIN DASHBOARD VIEW ===== -->
-<div id="view-admin" class="view">
-  <div class="dash-layout">
-
-    <!-- ADMIN SIDEBAR -->
-    <aside class="sidebar sidebar-admin" id="sidebarAdmin">
-      <div class="sidebar-head">
-        <div class="sidebar-title">Global Monitor</div>
-        <div class="sidebar-count" id="totalAdminCount">0 Companies</div>
-      </div>
-      <div class="sidebar-search">
-        <input type="text" id="globalSearch" placeholder="🔍 Search All..." oninput="renderGlobalSidebar()">
-      </div>
-      <div class="sidebar-list" id="adminSidebarList">
-        <div class="sidebar-empty">No data available.</div>
-      </div>
-    </aside>
-
-    <!-- ADMIN MAIN -->
-    <main class="dash-main dash-main-admin">
-      <!-- TOP BAR -->
-      <div class="dash-topbar">
-        <div>
-          <div class="dash-title">National Compliance Monitor</div>
-          <div class="dash-sub">Live feed of all submitted audits</div>
-        </div>
-        <div class="dash-actions">
-           <div class="badge badge-red">Live Mode</div>
-           <button class="btn btn-ghost" onclick="showView('dashboard')">Back to My View</button>
-        </div>
-      </div>
-
-      <!-- ADMIN STATS GRID -->
-      <div class="stats-grid stats-grid-large" id="statsGrid">
-        <div class="stat-tile stat-alert"><div class="st-val red" id="adminCrit">0</div><div class="st-lbl">Critical Risk</div></div>
-        <div class="stat-tile stat-alert"><div class="st-val blue" id="adminMid">0</div><div class="st-lbl">Needs Review</div></div>
-        <div class="stat-tile"><div class="st-val" id="adminTotal">0</div><div class="st-lbl">Total Businesses</div></div>
-        <div class="stat-tile"><div class="st-val green" id="adminGood">0</div><div class="st-lbl">Fully Compliant</div></div>
-        <div class="stat-tile stat-alert"><div class="st-val gold" id="adminPending">0</div><div class="st-lbl">License Pending</div></div>
-      </div>
-
-      <!-- GLOBAL CHARTS -->
-      <div class="charts-row charts-global">
-        <div class="chart-tile chart-wide">
-          <div class="ct-title">National Compliance Trend</div>
-          <div class="ct-body"><canvas id="chartGlobalBar"></canvas></div>
-        </div>
-        <div class="chart-tile">
-          <div class="ct-title">Risk Distribution</div>
-          <div class="ct-body"><canvas id="chartGlobalDonut"></canvas></div>
-        </div>
-      </div>
-
-      <div class="charts-row charts-global">
-        <div class="chart-tile">
-          <div class="ct-title">Industry Breakdown</div>
-          <div class="ct-body"><canvas id="chartGlobalPie"></canvas></div>
-        </div>
-        <div class="chart-tile">
-          <div class="ct-title">License Status</div>
-          <div class="ct-body"><canvas id="chartGlobalPolar"></canvas></div>
-        </div>
-      </div>
-
-      <!-- GLOBAL DATA TABLE -->
-      <div class="tbl-tile tbl-admin">
-        <div class="tbl-head tbl-head-full">
-          <div class="tbl-title">Master Submission Log</div>
-          <div class="search-group">
-             <input class="ds-search" id="tblSearch" type="text" placeholder="🔍 Filter companies..." oninput="renderAdminTable()" style="width:250px;">
-             <button class="btn btn-blue" onclick="downloadAllReports()">⬇ Export All CSV</button>
-          </div>
-        </div>
-        <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Entity</th>
-                <th>Contact</th>
-                <th>State</th>
-                <th>Employees</th>
-                <th>Estab. Type</th>
-                <th>Score</th>
-                <th>Status</th>
-                <th>Verdict</th>
+                <th>Gaps</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="adminTblBody">
-               <tr><td colspan="10" class="empty-td">No submissions found in database.</td></tr>
+              <tr><td colspan="10" class="empty-td">No submissions found.</td></tr>
             </tbody>
           </table>
         </div>

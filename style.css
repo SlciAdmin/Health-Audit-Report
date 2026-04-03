@@ -822,11 +822,28 @@ input.error { border-color: var(--red) !important; box-shadow: 0 0 0 3px rgba(19
 .dash-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
 
 .ds-select {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 0.5rem 0.9rem;
-  color: var(--white); font-family: 'Syne', sans-serif; font-size: 0.8rem;
-  outline: none; cursor: pointer; -webkit-appearance: none;
+  background: var(--bg3); 
+  border: 1px solid var(--border);
+  border-radius: var(--r); 
+  padding: 0.5rem 0.9rem;
+  color: var(--text); /* Changed from var(--white) for light mode compatibility */
+  font-family: 'Syne', sans-serif; 
+  font-size: 0.8rem;
+  outline: none; 
+  cursor: pointer;
+  
+  /* ✅ Cross-Browser Compatibility Fix */
+  appearance: none;           /* Standard property for all browsers */
+  -webkit-appearance: none;   /* Required for Safari/older Chrome */
+  -moz-appearance: none;      /* Required for Firefox */
+  
+  /* Optional: Add custom dropdown arrow if needed */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237a8299' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;       /* Extra padding for custom arrow */
 }
+
 .ds-select:focus { border-color: var(--gold); }
 .ds-search {
   background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r);
@@ -1139,4 +1156,20 @@ tr:hover td { background: var(--bg3); }
   .opt { flex: 1 1 100%; }
   .udash-score-stats { grid-template-columns: 1fr 1fr; }
   .nav-logo .logo-text { font-size: 1.1rem; }
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-img {
+  height: 45px;
+  width: auto;
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 600;
 }

@@ -1,30 +1,79 @@
 // ============================================================
 // LABOURSHIELD — script.js
-// Complete Cross-Device Google Sheets Integration
+// Light/Dark Mode + Full Responsive + Google Sheets Integration
 // ============================================================
 
-// 🔗 REPLACE THIS with your deployed Google Apps Script Web App URL
 const API_URL = "https://script.google.com/macros/s/AKfycbwyKhpfBAWRxo1qWWFrPKqN2ThJoY9QG6XSuSZ-fot5vPHkNhMZSVGJ4I5RZqOjag/exec";
 
 // ===== STATE =====
-let submissions = [];          // All submissions (from Sheets + local cache merged)
-let localSubmissions = [];     // LocalStorage cache
-let isAdmin = false;
-let charts = {};               // Admin charts
-let uCharts = {};              // User charts
-let activeDetailId = null;
+let submissions        = [];
+let localSubmissions   = [];
+let isAdmin            = false;
+let charts             = {};
+let uCharts            = {};
+let activeDetailId     = null;
 let currentUserSubmission = null;
-let adminRenderPending = false;
 
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'labourshield@2024';
 const LS_KEY     = 'ls_submissions_v2';
 const LS_LAST    = 'ls_last_submission_id';
 const LS_ADMIN   = 'ls_admin_session';
+const LS_THEME   = 'ls_theme';
+
+// ===== THEME =====
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem(LS_THEME, theme);
+  // Destroy and re-render charts on theme change (colors change)
+  Object.keys(charts).forEach(k => { try { charts[k].destroy(); } catch(e){} });
+  Object.keys(uCharts).forEach(k => { try { uCharts[k].destroy(); } catch(e){} });
+  charts = {}; uCharts = {};
+  if (currentUserSubmission && document.getElementById('udashReport')?.style.display !== 'none') {
+    renderUserCharts(currentUserSubmission);
+  }
+  if (isAdmin && document.getElementById('view-admin-dashboard')?.classList.contains('active')) {
+    const stateF = document.getElementById('adminStateFilter')?.value || '';
+    const indF   = document.getElementById('adminIndustryFilter')?.value || '';
+    const filtered = submissions.filter(s => (!stateF || s.state === stateF) && (!indF || s.field === indF));
+    renderAdminCharts(filtered);
+  }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  applyTheme(current === 'light' ? 'dark' : 'light');
+}
+
+// ===== MOBILE MENU =====
+function toggleMobileMenu() {
+  const navCenter   = document.getElementById('navCenter');
+  const hamburger   = document.getElementById('hamburgerBtn');
+  const overlay     = document.getElementById('mobileNavOverlay');
+  const isOpen      = navCenter.classList.contains('mobile-open');
+  if (isOpen) {
+    navCenter.classList.remove('mobile-open');
+    hamburger.classList.remove('open');
+    overlay.classList.remove('open');
+  } else {
+    navCenter.classList.add('mobile-open');
+    hamburger.classList.add('open');
+    overlay.classList.add('open');
+  }
+}
+function closeMobileMenu() {
+  document.getElementById('navCenter')?.classList.remove('mobile-open');
+  document.getElementById('hamburgerBtn')?.classList.remove('open');
+  document.getElementById('mobileNavOverlay')?.classList.remove('open');
+}
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async () => {
-  // Load local cache first so UI is instant
+  // Apply saved theme (default: light)
+  const savedTheme = localStorage.getItem(LS_THEME) || 'light';
+  applyTheme(savedTheme);
+
+  // Load local cache
   try { localSubmissions = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { localSubmissions = []; }
   submissions = [...localSubmissions];
   updateNavBadge();
@@ -41,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUserSubmission = localSubmissions.find(s => String(s.id) === lastId) || null;
   }
 
-  // Event: Q20 toggle Q21
+  // Q20 toggle Q21
   document.body.addEventListener('change', e => {
     if (e.target.name === 'q20') {
       const box = document.getElementById('q21box');
@@ -55,49 +104,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Fetch from Sheets in background
+  // Fetch from Sheets
   await loadFromSheets(false);
 
-  // If URL has #dashboard
   if (window.location.hash === '#dashboard' && currentUserSubmission) {
     showView('user-dashboard');
   }
 });
 
-// Refresh when tab becomes active (for admin seeing live data)
+// Refresh when tab becomes visible (admin)
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && isAdmin) loadFromSheets(true);
 });
 
 // ===== UTILITIES =====
 function updateNavBadge() {
-  const el = document.getElementById('navBadge');
+  // Badge hidden on mobile, shown in admin only
   const n = submissions.length;
-  if (el) el.textContent = n + ' Audit' + (n !== 1 ? 's' : '');
+  // We no longer show a badge in nav for the user side
 }
 
 function showToast(msg, color = 'gold') {
   const existing = document.getElementById('ls-toast');
   if (existing) existing.remove();
-  const colors = { green:'#2ecc8a', red:'#e05555', gold:'#d4a843', blue:'#4e8cff' };
+  const colors = { green: '#1a8a5a', red: '#c0392b', gold: '#b8860b', blue: '#2563eb' };
+  const darkColors = { green: '#2ecc8a', red: '#e05555', gold: '#d4a843', blue: '#4e8cff' };
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const col = isDark ? (darkColors[color] || darkColors.gold) : (colors[color] || colors.gold);
   const t = document.createElement('div');
   t.id = 'ls-toast';
   t.textContent = msg;
-  t.style.cssText = `position:fixed;bottom:2rem;right:2rem;z-index:9999;background:${colors[color]||colors.gold};color:#08090d;padding:0.75rem 1.5rem;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;box-shadow:0 8px 30px rgba(0,0,0,0.4);animation:toastIn 0.3s ease;`;
+  t.style.cssText = `position:fixed;bottom:2rem;right:1rem;z-index:9999;background:${col};color:#fff;padding:0.75rem 1.25rem;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;box-shadow:0 8px 30px rgba(0,0,0,0.25);animation:toastIn 0.3s ease;max-width:calc(100vw - 2rem);word-break:break-word;`;
   const style = document.createElement('style');
   style.textContent = '@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
   document.head.appendChild(style);
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(),300); }, 3000);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(),300); }, 3500);
 }
 
 function getRadio(name) {
   const el = document.querySelector(`input[name="${name}"]:checked`);
   return el ? el.value : '';
 }
-
 function getCbx(name) {
   return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(e => e.value);
+}
+
+// Chart tick colour based on theme
+function getTickColor() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? '#7a8299' : '#6b7280';
+}
+function getGridColor() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
 }
 
 // ===== VIEW SWITCHING =====
@@ -106,21 +164,17 @@ function showView(name) {
   const target = document.getElementById('view-' + name);
   if (target) target.classList.add('active');
 
-  // Nav pills
   document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
   const pillMap = { 'form':'navForm', 'user-dashboard':'navUserDash', 'admin-dashboard':'navAdminDash' };
   const pill = document.getElementById(pillMap[name]);
   if (pill) pill.classList.add('active');
 
-  if (name === 'user-dashboard') {
-    renderUserDashboard();
-  }
+  if (name === 'user-dashboard') renderUserDashboard();
   if (name === 'admin-dashboard') {
     if (!isAdmin) { showView('form'); showToast('Admin access required.','red'); return; }
     renderAdminDashboard();
-    loadFromSheets(true); // Fetch fresh data
+    loadFromSheets(true);
   }
-
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -133,7 +187,7 @@ function toggleAdminLogin() {
     document.getElementById('adminLoginError').style.display = 'none';
     document.getElementById('adminUser').value = '';
     document.getElementById('adminPass').value = '';
-    setTimeout(() => document.getElementById('adminUser').focus(), 100);
+    setTimeout(() => document.getElementById('adminUser')?.focus(), 150);
   }
 }
 
@@ -156,8 +210,8 @@ function doAdminLogin() {
 function showAdminUI() {
   const pill = document.getElementById('navAdminDash');
   if (pill) { pill.style.display = 'flex'; pill.classList.add('admin-pill'); }
-  const btn = document.getElementById('adminToggleBtn');
-  if (btn) { btn.textContent = '🔓 Logout Admin'; btn.classList.add('active-admin'); }
+  const btn  = document.getElementById('adminToggleBtn');
+  if (btn)  { btn.textContent = '🔓 Logout'; btn.classList.add('active-admin'); }
 }
 
 function logoutAdmin() {
@@ -187,7 +241,6 @@ function goPage2() {
     else if (el) el.classList.remove('error');
   });
   if (!ok) { showToast('Please fill all required fields.','red'); return; }
-
   document.getElementById('pg1').style.display = 'none';
   document.getElementById('pg2').style.display = 'block';
   const sd1 = document.getElementById('sd1');
@@ -277,69 +330,43 @@ function getRecs(gaps) {
 }
 
 // ===== GOOGLE SHEETS API =====
-
-// POST — Save submission to Google Sheets
 async function sendToSheets(data) {
   try {
-    // We use no-cors because Apps Script deployed as web app requires it from browser
     await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
+      method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
     return { success: true };
-  } catch (err) {
+  } catch(err) {
     console.error('sendToSheets error:', err);
     return { success: false, error: err.message };
   }
 }
 
-// GET — Load all submissions from Google Sheets
 async function loadFromSheets(showLoader = false) {
   const loader = document.getElementById('adminLoadingBar');
   if (showLoader && loader) loader.style.display = 'block';
-
   try {
-    const res = await fetch(API_URL + '?t=' + Date.now(), {
-      method: 'GET',
-      mode: 'cors'
-    });
-
+    const res = await fetch(API_URL + '?t=' + Date.now(), { method: 'GET', mode: 'cors' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const raw = await res.json();
-
     if (!Array.isArray(raw)) throw new Error('Invalid data format');
-
-    // Normalise array fields
-    const normalised = raw.map(item => normaliseItem(item));
-
-    // Merge: cloud data + any local-only items not yet synced
-    const cloudIds = new Set(normalised.map(s => String(s.id)));
-    const localOnly = localSubmissions.filter(s => !cloudIds.has(String(s.id)));
-    submissions = [...normalised, ...localOnly];
-
-    // Sort newest first
-    submissions.sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
-
-    // Update local cache
+    const normalised = raw.map(normaliseItem);
+    const cloudIds   = new Set(normalised.map(s => String(s.id)));
+    const localOnly  = localSubmissions.filter(s => !cloudIds.has(String(s.id)));
+    submissions      = [...normalised, ...localOnly];
+    submissions.sort((a,b) => new Date(b.submittedAt||0) - new Date(a.submittedAt||0));
     localSubmissions = submissions;
     localStorage.setItem(LS_KEY, JSON.stringify(localSubmissions));
-
-    updateNavBadge();
-
-    // Refresh admin if open
     if (isAdmin && document.getElementById('view-admin-dashboard')?.classList.contains('active')) {
       renderAdminDashboard();
     }
-
     return { success: true };
-  } catch (err) {
+  } catch(err) {
     console.error('loadFromSheets error:', err);
-    // Fallback to local
     submissions = [...localSubmissions];
-    submissions.sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
-    updateNavBadge();
+    submissions.sort((a,b) => new Date(b.submittedAt||0) - new Date(a.submittedAt||0));
     if (showLoader) showToast('Using cached data (offline mode)', 'blue');
     return { success: false };
   } finally {
@@ -349,25 +376,12 @@ async function loadFromSheets(showLoader = false) {
 
 function normaliseItem(item) {
   const out = { ...item };
-  // q21: comma-separated string → array
-  if (typeof out.q21 === 'string') {
-    out.q21 = out.q21 ? out.q21.split(',').map(s => s.trim()).filter(Boolean) : [];
-  } else if (!Array.isArray(out.q21)) {
-    out.q21 = [];
-  }
-  // gaps: pipe-separated → array
-  if (typeof out.gaps === 'string') {
-    out.gaps = out.gaps ? out.gaps.split('|').map(s => s.trim()).filter(Boolean) : [];
-  } else if (!Array.isArray(out.gaps)) {
-    out.gaps = [];
-  }
-  // recs: pipe-separated → array
-  if (typeof out.recs === 'string') {
-    out.recs = out.recs ? out.recs.split('|').map(s => s.trim()).filter(Boolean) : [];
-  } else if (!Array.isArray(out.recs)) {
-    out.recs = [];
-  }
-  // score: ensure number
+  if (typeof out.q21 === 'string') out.q21 = out.q21 ? out.q21.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  else if (!Array.isArray(out.q21)) out.q21 = [];
+  if (typeof out.gaps === 'string') out.gaps = out.gaps ? out.gaps.split('|').map(s=>s.trim()).filter(Boolean) : [];
+  else if (!Array.isArray(out.gaps)) out.gaps = [];
+  if (typeof out.recs === 'string') out.recs = out.recs ? out.recs.split('|').map(s=>s.trim()).filter(Boolean) : [];
+  else if (!Array.isArray(out.recs)) out.recs = [];
   if (typeof out.score === 'string') out.score = parseInt(out.score) || 0;
   return out;
 }
@@ -381,7 +395,6 @@ async function submitAudit() {
   }
   if (missingQ) {
     showToast(`Please answer question ${missingQ.replace('q','')}`, 'red');
-    // Scroll to first unanswered
     const el = document.querySelector(`input[name="${missingQ}"]`);
     if (el) el.closest('.qblock')?.scrollIntoView({ behavior:'smooth', block:'center' });
     return;
@@ -390,15 +403,14 @@ async function submitAudit() {
   const d = {
     id: Date.now(),
     submittedAt: new Date().toISOString(),
-    name: document.getElementById('name')?.value.trim() || '',
-    contact: document.getElementById('contact')?.value.trim() || '',
-    state: document.getElementById('state')?.value || '',
-    location: document.getElementById('location')?.value.trim() || '',
-    employees: document.getElementById('employees')?.value || '',
+    name:        document.getElementById('name')?.value.trim() || '',
+    contact:     document.getElementById('contact')?.value.trim() || '',
+    state:       document.getElementById('state')?.value || '',
+    location:    document.getElementById('location')?.value.trim() || '',
+    employees:   document.getElementById('employees')?.value || '',
     companyName: document.getElementById('companyName')?.value.trim() || '',
-    field: document.getElementById('field')?.value || '',
-    q1: getRadio('q1'), q2: getRadio('q2'),
-    q3: getRadio('q3'), q4: getRadio('q4'),
+    field:       document.getElementById('field')?.value || '',
+    q1: getRadio('q1'), q2: getRadio('q2'), q3: getRadio('q3'), q4: getRadio('q4'),
     q5: document.getElementById('q5')?.value || '',
     q6: getRadio('q6'), q7: getRadio('q7'), q8: getRadio('q8'),
     q9: getRadio('q9'), q10: getRadio('q10'),
@@ -417,26 +429,17 @@ async function submitAudit() {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '⏳ Saving...'; }
 
   try {
-    // 1. Save to localStorage immediately (device-local)
     localSubmissions.unshift(d);
     localStorage.setItem(LS_KEY, JSON.stringify(localSubmissions));
     localStorage.setItem(LS_LAST, String(d.id));
-
-    // 2. Update in-memory
     submissions.unshift(d);
     currentUserSubmission = d;
-    updateNavBadge();
 
-    // 3. Send to Google Sheets (async, non-blocking)
     sendToSheets(d).then(result => {
-      if (result.success) {
-        showToast('✅ Synced to cloud successfully!', 'green');
-      } else {
-        showToast('⚠️ Saved locally. Will sync when online.', 'gold');
-      }
+      if (result.success) showToast('✅ Synced to cloud successfully!', 'green');
+      else showToast('⚠️ Saved locally. Will sync when online.', 'gold');
     });
 
-    // Show success UI immediately (don't wait for cloud)
     document.getElementById('pg2').style.display = 'none';
     const sc  = d.score;
     const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
@@ -449,8 +452,7 @@ async function submitAudit() {
         <div style="font-size:0.8rem;color:var(--text2);">${d.gaps.length} gap${d.gaps.length!==1?'s':''} identified</div>`;
     }
     document.getElementById('pgSuccess').style.display = 'block';
-
-  } catch (err) {
+  } catch(err) {
     console.error('submitAudit error:', err);
     showToast('Error saving. Please try again.', 'red');
   } finally {
@@ -478,12 +480,10 @@ function resetForm() {
 
 // ===== USER DASHBOARD =====
 function renderUserDashboard() {
-  // Re-find current submission in case of update
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId && !currentUserSubmission) {
     currentUserSubmission = localSubmissions.find(s => String(s.id) === lastId) || null;
   }
-
   const empty  = document.getElementById('udashEmpty');
   const report = document.getElementById('udashReport');
 
@@ -509,23 +509,20 @@ function renderUserDashboard() {
   if (numEl) { numEl.textContent = sc + '%'; numEl.className = 'udash-score-num ' + cls; }
   set('udashVerdict', verdict);
   const barEl = document.getElementById('udashScoreBar');
-  if (barEl) { barEl.style.width = '0'; setTimeout(() => barEl.style.width = sc + '%', 100); }
+  if (barEl) { barEl.style.width = '0'; setTimeout(() => barEl.style.width = sc + '%', 200); }
   set('udashScoreMeta', `${(s.gaps||[]).length} compliance gap${(s.gaps||[]).length!==1?'s':''} identified out of 17 checks`);
 
-  // Stat tiles
   const yn = (v, id) => {
     const e = document.getElementById(id); if (!e) return;
     if (v === 'Yes')  { e.textContent='Yes ✅'; e.className='ust-val yes'; }
     else if (v === 'No') { e.textContent='No ❌'; e.className='ust-val no'; }
     else { e.textContent=v||'—'; e.className='ust-val partial'; }
   };
-  yn(s.q9,  'ustPF'); yn(s.q10, 'ustESI'); yn(s.q15, 'ustPOSH');
-  yn(s.q11, 'ustLeave'); yn(s.q17, 'ustHR'); yn(s.q13, 'ustBonus');
+  yn(s.q9,'ustPF'); yn(s.q10,'ustESI'); yn(s.q15,'ustPOSH');
+  yn(s.q11,'ustLeave'); yn(s.q17,'ustHR'); yn(s.q13,'ustBonus');
 
-  // Charts
   renderUserCharts(s);
 
-  // Grids
   function makeGrid(containerId, rows) {
     const el = document.getElementById(containerId);
     if (!el) return;
@@ -584,23 +581,28 @@ function renderUserDashboard() {
 }
 
 function ynHtml(v) {
-  if (v === 'Yes')         return '<div class="m-item-val yes">✅ Yes</div>';
-  if (v === 'No')          return '<div class="m-item-val no">❌ No</div>';
-  if (v === 'Partial')     return '<div class="m-item-val partial">⚖ Partial</div>';
-  if (v === 'In Progress') return '<div class="m-item-val partial">🔄 In Progress</div>';
-  if (v === 'Occasionally')return '<div class="m-item-val partial">🔁 Sometimes</div>';
-  if (v === 'Not Yet')     return '<div class="m-item-val no">🗑 Not Yet</div>';
+  if (v === 'Yes')          return '<div class="m-item-val yes">✅ Yes</div>';
+  if (v === 'No')           return '<div class="m-item-val no">❌ No</div>';
+  if (v === 'Partial')      return '<div class="m-item-val partial">⚖ Partial</div>';
+  if (v === 'In Progress')  return '<div class="m-item-val partial">🔄 In Progress</div>';
+  if (v === 'Occasionally') return '<div class="m-item-val partial">🔁 Sometimes</div>';
+  if (v === 'Not Yet')      return '<div class="m-item-val no">🗑 Not Yet</div>';
   if (v === 'Not Applicable') return '<div class="m-item-val partial">— N/A</div>';
   return `<div class="m-item-val">${v||'—'}</div>`;
 }
 
 // ===== USER CHARTS =====
 function renderUserCharts(s) {
-  const tick = '#7a8299', ff = 'Syne';
+  const tick = getTickColor(), grid = getGridColor(), ff = 'Syne';
   Object.keys(uCharts).forEach(k => { try { uCharts[k].destroy(); } catch(e){} });
   uCharts = {};
 
-  // Radar
+  const gold   = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim() || '#d4a843';
+  const green  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#2ecc8a';
+  const red    = getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#e05555';
+  const blue   = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() || '#4e8cff';
+  const purple = getComputedStyle(document.documentElement).getPropertyValue('--purple').trim() || '#a78bfa';
+
   const rc = document.getElementById('uChartRadar');
   if (rc) {
     uCharts['r'] = new Chart(rc, {
@@ -619,18 +621,17 @@ function renderUserCharts(s) {
             (s.q17==='Yes'?50:s.q17==='Partial'?25:0)+(s.q18==='Yes'?50:s.q18==='Occasionally'?25:0),
             s.q20==='Yes'?100:0
           ],
-          backgroundColor:'rgba(212,168,67,0.15)',borderColor:'#d4a843',
-          pointBackgroundColor:'#d4a843',borderWidth:2,pointRadius:4,
+          backgroundColor: gold + '26', borderColor: gold,
+          pointBackgroundColor: gold, borderWidth:2, pointRadius:4,
         }]
       },
       options:{responsive:true,maintainAspectRatio:false,
         scales:{r:{min:0,max:100,ticks:{color:tick,font:{family:ff,size:9},stepSize:25,backdropColor:'transparent'},
-          grid:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:tick,font:{family:ff,size:10}}}},
+          grid:{color:grid},pointLabels:{color:tick,font:{family:ff,size:10}}}},
         plugins:{legend:{display:false}}}
     });
   }
 
-  // Doughnut
   const dc = document.getElementById('uChartDough');
   if (dc) {
     const active = [s.q9==='Yes',s.q10==='Yes',s.q15==='Yes',s.q13==='Yes'].filter(Boolean).length;
@@ -638,18 +639,15 @@ function renderUserCharts(s) {
       type: 'doughnut',
       data: {
         labels: ['PF Active','ESI Active','POSH Active','Bonus Active','Not Compliant'],
-        datasets: [{
-          data: [s.q9==='Yes'?1:0,s.q10==='Yes'?1:0,s.q15==='Yes'?1:0,s.q13==='Yes'?1:0,Math.max(0,4-active)],
-          backgroundColor:['#2ecc8a','#4e8cff','#d4a843','#a78bfa','rgba(224,85,85,0.4)'],
-          borderWidth:0,hoverOffset:10
-        }]
+        datasets: [{ data: [s.q9==='Yes'?1:0,s.q10==='Yes'?1:0,s.q15==='Yes'?1:0,s.q13==='Yes'?1:0,Math.max(0,4-active)],
+          backgroundColor:[green,blue,gold,purple,red+'66'],
+          borderWidth:0,hoverOffset:10 }]
       },
       options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
         plugins:{legend:{position:'bottom',labels:{color:tick,font:{family:ff,size:10},padding:8}}}}
     });
   }
 
-  // Bar
   const bc = document.getElementById('uChartBar');
   if (bc) {
     const vals = [
@@ -667,17 +665,16 @@ function renderUserCharts(s) {
       data: {
         labels:['Emp Records','Appt Letters','Salary Struct.','Timely Pay','Leave Policy','Grievance','HR Policies','Policy Review'],
         datasets:[{label:'% Score',data:vals,
-          backgroundColor:vals.map(v=>v>=80?'#2ecc8a':v>=50?'#d4a843':'#e05555'),
+          backgroundColor:vals.map(v=>v>=80?green:v>=50?gold:red),
           borderRadius:6,borderSkipped:false}]
       },
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false}},
-        scales:{x:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:'rgba(255,255,255,0.05)'}},
-          y:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:'rgba(255,255,255,0.05)'},beginAtZero:true,max:100}}}
+        scales:{x:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid}},
+          y:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid},beginAtZero:true,max:100}}}
     });
   }
 
-  // Polar
   const pc = document.getElementById('uChartPolar');
   if (pc) {
     uCharts['p'] = new Chart(pc, {
@@ -689,13 +686,13 @@ function renderUserCharts(s) {
             s.q17==='Yes'?100:s.q17==='Partial'?60:0,
             s.q18==='Yes'?100:s.q18==='Occasionally'?50:0,
             s.q14==='Yes'?100:s.q14==='Informal System'?50:0],
-          backgroundColor:['rgba(212,168,67,0.5)','rgba(78,140,255,0.5)','rgba(46,204,138,0.5)','rgba(167,139,250,0.5)','rgba(46,204,138,0.35)'],
+          backgroundColor:[gold+'80',blue+'80',green+'80',purple+'80',green+'59'],
           borderWidth:0,
         }]
       },
       options:{responsive:true,maintainAspectRatio:false,
         scales:{r:{ticks:{color:tick,font:{family:ff,size:9},backdropColor:'transparent'},
-          grid:{color:'rgba(255,255,255,0.06)'},min:0,max:100}},
+          grid:{color:grid},min:0,max:100}},
         plugins:{legend:{position:'bottom',labels:{color:tick,font:{family:ff,size:9},padding:8}}}}
     });
   }
@@ -707,10 +704,7 @@ function renderAdminDashboard() {
   populateAdminFilters();
   const stateF = document.getElementById('adminStateFilter')?.value || '';
   const indF   = document.getElementById('adminIndustryFilter')?.value || '';
-  const filtered = submissions
-    .filter(s => !stateF || s.state === stateF)
-    .filter(s => !indF   || s.field === indF);
-
+  const filtered = submissions.filter(s => (!stateF || s.state === stateF) && (!indF || s.field === indF));
   updateAdminStats(filtered);
   renderAdminSidebar();
   renderAdminCharts(filtered);
@@ -719,15 +713,14 @@ function renderAdminDashboard() {
 
 function populateAdminFilters() {
   const fillSelect = (id, values, currentVal) => {
-    const el = document.getElementById(id);
-    if (!el) return;
+    const el = document.getElementById(id); if (!el) return;
     const opts = values.sort().map(v => `<option value="${v}" ${v===currentVal?'selected':''}>${v}</option>`).join('');
     el.innerHTML = `<option value="">All</option>` + opts;
   };
   const stateF = document.getElementById('adminStateFilter')?.value || '';
   const indF   = document.getElementById('adminIndustryFilter')?.value || '';
   fillSelect('adminStateFilter',    [...new Set(submissions.map(s=>s.state).filter(Boolean))], stateF);
-  fillSelect('adminIndustryFilter', [...new Set(submissions.map(s=>s.field).filter(Boolean))],  indF);
+  fillSelect('adminIndustryFilter', [...new Set(submissions.map(s=>s.field).filter(Boolean))], indF);
 }
 
 function updateAdminStats(data) {
@@ -749,15 +742,12 @@ function renderAdminSidebar() {
   const countEl = document.getElementById('adminSidebarCount');
   if (countEl) countEl.textContent = submissions.length;
   if (!list) return;
-
   const filtered = submissions.filter(s =>
     (s.companyName||'').toLowerCase().includes(q) ||
     (s.name||'').toLowerCase().includes(q) ||
     (s.state||'').toLowerCase().includes(q)
   );
-
   if (!filtered.length) { list.innerHTML='<div class="sidebar-empty">No results found.</div>'; return; }
-
   list.innerHTML = filtered.map(s => {
     const sc=s.score||0, cls=sc>=70?'good':sc>=40?'mid':'low';
     return `<div class="sidebar-card ${activeDetailId===s.id?'active':''}" onclick="showDetail(${s.id})">
@@ -768,21 +758,25 @@ function renderAdminSidebar() {
 }
 
 function renderAdminCharts(data) {
-  const grid='rgba(255,255,255,0.05)', tick='#7a8299', ff='Syne';
+  const tick = getTickColor(), grid = getGridColor(), ff = 'Syne';
   Object.keys(charts).forEach(k => { try { charts[k].destroy(); } catch(e){} });
   charts = {};
-
   if (!data.length) return;
+
+  const gold   = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim();
+  const green  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim();
+  const red    = getComputedStyle(document.documentElement).getPropertyValue('--red').trim();
+  const blue   = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim();
+  const purple = getComputedStyle(document.documentElement).getPropertyValue('--purple').trim();
 
   const pct = (fn) => Math.round(fn(data)/data.length*100);
 
-  // 1. Bar — statutory compliance %
   const bc = document.getElementById('adminChartBar');
   if (bc) {
     charts['bar'] = new Chart(bc, {
       type:'bar',
       data:{
-        labels:['Licensing','Records','Salary Struct.','Timely Pay','PF','ESI','Leave','POSH','HR Policy','Bonus'],
+        labels:['Licensing','Records','Salary','Timely Pay','PF','ESI','Leave','POSH','HR Policy','Bonus'],
         datasets:[{label:'% Compliant',
           data:[
             pct(d=>d.filter(s=>s.q2!=='Not Yet Taken'&&s.q2!=='').length),
@@ -796,7 +790,7 @@ function renderAdminCharts(data) {
             pct(d=>d.filter(s=>s.q17==='Yes'||s.q17==='Partial').length),
             pct(d=>d.filter(s=>s.q13==='Yes').length),
           ],
-          backgroundColor:['#d4a843','#2ecc8a','#4e8cff','#a78bfa','#2ecc8a','#d4a843','#4e8cff','#e05555','#2ecc8a','#d4a843'],
+          backgroundColor:[gold,green,blue,purple,green,gold,blue,red,green,gold],
           borderRadius:6,borderSkipped:false}]
       },
       options:{responsive:true,maintainAspectRatio:false,
@@ -806,7 +800,6 @@ function renderAdminCharts(data) {
     });
   }
 
-  // 2. Doughnut — establishment type
   const dc = document.getElementById('adminChartDough');
   if (dc) {
     const cnt={}; data.forEach(s=>{if(s.q1) cnt[s.q1]=(cnt[s.q1]||0)+1;});
@@ -814,30 +807,28 @@ function renderAdminCharts(data) {
     const vals=Object.keys(cnt).length?Object.values(cnt):[1];
     charts['dough'] = new Chart(dc, {
       type:'doughnut',
-      data:{labels:lbls,datasets:[{data:vals,backgroundColor:['#d4a843','#2ecc8a','#4e8cff','#a78bfa','#e05555'],borderWidth:0,hoverOffset:10}]},
+      data:{labels:lbls,datasets:[{data:vals,backgroundColor:[gold,green,blue,purple,red],borderWidth:0,hoverOffset:10}]},
       options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
         plugins:{legend:{position:'bottom',labels:{color:tick,font:{family:ff,size:11},padding:10}}}}
     });
   }
 
-  // 3. Bar — employee size
   const ec = document.getElementById('adminChartEmp');
   if (ec) {
     const sizes=['1–10','11–20','21–50','51–100','101–150','151–200','201–300','301–400','401–500','500+'];
     const cnt={}; sizes.forEach(s=>cnt[s]=0); data.forEach(s=>{if(s.employees) cnt[s.employees]=(cnt[s.employees]||0)+1;});
     charts['emp'] = new Chart(ec, {
       type:'bar',
-      data:{labels:sizes,datasets:[{label:'Companies',data:sizes.map(s=>cnt[s]),backgroundColor:'#4e8cff',borderRadius:6,borderSkipped:false}]},
+      data:{labels:sizes,datasets:[{label:'Companies',data:sizes.map(s=>cnt[s]),backgroundColor:blue,borderRadius:6,borderSkipped:false}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{x:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid}},
           y:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid},beginAtZero:true}}}
     });
   }
 
-  // 4. Pie — HR coverage
-  const pc = document.getElementById('adminChartPie');
-  if (pc) {
-    charts['pie'] = new Chart(pc, {
+  const pieC = document.getElementById('adminChartPie');
+  if (pieC) {
+    charts['pie'] = new Chart(pieC, {
       type:'pie',
       data:{
         labels:['HR Policies','POSH Aware','Emp. Records','ICC Active'],
@@ -846,14 +837,13 @@ function renderAdminCharts(data) {
           pct(d=>d.filter(s=>s.q15==='Yes').length),
           pct(d=>d.filter(s=>s.q3==='Yes').length),
           pct(d=>d.filter(s=>s.q16==='Yes').length),
-        ],backgroundColor:['#2ecc8a','#4e8cff','#d4a843','#a78bfa'],borderWidth:0,hoverOffset:8}]
+        ],backgroundColor:[green,blue,gold,purple],borderWidth:0,hoverOffset:8}]
       },
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{position:'bottom',labels:{color:tick,font:{family:ff,size:11},padding:10}}}}
     });
   }
 
-  // 5. Bar — score distribution
   const sc = document.getElementById('adminChartScore');
   if (sc) {
     const ranges={'0–20%':0,'21–40%':0,'41–60%':0,'61–80%':0,'81–100%':0};
@@ -868,14 +858,13 @@ function renderAdminCharts(data) {
     charts['score'] = new Chart(sc, {
       type:'bar',
       data:{labels:Object.keys(ranges),datasets:[{label:'Companies',data:Object.values(ranges),
-        backgroundColor:['#e05555','#e05555','#d4a843','#2ecc8a','#2ecc8a'],borderRadius:6,borderSkipped:false}]},
+        backgroundColor:[red,red,gold,green,green],borderRadius:6,borderSkipped:false}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{x:{ticks:{color:tick,font:{family:ff,size:10}},grid:{color:grid}},
           y:{ticks:{color:tick,font:{family:ff,size:10}},grid:{color:grid},beginAtZero:true}}}
     });
   }
 
-  // 6. Horizontal Bar — industry
   const ic = document.getElementById('adminChartIndustry');
   if (ic) {
     const cnt={}; data.forEach(s=>{if(s.field) cnt[s.field]=(cnt[s.field]||0)+1;});
@@ -883,7 +872,7 @@ function renderAdminCharts(data) {
     const vals=Object.keys(cnt).length?Object.values(cnt):[0];
     charts['ind'] = new Chart(ic, {
       type:'bar',
-      data:{labels:lbls,datasets:[{label:'Submissions',data:vals,backgroundColor:'#a78bfa',borderRadius:6,borderSkipped:false}]},
+      data:{labels:lbls,datasets:[{label:'Submissions',data:vals,backgroundColor:purple,borderRadius:6,borderSkipped:false}]},
       options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{x:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid},beginAtZero:true},
           y:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid}}}}
@@ -894,11 +883,9 @@ function renderAdminCharts(data) {
 function renderAdminTable() {
   const tbody = document.getElementById('adminTblBody');
   if (!tbody) return;
-
   const stateF = document.getElementById('adminStateFilter')?.value || '';
   const indF   = document.getElementById('adminIndustryFilter')?.value || '';
   const q      = (document.getElementById('adminTblSearch')?.value || '').toLowerCase();
-
   const filtered = submissions
     .filter(s => !stateF || s.state === stateF)
     .filter(s => !indF   || s.field === indF)
@@ -908,7 +895,6 @@ function renderAdminTable() {
     tbody.innerHTML = '<tr><td colspan="10" class="empty-td">No submissions found.</td></tr>';
     return;
   }
-
   tbody.innerHTML = filtered.map((s, i) => {
     const sc=s.score||0, cls=sc>=70?'good':sc>=40?'mid':'low';
     const gl=(s.gaps||[]).length, gc=gl>5?'low':gl>2?'mid':'good';
@@ -922,16 +908,16 @@ function renderAdminTable() {
         <div style="font-size:0.82rem">${s.name||'—'}</div>
         <div style="font-size:0.7rem;color:var(--text2)">${s.contact||'—'}</div>
       </td>
-      <td>${s.state||'—'}</td>
-      <td style="font-size:0.78rem">${s.field||'—'}</td>
+      <td style="white-space:nowrap">${s.state||'—'}</td>
+      <td style="font-size:0.78rem;white-space:nowrap">${s.field||'—'}</td>
       <td><span class="badge info">${s.employees||'—'}</span></td>
-      <td style="font-size:0.8rem">${s.q1||'—'}</td>
+      <td style="font-size:0.8rem;white-space:nowrap">${s.q1||'—'}</td>
       <td><span class="badge ${cls}">${sc}%</span></td>
       <td><span class="badge ${gc}">${gl} gaps</span></td>
       <td>
-        <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
-          <button class="btn btn-ghost" style="padding:0.35rem 0.75rem;font-size:0.75rem" onclick="showDetail(${s.id})">👁 View</button>
-          <button class="btn btn-red"   style="padding:0.35rem 0.75rem;font-size:0.75rem" onclick="deleteSubmission(${s.id})">🗑</button>
+        <div style="display:flex;gap:0.4rem;flex-wrap:nowrap">
+          <button class="btn btn-ghost btn-sm" onclick="showDetail(${s.id})">👁 View</button>
+          <button class="btn btn-red btn-sm" onclick="deleteSubmission(${s.id})">🗑</button>
         </div>
       </td>
     </tr>`;
@@ -941,8 +927,8 @@ function renderAdminTable() {
 // ===== DELETE =====
 function deleteSubmission(id) {
   if (!isAdmin) { showToast('Admin access required.','red'); return; }
-  if (!confirm('Delete this submission?\n\nNote: This removes it from your local view. To permanently delete from Google Sheets, remove the row there directly.')) return;
-  submissions    = submissions.filter(s => s.id !== id);
+  if (!confirm('Delete this submission?\n\nNote: This removes it from local view. To permanently delete from Google Sheets, remove the row there directly.')) return;
+  submissions      = submissions.filter(s => s.id !== id);
   localSubmissions = localSubmissions.filter(s => s.id !== id);
   localStorage.setItem(LS_KEY, JSON.stringify(localSubmissions));
   renderAdminDashboard();
@@ -966,9 +952,9 @@ function showDetail(id) {
   const recs  = Array.isArray(s.recs) && s.recs.length ? s.recs  : getRecs(gaps);
 
   const yn = v => {
-    if (v==='Yes')    return '<span class="m-item-val yes">✅ Yes</span>';
-    if (v==='No')     return '<span class="m-item-val no">❌ No</span>';
-    if (v==='Partial')return '<span class="m-item-val partial">⚖ Partial</span>';
+    if (v==='Yes')     return '<span class="m-item-val yes">✅ Yes</span>';
+    if (v==='No')      return '<span class="m-item-val no">❌ No</span>';
+    if (v==='Partial') return '<span class="m-item-val partial">⚖ Partial</span>';
     if (v==='In Progress') return '<span class="m-item-val partial">🔄 In Progress</span>';
     return `<span class="m-item-val">${v||'—'}</span>`;
   };
@@ -986,13 +972,13 @@ function showDetail(id) {
     </div>
     <div class="m-section">📋 Business Profile</div>
     <div class="m-grid">
-      ${mi('Contact Person',s.name)} ${mi('Phone',s.contact)} ${mi('Location',(s.location||'')+(s.state?', '+s.state:''))}
+      ${mi('Contact',s.name)} ${mi('Phone',s.contact)} ${mi('Location',(s.location||'')+(s.state?', '+s.state:''))}
       ${mi('Est. Type',s.q1)} ${mi('License',s.q2)} ${mi('Starting Salary',s.q5?'₹'+s.q5:'—')}
     </div>
     <div class="m-section">👥 Employee & Salary</div>
     <div class="m-grid">
       <div class="m-item"><div class="m-item-label">Employee Records</div>${yn(s.q3)}</div>
-      <div class="m-item"><div class="m-item-label">Appointment Letters</div>${yn(s.q4)}</div>
+      <div class="m-item"><div class="m-item-label">Appt Letters</div>${yn(s.q4)}</div>
       <div class="m-item"><div class="m-item-label">Structured Salary</div>${yn(s.q6)}</div>
       <div class="m-item"><div class="m-item-label">Timely Payment</div>${yn(s.q7)}</div>
       <div class="m-item"><div class="m-item-label">Statutory Benefits</div>${yn(s.q8)}</div>
@@ -1007,7 +993,7 @@ function showDetail(id) {
       <div class="m-item"><div class="m-item-label">Grievance System</div>${yn(s.q14)}</div>
       <div class="m-item"><div class="m-item-label">Policy Reviews</div>${yn(s.q18)}</div>
     </div>
-    <div class="m-section">👩‍⚖️ POSH & HR Governance</div>
+    <div class="m-section">👩‍⚖️ POSH & HR</div>
     <div class="m-grid">
       <div class="m-item"><div class="m-item-label">POSH Sessions</div>${yn(s.q15)}</div>
       <div class="m-item"><div class="m-item-label">ICC Constituted</div>${yn(s.q16)}</div>
@@ -1015,7 +1001,9 @@ function showDetail(id) {
     </div>
     <div class="m-section">⚖️ Legal Awareness</div>
     <div style="margin-bottom:1rem">
-      <div class="m-item" style="margin-bottom:0.5rem"><div class="m-item-label">Labour Law Awareness</div>${yn(s.q20)}</div>
+      <div class="m-grid" style="margin-bottom:0.5rem">
+        <div class="m-item"><div class="m-item-label">Labour Law Awareness</div>${yn(s.q20)}</div>
+      </div>
       ${s.q21?.length ? `<div class="m-laws">${s.q21.map(l=>`<div class="m-law-item">✦ ${l}</div>`).join('')}</div>` : ''}
     </div>
     ${gaps.length ? `
@@ -1025,6 +1013,7 @@ function showDetail(id) {
       <div class="m-section">✅ Recommended Actions</div>
       <div class="m-recs">${recs.map(r=>`<div class="m-rec-item"><span class="m-rec-icon">→</span><span>${r}</span></div>`).join('')}</div>` : ''}
     <div class="m-actions">
+      <button class="btn btn-gold" onclick="downloadPDF(${s.id})">⬇ Download PDF</button>
       <button class="btn btn-ghost" onclick="closeModal(true)">Close</button>
     </div>`;
 
@@ -1041,12 +1030,11 @@ function closeModal(force) {
   if (force === true || (force && force.target === m)) { m.classList.remove('open'); activeDetailId = null; }
 }
 
-// ===== PDF DOWNLOAD (pure JS, no external lib needed) =====
+// ===== PDF DOWNLOAD =====
 async function downloadPDF(id) {
   const s = id ? submissions.find(x => x.id == id) : currentUserSubmission;
   if (!s) { showToast('Submission not found','red'); return; }
 
-  // Load jsPDF if not loaded
   if (!window.jspdf?.jsPDF) {
     showToast('Loading PDF generator…','blue');
     await new Promise((res,rej) => {
@@ -1062,8 +1050,8 @@ async function downloadPDF(id) {
   const pw=210, ml=18, mr=18;
   let y=0;
 
-  const BG=[8,9,13],BG2=[14,16,24],GOLD=[212,168,67],GREEN=[46,204,138],
-        RED=[224,85,85],BLUE=[78,140,255],WHITE=[238,240,245],MUTED=[122,130,153];
+  const BG=[248,249,250],BG2=[255,255,255],GOLD=[184,134,11],GREEN=[26,138,90],
+        RED=[192,57,43],BLUE=[37,99,235],DARK=[17,24,39],MUTED=[107,114,128];
   const sc = s.score||0;
   const scoreCol = sc>=70?GREEN:sc>=40?BLUE:RED;
   const verdict  = sc>=70?'GOOD STANDING':sc>=40?'NEEDS IMPROVEMENT':'CRITICAL ATTENTION';
@@ -1074,21 +1062,20 @@ async function downloadPDF(id) {
     y=18;
   };
 
-  // Page 1 header
   doc.setFillColor(...BG);  doc.rect(0,0,210,297,'F');
-  doc.setFillColor(...BG2); doc.rect(0,0,210,56,'F');
-  doc.setFillColor(...GOLD);doc.rect(0,0,210,2,'F');
+  doc.setFillColor(...DARK); doc.rect(0,0,210,56,'F');
+  doc.setFillColor(...GOLD); doc.rect(0,0,210,2,'F');
 
   doc.setTextColor(...GOLD); doc.setFontSize(7); doc.setFont('helvetica','bold');
   doc.text('LABOURSHIELD  ·  COMPLIANCE AUDIT REPORT',105,14,{align:'center'});
-  doc.setTextColor(...WHITE); doc.setFontSize(18);
+  doc.setTextColor(255,255,255); doc.setFontSize(18);
   doc.text((s.companyName||'UNKNOWN').toUpperCase(),105,27,{align:'center'});
   doc.setTextColor(...MUTED); doc.setFontSize(8); doc.setFont('helvetica','normal');
   doc.text(`${s.field||'—'}  ·  ${s.state||'—'}  ·  ${s.employees||'—'} employees  ·  ${fmtDate(s.submittedAt)}`,105,36,{align:'center'});
 
   doc.setFillColor(...scoreCol);
   doc.roundedRect(ml,44,pw-ml-mr,12,2,2,'F');
-  doc.setTextColor(...BG); doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
   doc.text(`COMPLIANCE SCORE:  ${sc}%   —   ${verdict}`,105,51.5,{align:'center'});
   y=65;
 
@@ -1104,7 +1091,7 @@ async function downloadPDF(id) {
     if (y>270) addPage();
     doc.setTextColor(...MUTED); doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.text(label,ml+2,y);
-    doc.setTextColor(...(col||WHITE)); doc.setFont('helvetica','bold');
+    doc.setTextColor(...(col||DARK)); doc.setFont('helvetica','bold');
     doc.text(String(val||'—'),ml+90,y); y+=6.5;
   };
 
@@ -1112,7 +1099,7 @@ async function downloadPDF(id) {
     if (v==='Yes')    return {t:'Yes',c:GREEN};
     if (v==='No')     return {t:'No',c:RED};
     if (v==='Partial'||v==='In Progress'||v==='Occasionally') return {t:v,c:GOLD};
-    return {t:v||'—',c:WHITE};
+    return {t:v||'—',c:DARK};
   };
 
   sec('Business Profile');
@@ -1130,7 +1117,7 @@ async function downloadPDF(id) {
   r=yn2(s.q8); row('Statutory Benefits (PF/ESI)?',r.t,r.c); y+=2;
 
   sec('Employee Benefits & Welfare');
-  r=yn2(s.q9); row('Retirement / PF Savings?',r.t,r.c);
+  r=yn2(s.q9);  row('Retirement / PF Savings?',r.t,r.c);
   r=yn2(s.q10); row('Medical / ESI Coverage?',r.t,r.c);
   r=yn2(s.q11); row('Leave Policy in Place?',r.t,r.c);
   row('Annual Leaves Count',s.q12||'—');
@@ -1168,7 +1155,6 @@ async function downloadPDF(id) {
     }); y+=2;
   }
 
-  // Footer on every page
   const total = doc.getNumberOfPages();
   for (let i=1;i<=total;i++) {
     doc.setPage(i);

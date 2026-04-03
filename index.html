@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,8 +11,6 @@
 </head>
 <body>
 
-<div class="noise"></div>
-
 <!-- ===== NAVIGATION ===== -->
 <nav id="mainNav">
   <div class="nav-left">
@@ -21,22 +19,34 @@
       <span class="logo-text">Labour<strong>Shield</strong></span>
     </div>
   </div>
+
+  <button class="nav-hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+
   <div class="nav-center" id="navCenter">
-    <button class="nav-pill active" id="navForm" onclick="showView('form')">
+    <button class="nav-pill active" id="navForm" onclick="showView('form');closeMobileMenu()">
       <span class="pill-icon">✦</span> New Audit
     </button>
-    <button class="nav-pill" id="navUserDash" onclick="showView('user-dashboard')">
+    <button class="nav-pill" id="navUserDash" onclick="showView('user-dashboard');closeMobileMenu()">
       <span class="pill-icon">◈</span> My Report
     </button>
-    <button class="nav-pill admin-only" id="navAdminDash" onclick="showView('admin-dashboard')" style="display:none">
+    <button class="nav-pill admin-only" id="navAdminDash" onclick="showView('admin-dashboard');closeMobileMenu()" style="display:none">
       <span class="pill-icon">🛡</span> Admin Panel
     </button>
   </div>
+
   <div class="nav-right">
-    <div class="nav-badge" id="navBadge">0 Audits</div>
+    <button class="btn-theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle Light/Dark Mode">
+      <span class="theme-icon-sun">☀️</span>
+      <span class="theme-icon-moon">🌙</span>
+    </button>
     <button class="btn-admin-toggle" id="adminToggleBtn" onclick="toggleAdminLogin()">Admin Login</button>
   </div>
 </nav>
+
+<!-- Mobile nav overlay -->
+<div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="closeMobileMenu()"></div>
 
 <!-- ===== ADMIN LOGIN MODAL ===== -->
 <div id="adminLoginModal" class="modal-bg" onclick="closeAdminModal(event)">
@@ -57,8 +67,8 @@
         <input type="password" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()">
       </div>
       <div id="adminLoginError" class="admin-error" style="display:none">❌ Invalid credentials</div>
-      <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
-        <button class="btn btn-gold" style="flex:1" onclick="doAdminLogin()">Login as Admin</button>
+      <div style="display:flex;gap:0.75rem;margin-top:1.5rem;flex-wrap:wrap">
+        <button class="btn btn-gold" style="flex:1;min-width:120px" onclick="doAdminLogin()">Login as Admin</button>
         <button class="btn btn-ghost" onclick="closeAdminModal(true)">Cancel</button>
       </div>
     </div>
@@ -76,9 +86,8 @@
   </div>
 
   <div class="form-shell">
-
     <div class="step-track">
-      <div class="step-item" id="si1">
+      <div class="step-item">
         <div class="step-dot active" id="sd1"><span>1</span></div>
         <div class="step-info">
           <div class="step-name">Profile</div>
@@ -86,7 +95,7 @@
         </div>
       </div>
       <div class="step-rail" id="sr1"></div>
-      <div class="step-item" id="si2">
+      <div class="step-item">
         <div class="step-dot" id="sd2"><span>2</span></div>
         <div class="step-info">
           <div class="step-name">Audit</div>
@@ -173,7 +182,7 @@
       <div class="sec-label"><span class="sec-num">S1</span> Business Setup</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q1 &nbsp;—&nbsp; What type of establishment best describes your business?</div>
+          <div class="qlabel">Q1 — What type of establishment best describes your business?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q1" value="Factory"><span>🏭 Factory</span></label>
             <label class="opt"><input type="radio" name="q1" value="Office"><span>🏢 Office</span></label>
@@ -182,7 +191,7 @@
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q2 &nbsp;—&nbsp; Which license or registration has your business obtained?</div>
+          <div class="qlabel">Q2 — Which license or registration has your business obtained?</div>
           <div class="opt-row wrap">
             <label class="opt"><input type="radio" name="q2" value="Factory License"><span>Factory License</span></label>
             <label class="opt"><input type="radio" name="q2" value="Shops & Establishment License"><span>Shops & Estab.</span></label>
@@ -196,7 +205,7 @@
       <div class="sec-label"><span class="sec-num">S2</span> Employee Management</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q3 &nbsp;—&nbsp; Do you maintain basic employee records (ID proof, joining details)?</div>
+          <div class="qlabel">Q3 — Do you maintain basic employee records (ID proof, joining details)?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q3" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q3" value="No"><span>❌ No</span></label>
@@ -204,7 +213,7 @@
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q4 &nbsp;—&nbsp; Do you issue appointment letters / joining confirmation?</div>
+          <div class="qlabel">Q4 — Do you issue appointment letters / joining confirmation?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q4" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q4" value="No"><span>❌ No</span></label>
@@ -215,11 +224,11 @@
       <div class="sec-label"><span class="sec-num">S3</span> Salary Practices</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q5 &nbsp;—&nbsp; Typical starting salary for helpers / support staff (₹)</div>
+          <div class="qlabel">Q5 — Typical starting salary for helpers / support staff (₹)</div>
           <input type="number" id="q5" placeholder="e.g. 12000" class="solo-input">
         </div>
         <div class="qblock">
-          <div class="qlabel">Q6 &nbsp;—&nbsp; Do you follow a structured salary format (Basic + Allowances)?</div>
+          <div class="qlabel">Q6 — Do you follow a structured salary format (Basic + Allowances)?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q6" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q6" value="No"><span>❌ No</span></label>
@@ -227,14 +236,14 @@
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q7 &nbsp;—&nbsp; Are salaries paid on time (on or before 7th of month)?</div>
+          <div class="qlabel">Q7 — Are salaries paid on time (on or before 7th of month)?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q7" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q7" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q8 &nbsp;—&nbsp; Do you provide statutory benefits (PF, ESI, etc.)?</div>
+          <div class="qlabel">Q8 — Do you provide statutory benefits (PF, ESI, etc.)?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q8" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q8" value="No"><span>❌ No</span></label>
@@ -246,7 +255,7 @@
       <div class="sec-label"><span class="sec-num">S4</span> Employee Benefits</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q9 &nbsp;—&nbsp; Retirement / Savings benefits such as PF?</div>
+          <div class="qlabel">Q9 — Retirement / Savings benefits such as PF?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q9" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q9" value="Not Yet"><span>🗑 Not Yet</span></label>
@@ -254,7 +263,7 @@
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q10 &nbsp;—&nbsp; Medical / Insurance benefits such as ESI?</div>
+          <div class="qlabel">Q10 — Medical / Insurance benefits such as ESI?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q10" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q10" value="Not Yet"><span>🗑 Not Yet</span></label>
@@ -266,14 +275,14 @@
       <div class="sec-label"><span class="sec-num">S5</span> Leave & Working Conditions</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q11 &nbsp;—&nbsp; Do employees get leaves or time-off?</div>
+          <div class="qlabel">Q11 — Do employees get leaves or time-off?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q11" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q11" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q12 &nbsp;—&nbsp; How many leaves annually?</div>
+          <div class="qlabel">Q12 — How many leaves annually?</div>
           <input type="text" id="q12" placeholder="e.g. 18 Casual + 12 Privilege" class="solo-input">
         </div>
       </div>
@@ -281,7 +290,7 @@
       <div class="sec-label"><span class="sec-num">S6</span> Bonus & Payments</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q13 &nbsp;—&nbsp; Do you provide statutory / festive bonus (e.g. Diwali)?</div>
+          <div class="qlabel">Q13 — Do you provide statutory / festive bonus (e.g. Diwali)?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q13" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q13" value="No"><span>❌ No</span></label>
@@ -292,7 +301,7 @@
       <div class="sec-label"><span class="sec-num">S7</span> Workplace Practices</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q14 &nbsp;—&nbsp; Is there a formal system for employees to raise complaints?</div>
+          <div class="qlabel">Q14 — Is there a formal system for employees to raise complaints?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q14" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q14" value="Informal System"><span>🗣 Informal</span></label>
@@ -304,14 +313,14 @@
       <div class="sec-label"><span class="sec-num">S8</span> POSH — Prevention of Sexual Harassment</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q15 &nbsp;—&nbsp; Do you conduct POSH awareness sessions?</div>
+          <div class="qlabel">Q15 — Do you conduct POSH awareness sessions?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q15" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q15" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q16 &nbsp;—&nbsp; Is there a designated Internal Committee (ICC)?</div>
+          <div class="qlabel">Q16 — Is there a designated Internal Committee (ICC)?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q16" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q16" value="No"><span>❌ No</span></label>
@@ -322,7 +331,7 @@
       <div class="sec-label"><span class="sec-num">S9</span> HR & Policies</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q17 &nbsp;—&nbsp; Do you maintain written HR policies / guidelines?</div>
+          <div class="qlabel">Q17 — Do you maintain written HR policies / guidelines?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q17" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q17" value="No"><span>❌ No</span></label>
@@ -330,7 +339,7 @@
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q18 &nbsp;—&nbsp; Do you review / update practices regularly?</div>
+          <div class="qlabel">Q18 — Do you review / update practices regularly?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q18" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q18" value="Occasionally"><span>🔁 Sometimes</span></label>
@@ -342,7 +351,7 @@
       <div class="sec-label"><span class="sec-num">S10</span> Engagement</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q19 &nbsp;—&nbsp; Would you like a detailed improvement report?</div>
+          <div class="qlabel">Q19 — Would you like a detailed improvement report?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q19" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q19" value="No"><span>❌ No</span></label>
@@ -353,14 +362,14 @@
       <div class="sec-label"><span class="sec-num">S11</span> Legal Awareness</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q20 &nbsp;—&nbsp; Are you aware your business must file returns under labour laws?</div>
+          <div class="qlabel">Q20 — Are you aware your business must file returns under labour laws?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="q20" value="Yes" id="q20y"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="q20" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div id="q21box" style="display:none" class="qblock q21-box">
-          <div class="qlabel q21-label">Q21 &nbsp;—&nbsp; Under which labour laws are you currently filing returns?</div>
+          <div class="qlabel q21-label">Q21 — Under which labour laws are you currently filing returns?</div>
           <div class="cbx-list">
             <label class="cbx-item"><input type="checkbox" name="q21" value="Labour Code on Wages"><span>Labour Code on Wages</span></label>
             <label class="cbx-item"><input type="checkbox" name="q21" value="Labour Code on Social Security"><span>Labour Code on Social Security</span></label>
@@ -519,8 +528,8 @@
           <select class="ds-select" id="adminIndustryFilter" onchange="renderAdminDashboard()">
             <option value="">All Industries</option>
           </select>
-          <button class="btn btn-ghost" style="font-size:0.78rem;padding:0.5rem 1rem" onclick="loadFromSheets()">🔄 Refresh</button>
-          <button class="btn btn-ghost" onclick="logoutAdmin()">🔓 Logout</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadFromSheets()">🔄 Refresh</button>
+          <button class="btn btn-ghost btn-sm" onclick="logoutAdmin()">🔓 Logout</button>
         </div>
       </div>
 
@@ -611,7 +620,8 @@
   </div>
 </div>
 
-<button class="fab-sidebar" onclick="toggleSidebar()" id="fabBtn">☰</button>
+<!-- FAB for sidebar on mobile -->
+<button class="fab-sidebar" onclick="toggleSidebar()" id="fabBtn" aria-label="Toggle sidebar">☰</button>
 
 <script src="script.js"></script>
 </body>

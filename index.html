@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -55,7 +54,7 @@
       </div>
       <div class="fg" style="margin-top:1rem">
         <label>Password</label>
-        <input type="password" id="adminPass" placeholder="••••••••">
+        <input type="password" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()">
       </div>
       <div id="adminLoginError" class="admin-error" style="display:none">❌ Invalid credentials</div>
       <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
@@ -373,7 +372,7 @@
 
       <div class="btn-row">
         <button class="btn btn-ghost" onclick="goPage1()">← Back to Profile</button>
-        <button class="btn btn-gold" onclick="submitAudit()">Submit Audit ✦</button>
+        <button class="btn btn-gold" id="submitBtn" onclick="submitAudit()">Submit Audit ✦</button>
       </div>
     </div>
 
@@ -407,7 +406,6 @@
   </div>
 
   <div class="udash-shell" id="udashShell">
-    <!-- Empty state shown if no submission -->
     <div id="udashEmpty" class="udash-empty">
       <div class="udash-empty-icon">📋</div>
       <div class="udash-empty-title">No Audit Submitted Yet</div>
@@ -415,10 +413,7 @@
       <button class="btn btn-gold" onclick="showView('form')" style="margin-top:1.5rem">Start Audit Now ✦</button>
     </div>
 
-    <!-- Report shown after submission -->
     <div id="udashReport" style="display:none">
-
-      <!-- Score Card -->
       <div class="udash-score-row">
         <div class="udash-score-main">
           <div class="udash-score-label">Overall Compliance Score</div>
@@ -430,16 +425,15 @@
           <div class="udash-score-meta" id="udashScoreMeta">—</div>
         </div>
         <div class="udash-score-stats">
-          <div class="udash-stat-item" id="ust0"><div class="ust-val" id="ustPF">—</div><div class="ust-lbl">PF / Savings</div></div>
-          <div class="udash-stat-item" id="ust1"><div class="ust-val" id="ustESI">—</div><div class="ust-lbl">ESI / Medical</div></div>
-          <div class="udash-stat-item" id="ust2"><div class="ust-val" id="ustPOSH">—</div><div class="ust-lbl">POSH</div></div>
-          <div class="udash-stat-item" id="ust3"><div class="ust-val" id="ustLeave">—</div><div class="ust-lbl">Leave Policy</div></div>
-          <div class="udash-stat-item" id="ust4"><div class="ust-val" id="ustHR">—</div><div class="ust-lbl">HR Policy</div></div>
-          <div class="udash-stat-item" id="ust5"><div class="ust-val" id="ustBonus">—</div><div class="ust-lbl">Bonus</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustPF">—</div><div class="ust-lbl">PF / Savings</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustESI">—</div><div class="ust-lbl">ESI / Medical</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustPOSH">—</div><div class="ust-lbl">POSH</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustLeave">—</div><div class="ust-lbl">Leave Policy</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustHR">—</div><div class="ust-lbl">HR Policy</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustBonus">—</div><div class="ust-lbl">Bonus</div></div>
         </div>
       </div>
 
-      <!-- User Charts Row 1 -->
       <div class="udash-charts-row">
         <div class="chart-tile">
           <div class="ct-title">Compliance Area Breakdown</div>
@@ -451,7 +445,6 @@
         </div>
       </div>
 
-      <!-- User Charts Row 2 -->
       <div class="udash-charts-row">
         <div class="chart-tile">
           <div class="ct-title">Key Compliance Metrics</div>
@@ -463,44 +456,35 @@
         </div>
       </div>
 
-      <!-- Company Details -->
       <div class="udash-section-title">📋 Business Profile</div>
       <div class="m-grid" id="udashProfile"></div>
 
-      <!-- Employee & Salary -->
       <div class="udash-section-title">👥 Employee & Salary Practices</div>
       <div class="m-grid" id="udashEmployeeSalary"></div>
 
-      <!-- Benefits -->
       <div class="udash-section-title">🏦 Benefits & Welfare</div>
       <div class="m-grid" id="udashBenefits"></div>
 
-      <!-- POSH -->
       <div class="udash-section-title">👩‍⚖️ POSH & HR Governance</div>
       <div class="m-grid" id="udashPOSH"></div>
 
-      <!-- Legal -->
       <div class="udash-section-title">⚖️ Legal Awareness</div>
       <div class="m-grid" id="udashLegal"></div>
 
-      <!-- Gaps -->
       <div id="udashGapsSection" style="display:none">
         <div class="udash-section-title">⚠️ Compliance Gaps Identified</div>
         <div class="m-gaps" id="udashGaps"></div>
       </div>
 
-      <!-- Recommendations -->
       <div id="udashRecsSection" style="display:none">
         <div class="udash-section-title">✅ Recommended Actions</div>
         <div class="m-recs" id="udashRecs"></div>
       </div>
 
-      <!-- Actions -->
       <div class="udash-actions">
         <button class="btn btn-gold" id="udashPDFBtn">⬇ Download PDF Report</button>
         <button class="btn btn-ghost" onclick="showView('form')">+ Submit New Audit</button>
       </div>
-
     </div>
   </div>
 </div>
@@ -508,8 +492,6 @@
 <!-- ===== ADMIN DASHBOARD VIEW ===== -->
 <div id="view-admin-dashboard" class="view">
   <div class="dash-layout">
-
-    <!-- ADMIN SIDEBAR -->
     <aside class="sidebar" id="adminSidebar">
       <div class="sidebar-head">
         <div class="sidebar-title">All Submissions</div>
@@ -523,7 +505,6 @@
       </div>
     </aside>
 
-    <!-- ADMIN MAIN -->
     <main class="dash-main">
       <div class="dash-topbar">
         <div>
@@ -538,23 +519,26 @@
           <select class="ds-select" id="adminIndustryFilter" onchange="renderAdminDashboard()">
             <option value="">All Industries</option>
           </select>
-          <button class="btn btn-ghost" onclick="logoutAdmin()">🔓 Logout Admin</button>
+          <button class="btn btn-ghost" style="font-size:0.78rem;padding:0.5rem 1rem" onclick="loadFromSheets()">🔄 Refresh</button>
+          <button class="btn btn-ghost" onclick="logoutAdmin()">🔓 Logout</button>
         </div>
       </div>
 
-      <!-- ADMIN STATS -->
+      <div id="adminLoadingBar" class="loading-bar" style="display:none">
+        <div class="loading-bar-fill"></div>
+      </div>
+
       <div class="stats-grid admin-stats-grid">
         <div class="stat-tile"><div class="st-val" id="ast0">0</div><div class="st-lbl">Total Submissions</div></div>
         <div class="stat-tile"><div class="st-val gold" id="ast1">—</div><div class="st-lbl">Avg Compliance Score</div></div>
         <div class="stat-tile"><div class="st-val green" id="ast2">—</div><div class="st-lbl">PF Compliant</div></div>
         <div class="stat-tile"><div class="st-val blue" id="ast3">—</div><div class="st-lbl">ESI Compliant</div></div>
         <div class="stat-tile"><div class="st-val red" id="ast4">—</div><div class="st-lbl">POSH Active</div></div>
-        <div class="stat-tile"><div class="st-val gold" id="ast5">—</div><div class="st-lbl">High Compliance (70%+)</div></div>
+        <div class="stat-tile"><div class="st-val gold" id="ast5">—</div><div class="st-lbl">High (70%+)</div></div>
         <div class="stat-tile"><div class="st-val blue" id="ast6">—</div><div class="st-lbl">Medium (40–69%)</div></div>
         <div class="stat-tile"><div class="st-val red" id="ast7">—</div><div class="st-lbl">Critical (&lt;40%)</div></div>
       </div>
 
-      <!-- ADMIN CHARTS ROW 1 -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Overall Statutory Compliance % Across All Businesses</div>
@@ -566,7 +550,6 @@
         </div>
       </div>
 
-      <!-- ADMIN CHARTS ROW 2 -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Company Size Breakdown</div>
@@ -578,7 +561,6 @@
         </div>
       </div>
 
-      <!-- ADMIN CHARTS ROW 3 -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Compliance Score Distribution</div>
@@ -590,7 +572,6 @@
         </div>
       </div>
 
-      <!-- ADMIN TABLE -->
       <div class="tbl-tile">
         <div class="tbl-head">
           <div class="tbl-title">All Submission Records</div>
@@ -618,7 +599,6 @@
           </table>
         </div>
       </div>
-
     </main>
   </div>
 </div>
@@ -631,7 +611,6 @@
   </div>
 </div>
 
-<!-- MOBILE SIDEBAR TOGGLE -->
 <button class="fab-sidebar" onclick="toggleSidebar()" id="fabBtn">☰</button>
 
 <script src="script.js"></script>

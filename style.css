@@ -1158,3 +1158,28 @@ tr:hover td { background: var(--bg3); }
   .nav-logo .logo-text { font-size: 1.1rem; }
 }
 
+/* LOGO + TEXT ALIGNMENT */
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* logo aur text ke beech space */
+}
+
+/* SMALL CLEAN LOGO */
+.logo-img {
+  height: 28px;   /* chota logo (perfect navbar size) */
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* TEXT SAME DESIGN */
+.logo-text {
+  font-size: 1.3rem;
+  font-family: 'Cormorant Garamond', serif;
+  color: var(--white);
+}
+
+.logo-text strong {
+  color: var(--gold);
+}

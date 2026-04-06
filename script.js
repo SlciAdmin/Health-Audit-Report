@@ -1,8 +1,9 @@
 // ============================================================
 // LABOURSHIELD — script.js  (Sections A–H, Complete)
+// Professional Charts Edition — Fully Responsive & Animated
 // ============================================================
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwyKhpfBAWRxo1qWWFrPKqN2ThJoY9QG6XSuSZ-fot5vPHkNhMZSVGJ4I5RZqOjag/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwtnHj0xCiup7v6yXlcTIvpVYYHrvDufpnZln5dT3lJVL_o_be6MvKMdNY_BRjKsc9tuQ/exec";
 
 // ===== STATE =====
 let submissions        = [];
@@ -20,13 +21,50 @@ const LS_LAST    = 'ls_last_submission_id_v3';
 const LS_ADMIN   = 'ls_admin_session';
 const LS_THEME   = 'ls_theme';
 
+// ============================================================
+// CHART COLOR PALETTES — Professional, Theme-Aware
+// ============================================================
+function getPalette() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return {
+    dark,
+    gold:   dark ? '#F5C842' : '#C49A0A',
+    green:  dark ? '#34D988' : '#1A8A5A',
+    red:    dark ? '#F06464' : '#C0392B',
+    blue:   dark ? '#5B9EFF' : '#2563EB',
+    purple: dark ? '#B89EFF' : '#7C3AED',
+    teal:   dark ? '#3ECFB2' : '#0D9488',
+    orange: dark ? '#FFB347' : '#D97706',
+    pink:   dark ? '#F472B6' : '#BE185D',
+    indigo: dark ? '#818CF8' : '#4338CA',
+    // Tick / grid
+    tick:   dark ? '#7A8299' : '#9CA3AF',
+    grid:   dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
+    bg:     dark ? '#0E1018' : '#FFFFFF',
+    text:   dark ? '#C8CDD8' : '#374151',
+    // Alpha fills
+    goldA:  dark ? 'rgba(245,200,66,0.18)' : 'rgba(196,154,10,0.14)',
+    greenA: dark ? 'rgba(52,217,136,0.18)' : 'rgba(26,138,90,0.14)',
+    blueA:  dark ? 'rgba(91,158,255,0.18)' : 'rgba(37,99,235,0.14)',
+    redA:   dark ? 'rgba(240,100,100,0.18)' : 'rgba(192,57,43,0.14)',
+  };
+}
+
+function chartFont() { return { family: "'Syne', 'Inter', sans-serif", size: 11, weight: '600' }; }
+function chartFontSm() { return { family: "'Syne', 'Inter', sans-serif", size: 10, weight: '500' }; }
+
+// Destroy all user/admin charts
+function destroyCharts(map) {
+  Object.values(map).forEach(c => { try { c.destroy(); } catch(e){} });
+  return {};
+}
+
 // ===== THEME =====
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem(LS_THEME, theme);
-  Object.keys(charts).forEach(k => { try { charts[k].destroy(); } catch(e){} });
-  Object.keys(uCharts).forEach(k => { try { uCharts[k].destroy(); } catch(e){} });
-  charts = {}; uCharts = {};
+  uCharts = destroyCharts(uCharts);
+  charts  = destroyCharts(charts);
   if (currentUserSubmission && document.getElementById('udashReport')?.style.display !== 'none') {
     renderUserCharts(currentUserSubmission);
   }
@@ -98,17 +136,21 @@ document.addEventListener('visibilitychange', () => {
 function showToast(msg, color = 'gold') {
   const existing = document.getElementById('ls-toast');
   if (existing) existing.remove();
-  const colors = { green: '#1a8a5a', red: '#c0392b', gold: '#b8860b', blue: '#2563eb' };
-  const darkColors = { green: '#2ecc8a', red: '#e05555', gold: '#d4a843', blue: '#4e8cff' };
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const col = isDark ? (darkColors[color] || darkColors.gold) : (colors[color] || colors.gold);
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const cols = {
+    green: dark?'#1a6641':'#166534', red: dark?'#922020':'#7F1D1D',
+    gold:  dark?'#92610a':'#78350F', blue: dark?'#1e4faa':'#1e3a8a'
+  };
   const t = document.createElement('div');
   t.id = 'ls-toast';
   t.textContent = msg;
-  t.style.cssText = `position:fixed;bottom:2rem;right:1rem;z-index:9999;background:${col};color:#fff;padding:0.75rem 1.25rem;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;box-shadow:0 8px 30px rgba(0,0,0,0.25);animation:toastIn 0.3s ease;max-width:calc(100vw - 2rem);word-break:break-word;`;
-  const style = document.createElement('style');
-  style.textContent = '@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
-  document.head.appendChild(style);
+  t.style.cssText = `position:fixed;bottom:2rem;right:1rem;z-index:9999;background:${cols[color]||cols.gold};color:#fff;padding:0.75rem 1.25rem;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;box-shadow:0 8px 30px rgba(0,0,0,0.3);animation:toastIn 0.3s ease;max-width:calc(100vw - 2rem);word-break:break-word;`;
+  if (!document.getElementById('_toast_style')) {
+    const s = document.createElement('style');
+    s.id = '_toast_style';
+    s.textContent = '@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
+    document.head.appendChild(s);
+  }
   document.body.appendChild(t);
   setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(),300); }, 3500);
 }
@@ -116,13 +158,6 @@ function showToast(msg, color = 'gold') {
 function getRadio(name) {
   const el = document.querySelector(`input[name="${name}"]:checked`);
   return el ? el.value : '';
-}
-
-function getTickColor() {
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? '#7a8299' : '#6b7280';
-}
-function getGridColor() {
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
 }
 
 // ===== VIEW SWITCHING =====
@@ -228,42 +263,33 @@ function goPage1() {
 }
 
 // ===== SCORE & ANALYSIS =====
-// 26 scoring checks mapped to all sections A–H
 function calcScore(d) {
   const checks = [
-    // Section A (2)
     d.sa1 !== '',
     d.sa2 === 'Yes',
-    // Section B (3)
     d.sb1 === 'Yes',
     d.sb2 === 'Yes',
     d.sb4 === 'Yes',
-    // Section C (5)
     d.sc2 === 'Yes',
     d.sc3 === 'Yes',
     d.sc4 === 'Yes',
     d.sc5 === 'Yes',
-    // Section D (3)
     d.sd1 === 'Yes',
     d.sd2 === 'Yes',
-    d.sd3 === 'No', // NOT paying PF above 50k/75k = correct
-    // Section E (2)
+    d.sd3 === 'No',
     d.se1 === 'Yes',
     d.se3 === 'Yes',
-    // Section F (3)
     d.sf1 === 'Yes',
     d.sf2 === 'Yes' || d.sf2 === 'Partial',
     d.sf3 === 'Yes',
-    // Section G (4)
     d.sg1 === 'Yes' || d.sg1 === 'Partial',
     d.sg2 === 'Yes' || d.sg2 === 'Partial',
     d.sg3 === 'Yes',
     d.sg4 === 'Yes',
-    // Section H (5 — awareness flags)
-    d.sh1 === 'No',  // never faced labour inspector issue = compliant
-    d.sh2 === 'No',  // no pending notices = compliant
-    d.sh3 === 'No',  // no notice period issues = compliant
-    d.sh4 === 'Yes' && d.sh5 === 'No', // issues assets but no damage = compliant
+    d.sh1 === 'No',
+    d.sh2 === 'No',
+    d.sh3 === 'No',
+    d.sh4 === 'Yes' && d.sh5 === 'No',
     d.sb5 === 'Yes',
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
@@ -271,48 +297,31 @@ function calcScore(d) {
 
 function getGaps(d) {
   const gaps = [];
-
-  // Section A
   if (d.sa2 !== 'Yes') gaps.push('License is not in the name of the owner himself — this may create legal complications');
-
-  // Section B
   if (d.sb1 !== 'Yes') gaps.push('Diwali / festive bonus not being paid to all employees');
   if (d.sb2 !== 'Yes') gaps.push('Unaware that statutory bonus is only for employees with wages up to ₹21,000');
   if (d.sb4 !== 'Yes') gaps.push('No structured salary format (Basic + Allowances) in place');
   if (d.sb5 !== 'Yes') gaps.push('Salaries not paid on time — must be paid on or before 7th of each month');
-
-  // Section C
   if (d.sc2 !== 'Yes') gaps.push('Unaware of POSH Act 2013 — mandatory if female employees are employed');
   if (d.sc3 !== 'Yes') gaps.push('Periodic POSH awareness sessions not being conducted');
   if (d.sc4 !== 'Yes') gaps.push('Internal Committee (IC) under POSH Act 2013 not formed');
   if (d.sc5 !== 'Yes') gaps.push('Annual return under POSH Act 2013 not filed');
-
-  // Section D
   if (d.sd1 !== 'Yes') gaps.push('PF contribution not being made on a monthly basis');
   if (d.sd2 !== 'Yes') gaps.push('PF contribution not capped at ₹15,000 — may result in excess liability');
   if (d.sd3 === 'Yes') gaps.push('Paying PF for employees with salary above ₹50,000/₹75,000 — review need');
-
-  // Section E
   if (d.se1 !== 'Yes') gaps.push('Employees not receiving statutory leaves');
   if (d.se3 !== 'Yes') gaps.push('Unaware that ESIC-covered employees are not entitled for separate sick leave');
-
-  // Section F
   if (d.sf1 !== 'Yes') gaps.push('Unaware that employees earning up to ₹42,000 are covered under ESI');
-  if (d.sf2 === 'No') gaps.push('Statutory benefits (PF/ESI) not being provided to eligible employees');
+  if (d.sf2 === 'No')  gaps.push('Statutory benefits (PF/ESI) not being provided to eligible employees');
   if (d.sf3 !== 'Yes') gaps.push('Salary not restructured as per the new Labour Codes');
-
-  // Section G
-  if (d.sg1 === 'No') gaps.push('HR Policy / Leave Policy / Appointment Letter not updated as per new Labour Codes');
-  if (d.sg2 === 'No') gaps.push('Written HR policies and guidelines not in place');
+  if (d.sg1 === 'No')  gaps.push('HR Policy / Leave Policy / Appointment Letter not updated as per new Labour Codes');
+  if (d.sg2 === 'No')  gaps.push('Written HR policies and guidelines not in place');
   if (d.sg3 !== 'Yes') gaps.push('Appointment letters not issued to employees');
   if (d.sg4 !== 'Yes') gaps.push('Basic employee records not maintained (ID proof, joining details)');
-
-  // Section H
   if (d.sh1 === 'Yes') gaps.push('Faced challenges with Labour Inspector — documentation and compliance records must be strengthened');
   if (d.sh2 === 'Yes') gaps.push('Pending Notices / Inspections / Cases require immediate legal attention');
   if (d.sh3 === 'Yes') gaps.push('Employees leaving without notice period — employment agreements need enforcement clauses');
   if (d.sh5 === 'Yes') gaps.push('Employees have damaged or left with assets without proper handover — Asset Agreement Policy required');
-
   return gaps;
 }
 
@@ -413,7 +422,6 @@ function normaliseItem(item) {
 
 // ===== FORM SUBMISSION =====
 async function submitAudit() {
-  // Validate required radio groups
   const requiredRadios = ['sa1','sa2','sb1','sb2','sb4','sb5','sc1','sc2','sc3','sc4','sc5','sd1','sd2','sd3','se1','se3','sf1','sf2','sf3','sg1','sg2','sg3','sg4','sh1','sh2','sh3','sh4','sh5'];
   let missingQ = null;
   for (const n of requiredRadios) {
@@ -429,7 +437,6 @@ async function submitAudit() {
   const d = {
     id: Date.now(),
     submittedAt: new Date().toISOString(),
-    // Profile
     name:        document.getElementById('name')?.value.trim() || '',
     contact:     document.getElementById('contact')?.value.trim() || '',
     state:       document.getElementById('state')?.value || '',
@@ -437,26 +444,18 @@ async function submitAudit() {
     employees:   document.getElementById('employees')?.value || '',
     companyName: document.getElementById('companyName')?.value.trim() || '',
     field:       document.getElementById('field')?.value || '',
-    // Section A
     sa1: getRadio('sa1'), sa2: getRadio('sa2'),
-    // Section B
     sb1: getRadio('sb1'), sb2: getRadio('sb2'),
     sb3: document.getElementById('sb3')?.value || '',
     sb4: getRadio('sb4'), sb5: getRadio('sb5'),
-    // Section C
     sc1: getRadio('sc1'), sc2: getRadio('sc2'), sc3: getRadio('sc3'),
     sc4: getRadio('sc4'), sc5: getRadio('sc5'),
-    // Section D
     sd1: getRadio('sd1'), sd2: getRadio('sd2'), sd3: getRadio('sd3'),
-    // Section E
     se1: getRadio('se1'),
     se2: document.getElementById('se2')?.value || '',
     se3: getRadio('se3'),
-    // Section F
     sf1: getRadio('sf1'), sf2: getRadio('sf2'), sf3: getRadio('sf3'),
-    // Section G
     sg1: getRadio('sg1'), sg2: getRadio('sg2'), sg3: getRadio('sg3'), sg4: getRadio('sg4'),
-    // Section H
     sh1: getRadio('sh1'), sh2: getRadio('sh2'), sh3: getRadio('sh3'),
     sh4: getRadio('sh4'), sh5: getRadio('sh5'),
   };
@@ -517,7 +516,9 @@ function resetForm() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ===== USER DASHBOARD =====
+// ============================================================
+// USER DASHBOARD
+// ============================================================
 function renderUserDashboard() {
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId && !currentUserSubmission) {
@@ -560,7 +561,8 @@ function renderUserDashboard() {
   yn(s.sd1,'ustPF'); yn(s.sf1,'ustESI'); yn(s.sc4,'ustPOSH');
   yn(s.se1,'ustLeave'); yn(s.sg2,'ustHR'); yn(s.sb1,'ustBonus');
 
-  renderUserCharts(s);
+  // Small delay so DOM is ready, then render charts
+  setTimeout(() => renderUserCharts(s), 80);
 
   // Profile
   document.getElementById('udashProfile').innerHTML = [
@@ -570,41 +572,35 @@ function renderUserDashboard() {
     ['License in Owner Name', s.sa2||'—'],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div><div class="m-item-val">${v||'—'}</div></div>`).join('');
 
-  // Section B — Bonus & Salary
   document.getElementById('udashBonus').innerHTML = [
     ['Bonus on Diwali', s.sb1], ['Aware of ₹21,000 Bonus Rule', s.sb2],
     ['Structured Salary Format', s.sb4], ['Timely Salary Payment', s.sb5],
     ['Starting Salary', s.sb3 ? '₹'+s.sb3 : '—'],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section C — POSH
   document.getElementById('udashPOSH').innerHTML = [
     ['Female Employees', s.sc1], ['Aware of POSH Act 2013', s.sc2],
     ['POSH Awareness Sessions', s.sc3], ['IC Committee Formed', s.sc4],
     ['Annual POSH Return Filed', s.sc5],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section D — PF
   document.getElementById('udashPFSection').innerHTML = [
     ['PF on Monthly Basis', s.sd1], ['PF Capped at ₹15,000', s.sd2],
     ['PF on >₹50k/₹75k salary', s.sd3],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section E — Leaves
   document.getElementById('udashLeaves').innerHTML = [
     ['Leaves Given to Employees', s.se1],
     ['Average Annual Leaves', s.se2||'—'],
     ['Aware: ESIC = No Sick Leave', s.se3],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section F — ESI
   document.getElementById('udashESI').innerHTML = [
     ['Aware ESI Coverage ₹42,000', s.sf1],
     ['Statutory Benefits Provided', s.sf2],
     ['Salary Restructured per Codes', s.sf3],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section G — HR
   document.getElementById('udashHR').innerHTML = [
     ['HR/Leave/Appt Letter Updated', s.sg1],
     ['Written HR Policies', s.sg2],
@@ -612,7 +608,6 @@ function renderUserDashboard() {
     ['Employee Records Maintained', s.sg4],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section H — Inspection
   document.getElementById('udashInspection').innerHTML = [
     ['Faced Labour Inspector Issues', s.sh1],
     ['Pending Notices / Cases', s.sh2],
@@ -621,7 +616,6 @@ function renderUserDashboard() {
     ['Asset Damage / Loss Faced', s.sh5],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Gaps
   const gapsSection = document.getElementById('udashGapsSection');
   const gapsEl      = document.getElementById('udashGaps');
   if ((s.gaps||[]).length) {
@@ -631,7 +625,6 @@ function renderUserDashboard() {
     if (gapsSection) gapsSection.style.display = 'none';
   }
 
-  // Recs
   const recsSection = document.getElementById('udashRecsSection');
   const recsEl      = document.getElementById('udashRecs');
   if ((s.recs||[]).length) {
@@ -655,80 +648,164 @@ function ynHtml(v) {
   return `<div class="m-item-val">${v||'—'}</div>`;
 }
 
-// ===== USER CHARTS =====
+// ============================================================
+// USER DASHBOARD CHARTS — Professional Edition
+// ============================================================
 function renderUserCharts(s) {
-  const tick = getTickColor(), grid = getGridColor(), ff = 'Syne';
-  Object.keys(uCharts).forEach(k => { try { uCharts[k].destroy(); } catch(e){} });
-  uCharts = {};
+  uCharts = destroyCharts(uCharts);
+  const p  = getPalette();
+  const ff = "'Syne', 'Inter', sans-serif";
 
-  const gold   = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim()   || '#d4a843';
-  const green  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim()  || '#2ecc8a';
-  const red    = getComputedStyle(document.documentElement).getPropertyValue('--red').trim()    || '#e05555';
-  const blue   = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim()   || '#4e8cff';
-  const purple = getComputedStyle(document.documentElement).getPropertyValue('--purple').trim() || '#a78bfa';
+  // Shared animation config
+  const animEase = { duration: 900, easing: 'easeOutQuart' };
 
-  // Radar — 8 sections
-  const rc = document.getElementById('uChartRadar');
-  if (rc) {
-    uCharts['r'] = new Chart(rc, {
+  // ── CHART 1: Radar — Compliance Area Breakdown ──────────────
+  const radarCtx = document.getElementById('uChartRadar');
+  if (radarCtx) {
+    // Per-section scores (0-100)
+    const secA = ((s.sa1?50:0) + (s.sa2==='Yes'?50:0));
+    const secB = ((s.sb1==='Yes'?25:0)+(s.sb2==='Yes'?25:0)+(s.sb4==='Yes'?25:0)+(s.sb5==='Yes'?25:0));
+    const secC = ((s.sc2==='Yes'?25:0)+(s.sc3==='Yes'?25:0)+(s.sc4==='Yes'?25:0)+(s.sc5==='Yes'?25:0));
+    const secD = ((s.sd1==='Yes'?34:0)+(s.sd2==='Yes'?33:0)+(s.sd3==='No'?33:0));
+    const secE = ((s.se1==='Yes'?50:0)+(s.se3==='Yes'?50:0));
+    const secF = ((s.sf1==='Yes'?34:0)+((s.sf2==='Yes'||s.sf2==='Partial')?33:0)+(s.sf3==='Yes'?33:0));
+    const secG = (((s.sg1==='Yes'||s.sg1==='Partial')?25:0)+((s.sg2==='Yes'||s.sg2==='Partial')?25:0)+(s.sg3==='Yes'?25:0)+(s.sg4==='Yes'?25:0));
+    const secH = ((s.sh1==='No'?25:0)+(s.sh2==='No'?25:0)+(s.sh3==='No'?25:0)+(s.sh5==='No'?25:0));
+    const data = [secA,secB,secC,secD,secE,secF,secG,secH];
+
+    uCharts['radar'] = new Chart(radarCtx, {
       type: 'radar',
       data: {
-        labels: ['Sec A\nLicensing','Sec B\nBonus/Salary','Sec C\nPOSH','Sec D\nPF','Sec E\nLeaves','Sec F\nESI','Sec G\nHR Policy','Sec H\nInspection'],
-        datasets: [{
-          label: 'Your Score',
-          data: [
-            // A: 2 checks
-            ((s.sa1?50:0) + (s.sa2==='Yes'?50:0)),
-            // B: 5 checks → bonus, awareness, salary struct, timely
-            ((s.sb1==='Yes'?25:0)+(s.sb2==='Yes'?25:0)+(s.sb4==='Yes'?25:0)+(s.sb5==='Yes'?25:0)),
-            // C: 4 checks
-            ((s.sc2==='Yes'?25:0)+(s.sc3==='Yes'?25:0)+(s.sc4==='Yes'?25:0)+(s.sc5==='Yes'?25:0)),
-            // D: 3 checks
-            ((s.sd1==='Yes'?34:0)+(s.sd2==='Yes'?33:0)+(s.sd3==='No'?33:0)),
-            // E: 2 checks
-            ((s.se1==='Yes'?50:0)+(s.se3==='Yes'?50:0)),
-            // F: 3 checks
-            ((s.sf1==='Yes'?34:0)+(s.sf2==='Yes'?33:0)+(s.sf3==='Yes'?33:0)),
-            // G: 4 checks
-            ((s.sg1==='Yes'||s.sg1==='Partial'?25:0)+(s.sg2==='Yes'||s.sg2==='Partial'?25:0)+(s.sg3==='Yes'?25:0)+(s.sg4==='Yes'?25:0)),
-            // H: 4 checks (no issues = compliant)
-            ((s.sh1==='No'?25:0)+(s.sh2==='No'?25:0)+(s.sh3==='No'?25:0)+(s.sh5==='No'?25:0)),
-          ],
-          backgroundColor: gold + '26', borderColor: gold,
-          pointBackgroundColor: gold, borderWidth: 2, pointRadius: 4,
-        }]
+        labels: ['Licensing','Bonus/Salary','POSH','Provident Fund','Leave Policy','ESI & Salary','HR Policy','Inspections'],
+        datasets: [
+          {
+            label: 'Your Score',
+            data,
+            backgroundColor: p.goldA,
+            borderColor: p.gold,
+            pointBackgroundColor: data.map(v => v >= 70 ? p.green : v >= 40 ? p.gold : p.red),
+            pointBorderColor: p.bg,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 2.5,
+            fill: true,
+          },
+          {
+            label: 'Target (100%)',
+            data: [100,100,100,100,100,100,100,100],
+            backgroundColor: 'transparent',
+            borderColor: p.grid,
+            pointRadius: 0,
+            borderWidth: 1.5,
+            borderDash: [4,4],
+          }
+        ]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        scales: { r: { min:0, max:100, ticks:{ color:tick, font:{family:ff,size:9}, stepSize:25, backdropColor:'transparent' },
-          grid:{ color:grid }, pointLabels:{ color:tick, font:{family:ff,size:9} } } },
-        plugins: { legend:{ display:false } }
+        animation: animEase,
+        scales: {
+          r: {
+            min: 0, max: 100,
+            ticks: { stepSize: 25, color: p.tick, font: chartFontSm(), backdropColor: 'transparent', display: true },
+            grid: { color: p.grid },
+            angleLines: { color: p.grid },
+            pointLabels: { color: p.tick, font: { family: ff, size: 10, weight: '600' } }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${Math.round(ctx.raw)}%` }
+          }
+        }
       }
     });
   }
 
-  // Doughnut — key benefits
-  const dc = document.getElementById('uChartDough');
-  if (dc) {
-    const active = [s.sd1==='Yes', s.sf2==='Yes'||s.sf2==='Partial', s.sc4==='Yes', s.sb1==='Yes'].filter(Boolean).length;
-    uCharts['d'] = new Chart(dc, {
+  // ── CHART 2: Doughnut — Statutory Benefits Status ───────────
+  const doughCtx = document.getElementById('uChartDough');
+  if (doughCtx) {
+    const pfOk   = s.sd1 === 'Yes';
+    const esiOk  = s.sf2 === 'Yes' || s.sf2 === 'Partial';
+    const poshOk = s.sc4 === 'Yes';
+    const bonusOk= s.sb1 === 'Yes';
+    const hrOk   = s.sg2 === 'Yes' || s.sg2 === 'Partial';
+    const leaveOk= s.se1 === 'Yes';
+
+    const labels  = ['PF Monthly','ESI / Benefits','POSH IC','Bonus','HR Policy','Leaves'];
+    const colors  = [p.blue, p.teal, p.gold, p.purple, p.green, p.orange];
+    const vals    = [pfOk?1:0, esiOk?1:0, poshOk?1:0, bonusOk?1:0, hrOk?1:0, leaveOk?1:0];
+    const gaps    = vals.filter(v=>v===0).length;
+    const compliant = vals.filter(v=>v===1).length;
+
+    // Show compliance vs non-compliance for clean donut
+    uCharts['dough'] = new Chart(doughCtx, {
       type: 'doughnut',
       data: {
-        labels: ['PF Active','ESI/Benefits','POSH IC','Bonus Paid','Non-Compliant'],
-        datasets: [{ data:[
-          s.sd1==='Yes'?1:0, s.sf2==='Yes'||s.sf2==='Partial'?1:0,
-          s.sc4==='Yes'?1:0, s.sb1==='Yes'?1:0, Math.max(0,4-active)
-        ], backgroundColor:[green,blue,gold,purple,red+'66'], borderWidth:0, hoverOffset:10 }]
+        labels: [...labels, 'Gaps'],
+        datasets: [{
+          data: [...vals, gaps],
+          backgroundColor: [...colors, p.dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'],
+          borderWidth: 2,
+          borderColor: p.bg,
+          hoverOffset: 8,
+          hoverBorderWidth: 3,
+        }]
       },
-      options: { responsive:true, maintainAspectRatio:false, cutout:'68%',
-        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:10}, padding:8 } } } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '72%',
+        animation: { ...animEase, animateRotate: true, animateScale: true },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+          }
+        }
+      },
+      plugins: [{
+        id: 'centerText',
+        afterDraw(chart) {
+          const { ctx, chartArea: { width, height, left, top } } = chart;
+          const cx = left + width/2, cy = top + height/2;
+          ctx.save();
+          ctx.font = `700 ${Math.round(height*0.18)}px ${ff}`;
+          ctx.fillStyle = compliant >= 5 ? p.green : compliant >= 3 ? p.gold : p.red;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(`${compliant}/${labels.length}`, cx, cy - height*0.04);
+          ctx.font = `500 ${Math.round(height*0.08)}px ${ff}`;
+          ctx.fillStyle = p.tick;
+          ctx.fillText('compliant', cx, cy + height*0.1);
+          ctx.restore();
+        }
+      }]
     });
+
+    // Build custom legend beneath
+    const legendEl = document.getElementById('uChartDoughLegend');
+    if (legendEl) {
+      legendEl.innerHTML = labels.map((l,i) => `
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:${p.tick};font-family:${ff};font-weight:600;">
+          <span style="width:8px;height:8px;border-radius:2px;background:${vals[i]?colors[i]:(p.dark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.1)')};display:inline-block;flex-shrink:0;"></span>
+          ${l}
+        </span>
+      `).join('');
+    }
   }
 
-  // Bar — key metrics
-  const bc = document.getElementById('uChartBar');
-  if (bc) {
-    const vals = [
+  // ── CHART 3: Bar — Key Compliance Metrics ────────────────────
+  const barCtx = document.getElementById('uChartBar');
+  if (barCtx) {
+    const labels = ['Owner License','Timely Salary','POSH Sessions','PF Monthly','PF Capped','Leaves Given','Salary Restructured','HR Policy Updated'];
+    const rawVals = [
       s.sa2==='Yes'?100:0,
       s.sb5==='Yes'?100:0,
       s.sc3==='Yes'?100:0,
@@ -738,47 +815,144 @@ function renderUserCharts(s) {
       s.sf3==='Yes'?100:0,
       s.sg1==='Yes'?100:s.sg1==='Partial'?60:0,
     ];
-    uCharts['b'] = new Chart(bc, {
+    const barColors = rawVals.map(v => v >= 80 ? p.green : v >= 50 ? p.gold : p.red);
+    const barAlpha  = rawVals.map(v => v >= 80 ? p.greenA : v >= 50 ? p.goldA : p.redA);
+
+    uCharts['bar'] = new Chart(barCtx, {
       type: 'bar',
       data: {
-        labels:['License\n(Owner)','Timely\nSalary','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nGiven','Salary\nRestructd','HR Policy\nUpdated'],
-        datasets:[{ label:'% Score', data:vals,
-          backgroundColor: vals.map(v => v>=80?green : v>=50?gold : red),
-          borderRadius:6, borderSkipped:false }]
+        labels,
+        datasets: [{
+          label: 'Compliance %',
+          data: rawVals,
+          backgroundColor: barAlpha,
+          borderColor: barColors,
+          borderWidth: 2,
+          borderRadius: { topLeft: 6, topRight: 6 },
+          borderSkipped: 'bottom',
+          hoverBackgroundColor: barColors.map(c => c + '55'),
+          hoverBorderWidth: 2.5,
+        }]
       },
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:8} }, grid:{ color:grid } },
-          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true, max:100 } } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: animEase,
+        scales: {
+          x: {
+            ticks: { color: p.tick, font: chartFontSm(), maxRotation: 35, autoSkip: false },
+            grid: { display: false },
+            border: { display: false }
+          },
+          y: {
+            beginAtZero: true, max: 110,
+            ticks: {
+              color: p.tick, font: chartFontSm(),
+              callback: v => v <= 100 ? v + '%' : ''
+            },
+            grid: { color: p.grid, lineWidth: 1 },
+            border: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+            callbacks: {
+              label: ctx => ` Status: ${ctx.raw >= 80 ? '✅ Compliant' : ctx.raw >= 50 ? '⚠ Partial' : '❌ Non-Compliant'}`
+            }
+          }
+        }
+      },
+      plugins: [{
+        id: 'valueLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx, data } = chart;
+          chart.getDatasetMeta(0).data.forEach((bar, i) => {
+            const v = data.datasets[0].data[i];
+            if (v === 0) return;
+            ctx.save();
+            ctx.font = `700 10px ${ff}`;
+            ctx.fillStyle = barColors[i];
+            ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            ctx.fillText(v + '%', bar.x, bar.y - 4);
+            ctx.restore();
+          });
+        }
+      }]
     });
   }
 
-  // Polar — HR Governance
-  const pc = document.getElementById('uChartPolar');
-  if (pc) {
-    uCharts['p'] = new Chart(pc, {
+  // ── CHART 4: Polar Area — HR Governance Score ─────────────────
+  const polarCtx = document.getElementById('uChartPolar');
+  if (polarCtx) {
+    const labels = ['POSH Awareness','IC Committee','HR Policies','Appointment Letters','Emp. Records'];
+    const vals   = [
+      s.sc3==='Yes'?100:0,
+      s.sc4==='Yes'?100:0,
+      s.sg2==='Yes'?100:s.sg2==='Partial'?65:0,
+      s.sg3==='Yes'?100:0,
+      s.sg4==='Yes'?100:s.sg4==='In Progress'?45:0,
+    ];
+    const colors  = [p.blue, p.gold, p.green, p.purple, p.teal];
+    const alphas  = [p.blueA, p.goldA, p.greenA, p.dark?'rgba(167,139,250,0.18)':'rgba(124,58,237,0.14)', p.dark?'rgba(62,207,178,0.18)':'rgba(13,148,136,0.14)'];
+
+    uCharts['polar'] = new Chart(polarCtx, {
       type: 'polarArea',
       data: {
-        labels:['POSH Awareness','IC Committee','HR Written Policy','Appt. Letters','Emp. Records'],
-        datasets:[{
-          data:[
-            s.sc3==='Yes'?100:0, s.sc4==='Yes'?100:0,
-            s.sg2==='Yes'?100:s.sg2==='Partial'?60:0,
-            s.sg3==='Yes'?100:0, s.sg4==='Yes'?100:0,
-          ],
-          backgroundColor:[gold+'80',blue+'80',green+'80',purple+'80',green+'59'],
-          borderWidth:0,
+        labels,
+        datasets: [{
+          data: vals,
+          backgroundColor: alphas,
+          borderColor: colors,
+          borderWidth: 2.5,
+          hoverBackgroundColor: colors.map(c => c + '44'),
         }]
       },
-      options:{ responsive:true, maintainAspectRatio:false,
-        scales:{ r:{ ticks:{ color:tick, font:{family:ff,size:9}, backdropColor:'transparent' },
-          grid:{ color:grid }, min:0, max:100 } },
-        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:9}, padding:8 } } } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: { ...animEase, animateRotate: true },
+        scales: {
+          r: {
+            min: 0, max: 110,
+            ticks: { stepSize: 25, display: false, backdropColor: 'transparent' },
+            grid: { color: p.grid },
+            pointLabels: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.raw}%`
+            }
+          }
+        }
+      }
     });
+
+    // Custom legend
+    const legendEl = document.getElementById('uChartPolarLegend');
+    if (legendEl) {
+      legendEl.innerHTML = labels.map((l,i) => `
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:${p.tick};font-family:${ff};font-weight:600;">
+          <span style="width:8px;height:8px;border-radius:2px;background:${colors[i]};display:inline-block;flex-shrink:0;"></span>
+          ${l}
+        </span>
+      `).join('');
+    }
   }
 }
 
-// ===== ADMIN DASHBOARD =====
+// ============================================================
+// ADMIN DASHBOARD
+// ============================================================
 function renderAdminDashboard() {
   if (!isAdmin) return;
   populateAdminFilters();
@@ -787,7 +961,7 @@ function renderAdminDashboard() {
   const filtered = submissions.filter(s => (!stateF || s.state === stateF) && (!indF || s.field === indF));
   updateAdminStats(filtered);
   renderAdminSidebar();
-  renderAdminCharts(filtered);
+  setTimeout(() => renderAdminCharts(filtered), 80);
   renderAdminTable();
 }
 
@@ -837,135 +1011,463 @@ function renderAdminSidebar() {
   }).join('');
 }
 
+// ============================================================
+// ADMIN CHARTS — Professional Analytics Suite
+// ============================================================
 function renderAdminCharts(data) {
-  const tick = getTickColor(), grid = getGridColor(), ff = 'Syne';
-  Object.keys(charts).forEach(k => { try { charts[k].destroy(); } catch(e){} });
-  charts = {};
-  if (!data.length) return;
+  charts = destroyCharts(charts);
+  const p   = getPalette();
+  const ff  = "'Syne', 'Inter', sans-serif";
+  const anim = { duration: 800, easing: 'easeOutQuart' };
 
-  const gold   = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim();
-  const green  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim();
-  const red    = getComputedStyle(document.documentElement).getPropertyValue('--red').trim();
-  const blue   = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim();
-  const purple = getComputedStyle(document.documentElement).getPropertyValue('--purple').trim();
+  if (!data.length) return;
 
   const pct = (fn) => data.length ? Math.round(fn(data)/data.length*100) : 0;
 
-  // Main compliance bar
+  // Palette for multi-series
+  const CAT_COLORS = [p.blue, p.green, p.gold, p.purple, p.teal, p.orange, p.pink, p.indigo, p.red];
+
+  // ── CHART 1: Horizontal Bar — Statutory Compliance % ────────
   const bc = document.getElementById('adminChartBar');
   if (bc) {
+    const metrics = [
+      { label: 'Owner License',    val: pct(d=>d.filter(s=>s.sa2==='Yes').length), color: p.blue },
+      { label: 'Diwali Bonus',     val: pct(d=>d.filter(s=>s.sb1==='Yes').length), color: p.gold },
+      { label: 'Timely Salary',    val: pct(d=>d.filter(s=>s.sb5==='Yes').length), color: p.green },
+      { label: 'POSH IC Active',   val: pct(d=>d.filter(s=>s.sc4==='Yes').length), color: p.purple },
+      { label: 'POSH Sessions',    val: pct(d=>d.filter(s=>s.sc3==='Yes').length), color: p.teal },
+      { label: 'PF Monthly',       val: pct(d=>d.filter(s=>s.sd1==='Yes').length), color: p.orange },
+      { label: 'PF Cap ₹15k',      val: pct(d=>d.filter(s=>s.sd2==='Yes').length), color: p.pink },
+      { label: 'Leaves Provided',  val: pct(d=>d.filter(s=>s.se1==='Yes').length), color: p.indigo },
+      { label: 'ESI Awareness',    val: pct(d=>d.filter(s=>s.sf1==='Yes').length), color: p.red },
+      { label: 'HR Policy Done',   val: pct(d=>d.filter(s=>s.sg1==='Yes'||s.sg1==='Partial').length), color: p.blue },
+      { label: 'Appt. Letters',    val: pct(d=>d.filter(s=>s.sg3==='Yes').length), color: p.green },
+      { label: 'Emp. Records',     val: pct(d=>d.filter(s=>s.sg4==='Yes').length), color: p.gold },
+    ];
+    // Sort descending for impact view
+    metrics.sort((a,b) => b.val - a.val);
+
     charts['bar'] = new Chart(bc, {
-      type:'bar',
-      data:{
-        labels:['Owner\nLicense','Diwali\nBonus','POSH\nIC','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nGiven','ESI\nAware','HR\nUpdated','Appt\nLetter'],
-        datasets:[{ label:'% Compliant',
-          data:[
-            pct(d=>d.filter(s=>s.sa2==='Yes').length),
-            pct(d=>d.filter(s=>s.sb1==='Yes').length),
-            pct(d=>d.filter(s=>s.sc4==='Yes').length),
-            pct(d=>d.filter(s=>s.sc3==='Yes').length),
-            pct(d=>d.filter(s=>s.sd1==='Yes').length),
-            pct(d=>d.filter(s=>s.sd2==='Yes').length),
-            pct(d=>d.filter(s=>s.se1==='Yes').length),
-            pct(d=>d.filter(s=>s.sf1==='Yes').length),
-            pct(d=>d.filter(s=>s.sg1==='Yes'||s.sg1==='Partial').length),
-            pct(d=>d.filter(s=>s.sg3==='Yes').length),
-          ],
-          backgroundColor:[gold,green,blue,purple,green,gold,blue,red,green,gold],
-          borderRadius:6, borderSkipped:false }]
+      type: 'bar',
+      data: {
+        labels: metrics.map(m => m.label),
+        datasets: [{
+          label: '% Compliant',
+          data: metrics.map(m => m.val),
+          backgroundColor: metrics.map(m => m.color + (p.dark?'33':'28')),
+          borderColor: metrics.map(m => m.color),
+          borderWidth: 2,
+          borderRadius: { topLeft: 6, topRight: 6 },
+          borderSkipped: 'bottom',
+          barPercentage: 0.7,
+          categoryPercentage: 0.85,
+        }]
       },
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:8} }, grid:{ color:grid } },
-          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true, max:100 } } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: anim,
+        indexAxis: 'y',
+        scales: {
+          x: {
+            beginAtZero: true, max: 100,
+            ticks: { color: p.tick, font: chartFontSm(), callback: v => v+'%' },
+            grid: { color: p.grid, lineWidth: 1 },
+            border: { display: false }
+          },
+          y: {
+            ticks: { color: p.tick, font: { family: ff, size: 10, weight: '600' } },
+            grid: { display: false },
+            border: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+            callbacks: { label: ctx => ` ${ctx.raw}% of businesses compliant` }
+          }
+        }
+      },
+      plugins: [{
+        id: 'barValueLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          chart.getDatasetMeta(0).data.forEach((bar, i) => {
+            const v = chart.data.datasets[0].data[i];
+            if (v < 5) return;
+            ctx.save();
+            ctx.font = `700 9px ${ff}`;
+            ctx.fillStyle = p.tick;
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillText(`${v}%`, bar.x + 5, bar.y);
+            ctx.restore();
+          });
+        }
+      }]
     });
   }
 
-  // Establishment type doughnut
+  // ── CHART 2: Doughnut — Establishment Type ───────────────────
   const dc = document.getElementById('adminChartDough');
   if (dc) {
-    const cnt={}; data.forEach(s=>{ if(s.sa1) cnt[s.sa1]=(cnt[s.sa1]||0)+1; });
-    const lbls=Object.keys(cnt).length?Object.keys(cnt):['No Data'];
-    const vals=Object.keys(cnt).length?Object.values(cnt):[1];
+    const cnt = {};
+    data.forEach(s => { if(s.sa1) cnt[s.sa1] = (cnt[s.sa1]||0)+1; });
+    const lbls = Object.keys(cnt).length ? Object.keys(cnt) : ['No Data'];
+    const vals = Object.keys(cnt).length ? Object.values(cnt) : [1];
+    const total = vals.reduce((a,b)=>a+b, 0);
+
     charts['dough'] = new Chart(dc, {
-      type:'doughnut',
-      data:{ labels:lbls, datasets:[{ data:vals, backgroundColor:[gold,green,blue,purple,red], borderWidth:0, hoverOffset:10 }] },
-      options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
-        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:11}, padding:10 } } } }
+      type: 'doughnut',
+      data: {
+        labels: lbls,
+        datasets: [{
+          data: vals,
+          backgroundColor: CAT_COLORS.slice(0,lbls.length).map(c => c + (p.dark?'44':'33')),
+          borderColor: CAT_COLORS.slice(0,lbls.length),
+          borderWidth: 2.5,
+          hoverOffset: 10,
+          hoverBorderWidth: 3,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '68%',
+        animation: { ...anim, animateRotate: true },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw/total*100)}%)`
+            }
+          }
+        }
+      },
+      plugins: [{
+        id: 'centerLabel',
+        afterDraw(chart) {
+          const { ctx, chartArea: { width, height, left, top } } = chart;
+          const cx = left + width/2, cy = top + height/2;
+          ctx.save();
+          ctx.font = `700 ${Math.round(height*0.2)}px ${ff}`;
+          ctx.fillStyle = p.text; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(total, cx, cy - height*0.05);
+          ctx.font = `500 ${Math.round(height*0.09)}px ${ff}`;
+          ctx.fillStyle = p.tick;
+          ctx.fillText('total', cx, cy + height*0.1);
+          ctx.restore();
+        }
+      }]
     });
+
+    // Build custom legend
+    const legEl = document.getElementById('adminChartDoughLegend');
+    if (legEl) {
+      legEl.innerHTML = lbls.map((l,i) => `
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:${p.tick};font-family:${ff};font-weight:600;">
+          <span style="width:8px;height:8px;border-radius:2px;background:${CAT_COLORS[i]};display:inline-block;"></span>
+          ${l} <span style="color:${CAT_COLORS[i]};">(${vals[i]})</span>
+        </span>
+      `).join('');
+    }
   }
 
-  // Employee size bar
+  // ── CHART 3: Grouped Bar — Company Size ─────────────────────
   const ec = document.getElementById('adminChartEmp');
   if (ec) {
-    const sizes=['1–10','11–20','21–50','51–100','101–150','151–200','201–300','301–400','401–500','500+'];
-    const cnt={}; sizes.forEach(s=>cnt[s]=0); data.forEach(s=>{ if(s.employees) cnt[s.employees]=(cnt[s.employees]||0)+1; });
+    const sizes = ['1–10','11–20','21–50','51–100','101–150','151–200','201–300','301–400','401–500','500+'];
+    const cnt = {}; sizes.forEach(s=>cnt[s]=0);
+    data.forEach(s => { if(s.employees && cnt[s.employees]!==undefined) cnt[s.employees]++; });
+    const vals = sizes.map(s => cnt[s]);
+    const maxVal = Math.max(...vals, 1);
+
     charts['emp'] = new Chart(ec, {
-      type:'bar',
-      data:{ labels:sizes, datasets:[{ label:'Companies', data:sizes.map(s=>cnt[s]), backgroundColor:blue, borderRadius:6, borderSkipped:false }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid } },
-          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true } } }
+      type: 'bar',
+      data: {
+        labels: sizes,
+        datasets: [{
+          label: 'Companies',
+          data: vals,
+          backgroundColor: vals.map(v => {
+            const intensity = v / maxVal;
+            return `rgba(91,158,255,${0.2 + intensity*0.55})`;
+          }),
+          borderColor: vals.map(v => {
+            const intensity = v / maxVal;
+            return p.blue + Math.round((0.4 + intensity*0.6)*255).toString(16).padStart(2,'0');
+          }),
+          borderWidth: 2,
+          borderRadius: { topLeft: 6, topRight: 6 },
+          borderSkipped: 'bottom',
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: anim,
+        scales: {
+          x: {
+            ticks: { color: p.tick, font: chartFontSm(), maxRotation: 30 },
+            grid: { display: false },
+            border: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: p.tick, font: chartFontSm(), stepSize: 1 },
+            grid: { color: p.grid },
+            border: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+          }
+        }
+      }
     });
   }
 
-  // HR pie
+  // ── CHART 4: Stacked Donut — HR & POSH Coverage ─────────────
   const pieC = document.getElementById('adminChartPie');
   if (pieC) {
+    const metrics = [
+      { label: 'HR Policy Updated', val: pct(d=>d.filter(s=>s.sg1==='Yes').length), color: p.green },
+      { label: 'POSH IC Formed',    val: pct(d=>d.filter(s=>s.sc4==='Yes').length), color: p.blue },
+      { label: 'Appt. Letters',     val: pct(d=>d.filter(s=>s.sg3==='Yes').length), color: p.gold },
+      { label: 'Emp. Records',      val: pct(d=>d.filter(s=>s.sg4==='Yes').length), color: p.purple },
+    ];
+
     charts['pie'] = new Chart(pieC, {
-      type:'pie',
-      data:{
-        labels:['HR Policy Updated','POSH IC Formed','Appt Letters Issued','Emp Records Maintained'],
-        datasets:[{ data:[
-          pct(d=>d.filter(s=>s.sg1==='Yes').length),
-          pct(d=>d.filter(s=>s.sc4==='Yes').length),
-          pct(d=>d.filter(s=>s.sg3==='Yes').length),
-          pct(d=>d.filter(s=>s.sg4==='Yes').length),
-        ], backgroundColor:[green,blue,gold,purple], borderWidth:0, hoverOffset:8 }]
+      type: 'bar',
+      data: {
+        labels: metrics.map(m => m.label),
+        datasets: [
+          {
+            label: 'Compliant %',
+            data: metrics.map(m => m.val),
+            backgroundColor: metrics.map(m => m.color + (p.dark?'44':'33')),
+            borderColor: metrics.map(m => m.color),
+            borderWidth: 2,
+            borderRadius: { topLeft: 6, topRight: 6 },
+            borderSkipped: 'bottom',
+          },
+          {
+            label: 'Gap %',
+            data: metrics.map(m => 100 - m.val),
+            backgroundColor: p.dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+            borderColor: p.dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+            borderWidth: 1,
+            borderRadius: { topLeft: 6, topRight: 6 },
+            borderSkipped: 'bottom',
+          }
+        ]
       },
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:11}, padding:10 } } } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: anim,
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { color: p.tick, font: { family: ff, size: 9, weight: '600' }, maxRotation: 15 },
+            grid: { display: false }, border: { display: false }
+          },
+          y: {
+            stacked: true, beginAtZero: true, max: 100,
+            ticks: { color: p.tick, font: chartFontSm(), callback: v => v+'%' },
+            grid: { color: p.grid }, border: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+            callbacks: {
+              label: ctx => ctx.datasetIndex === 0
+                ? ` Compliant: ${ctx.raw}%`
+                : ` Gap: ${ctx.raw}%`
+            }
+          }
+        }
+      },
+      plugins: [{
+        id: 'hrValueLabels',
+        afterDatasetsDraw(chart) {
+          if (chart.getDatasetMeta(0).hidden) return;
+          const { ctx } = chart;
+          chart.getDatasetMeta(0).data.forEach((bar, i) => {
+            const v = chart.data.datasets[0].data[i];
+            if (v < 10) return;
+            ctx.save();
+            ctx.font = `700 10px ${ff}`;
+            ctx.fillStyle = metrics[i].color;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            ctx.fillText(`${v}%`, bar.x, bar.y - 4);
+            ctx.restore();
+          });
+        }
+      }]
     });
   }
 
-  // Score distribution
+  // ── CHART 5: Score Distribution — Histogram ─────────────────
   const sc = document.getElementById('adminChartScore');
   if (sc) {
-    const ranges={'0–20%':0,'21–40%':0,'41–60%':0,'61–80%':0,'81–100%':0};
-    data.forEach(s=>{
-      const v=s.score||0;
-      if(v<=20) ranges['0–20%']++;
-      else if(v<=40) ranges['21–40%']++;
-      else if(v<=60) ranges['41–60%']++;
-      else if(v<=80) ranges['61–80%']++;
-      else ranges['81–100%']++;
+    const ranges = ['0–20', '21–40', '41–60', '61–80', '81–100'];
+    const cnt = { '0–20':0, '21–40':0, '41–60':0, '61–80':0, '81–100':0 };
+    data.forEach(s => {
+      const v = s.score||0;
+      if (v <= 20)       cnt['0–20']++;
+      else if (v <= 40)  cnt['21–40']++;
+      else if (v <= 60)  cnt['41–60']++;
+      else if (v <= 80)  cnt['61–80']++;
+      else               cnt['81–100']++;
     });
+    const vals   = ranges.map(r => cnt[r]);
+    const colors = [p.red, p.red, p.gold, p.green, p.green];
+    const alphas = [p.redA, p.redA, p.goldA, p.greenA, p.greenA];
+
     charts['score'] = new Chart(sc, {
-      type:'bar',
-      data:{ labels:Object.keys(ranges), datasets:[{ label:'Companies', data:Object.values(ranges),
-        backgroundColor:[red,red,gold,green,green], borderRadius:6, borderSkipped:false }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:10} }, grid:{ color:grid } },
-          y:{ ticks:{ color:tick, font:{family:ff,size:10} }, grid:{ color:grid }, beginAtZero:true } } }
+      type: 'bar',
+      data: {
+        labels: ranges.map(r => r + '%'),
+        datasets: [{
+          label: 'Companies',
+          data: vals,
+          backgroundColor: alphas,
+          borderColor: colors,
+          borderWidth: 2,
+          borderRadius: { topLeft: 8, topRight: 8 },
+          borderSkipped: 'bottom',
+          barPercentage: 0.85,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: { ...anim, delay: (ctx) => ctx.dataIndex * 100 },
+        scales: {
+          x: {
+            ticks: { color: p.tick, font: chartFont() },
+            grid: { display: false }, border: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: p.tick, font: chartFontSm(), stepSize: 1 },
+            grid: { color: p.grid }, border: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+          }
+        }
+      },
+      plugins: [{
+        id: 'histValueLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          chart.getDatasetMeta(0).data.forEach((bar, i) => {
+            const v = vals[i];
+            if (!v) return;
+            ctx.save();
+            ctx.font = `700 11px ${ff}`;
+            ctx.fillStyle = colors[i];
+            ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            ctx.fillText(v, bar.x, bar.y - 4);
+            ctx.restore();
+          });
+        }
+      }]
     });
   }
 
-  // Industry bar
+  // ── CHART 6: Horizontal Bar — Industry-wise ──────────────────
   const ic = document.getElementById('adminChartIndustry');
   if (ic) {
-    const cnt={}; data.forEach(s=>{ if(s.field) cnt[s.field]=(cnt[s.field]||0)+1; });
-    const lbls=Object.keys(cnt).length?Object.keys(cnt):['No Data'];
-    const vals=Object.keys(cnt).length?Object.values(cnt):[0];
+    const cnt = {};
+    data.forEach(s => { if(s.field) cnt[s.field] = (cnt[s.field]||0)+1; });
+    const sorted = Object.entries(cnt).sort((a,b) => b[1]-a[1]);
+    const lbls = sorted.map(e => e[0]);
+    const vals = sorted.map(e => e[1]);
+    const maxV = Math.max(...vals, 1);
+
     charts['ind'] = new Chart(ic, {
-      type:'bar',
-      data:{ labels:lbls, datasets:[{ label:'Submissions', data:vals, backgroundColor:purple, borderRadius:6, borderSkipped:false }] },
-      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true },
-          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid } } } }
+      type: 'bar',
+      data: {
+        labels: lbls.length ? lbls : ['No Data'],
+        datasets: [{
+          label: 'Submissions',
+          data: vals.length ? vals : [0],
+          backgroundColor: vals.map((v,i) => CAT_COLORS[i % CAT_COLORS.length] + (p.dark?'44':'33')),
+          borderColor: vals.map((v,i) => CAT_COLORS[i % CAT_COLORS.length]),
+          borderWidth: 2,
+          borderRadius: { topLeft: 6, topRight: 6 },
+          borderSkipped: 'left',
+          barPercentage: 0.75,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        animation: { ...anim, delay: (ctx) => ctx.dataIndex * 60 },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { color: p.tick, font: chartFontSm(), stepSize: 1 },
+            grid: { color: p.grid }, border: { display: false }
+          },
+          y: {
+            ticks: { color: p.tick, font: { family: ff, size: 10, weight: '600' } },
+            grid: { display: false }, border: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: p.dark ? '#1a1e2c' : '#fff',
+            titleColor: p.text, bodyColor: p.tick,
+            borderColor: p.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1,
+            padding: 10, cornerRadius: 8,
+          }
+        }
+      },
+      plugins: [{
+        id: 'indValueLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          chart.getDatasetMeta(0).data.forEach((bar, i) => {
+            const v = vals[i]||0;
+            if (!v) return;
+            const c = CAT_COLORS[i % CAT_COLORS.length];
+            ctx.save();
+            ctx.font = `700 10px ${ff}`;
+            ctx.fillStyle = c;
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillText(v, bar.x + 5, bar.y);
+            ctx.restore();
+          });
+        }
+      }]
     });
   }
 }
 
+// ===== ADMIN TABLE =====
 function renderAdminTable() {
   const tbody = document.getElementById('adminTblBody');
   if (!tbody) return;
@@ -1179,7 +1681,6 @@ async function downloadPDF(id) {
     y = 18;
   };
 
-  // Cover header
   doc.setFillColor(...BG);  doc.rect(0,0,210,297,'F');
   doc.setFillColor(...DARK); doc.rect(0,0,210,56,'F');
   doc.setFillColor(...GOLD); doc.rect(0,0,210,2,'F');
@@ -1222,46 +1723,38 @@ async function downloadPDF(id) {
   };
 
   let r;
-
   sec('Section A — Business Setup & Licensing');
   row('Establishment Type', s.sa1||'—');
   r=yn2(s.sa2); row('License in Owner Name?', r.t, r.c); y+=2;
-
   sec('Section B — Bonus & Salary Practices');
   r=yn2(s.sb1); row('Diwali Bonus to All Employees?', r.t, r.c);
   r=yn2(s.sb2); row('Aware of ₹21,000 Bonus Rule?', r.t, r.c);
   row('Starting Salary', s.sb3?'₹'+s.sb3:'—');
   r=yn2(s.sb4); row('Structured Salary Format?', r.t, r.c);
   r=yn2(s.sb5); row('Salaries Paid On Time?', r.t, r.c); y+=2;
-
   sec('Section C — POSH & Female Employment');
   r=yn2(s.sc1); row('Female Employees?', r.t, r.c);
   r=yn2(s.sc2); row('Aware of POSH Act 2013?', r.t, r.c);
   r=yn2(s.sc3); row('POSH Awareness Sessions?', r.t, r.c);
   r=yn2(s.sc4); row('IC Committee Formed?', r.t, r.c);
   r=yn2(s.sc5); row('Annual POSH Return Filed?', r.t, r.c); y+=2;
-
   sec('Section D — Provident Fund (PF)');
   r=yn2(s.sd1); row('PF Contribution Monthly?', r.t, r.c);
   r=yn2(s.sd2); row('PF Capped at ₹15,000?', r.t, r.c);
   r=yn2(s.sd3); row('Paying PF on Salary >₹50k/₹75k?', r.t, r.c); y+=2;
-
   sec('Section E — Leave Policy');
   r=yn2(s.se1); row('Leaves Given to Employees?', r.t, r.c);
   row('Average Annual Leaves', s.se2||'—');
   r=yn2(s.se3); row('Aware: ESIC = No Sick Leave?', r.t, r.c); y+=2;
-
   sec('Section F — ESI & Salary Structure');
   r=yn2(s.sf1); row('Aware ESI Coverage ₹42,000?', r.t, r.c);
   r=yn2(s.sf2); row('Statutory Benefits Provided?', r.t, r.c);
   r=yn2(s.sf3); row('Salary Restructured per Labour Codes?', r.t, r.c); y+=2;
-
   sec('Section G — HR Policy & Documentation');
   r=yn2(s.sg1); row('HR/Leave/Appt Letter Updated?', r.t, r.c);
   r=yn2(s.sg2); row('Written HR Policies in Place?', r.t, r.c);
   r=yn2(s.sg3); row('Appointment Letters Issued?', r.t, r.c);
   r=yn2(s.sg4); row('Employee Records Maintained?', r.t, r.c); y+=2;
-
   sec('Section H — Inspections, Legal & Assets');
   r=yn2(s.sh1); row('Faced Labour Inspector Challenges?', r.t, r.c);
   r=yn2(s.sh2); row('Pending Notices / Cases?', r.t, r.c);

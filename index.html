@@ -37,7 +37,7 @@
   </div>
 
   <div class="nav-right">
-    <button class="btn-theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle Light/Dark Mode">
+    <button class="btn-theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">
       <span class="theme-icon-sun">☀️</span>
       <span class="theme-icon-moon">🌙</span>
     </button>
@@ -45,7 +45,6 @@
   </div>
 </nav>
 
-<!-- Mobile nav overlay -->
 <div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="closeMobileMenu()"></div>
 
 <!-- ===== ADMIN LOGIN MODAL ===== -->
@@ -81,7 +80,7 @@
   <div class="form-hero">
     <div class="hero-tag">COMPLIANCE ASSESSMENT TOOL</div>
     <h1 class="hero-title">Labour Law Health<br><em>Check Audit</em></h1>
-    <div class="hero-timer">⚡ Estimated Time: 5 Minutes</div>
+    <div class="hero-timer">⚡ Estimated Time: 7 Minutes</div>
   </div>
 
   <div class="form-shell">
@@ -98,11 +97,12 @@
         <div class="step-dot" id="sd2"><span>2</span></div>
         <div class="step-info">
           <div class="step-name">Audit</div>
+          <div class="step-desc">Sections A–H</div>
         </div>
       </div>
     </div>
 
-    <!-- PAGE 1 -->
+    <!-- PAGE 1: PROFILE -->
     <div id="pg1">
       <div class="card">
         <div class="card-header">
@@ -163,7 +163,8 @@
               <option>Manufacturing</option><option>IT & Software</option><option>Retail & Trade</option>
               <option>Healthcare</option><option>Education</option><option>Construction</option>
               <option>Logistics & Transport</option><option>Finance & Banking</option>
-              <option>Hospitality</option><option>Agriculture</option><option>Compliance</option><option>Import & Export</option><option>Other</option>
+              <option>Hospitality</option><option>Agriculture</option><option>Compliance</option>
+              <option>Import & Export</option><option>Other</option>
             </select>
           </div>
         </div>
@@ -174,204 +175,256 @@
       </div>
     </div>
 
-    <!-- PAGE 2 -->
+    <!-- PAGE 2: AUDIT SECTIONS A–H -->
     <div id="pg2" style="display:none">
 
-      <div class="sec-label"><span class="sec-num">S1</span> Business Setup</div>
+      <!-- ===== SECTION A: BUSINESS SETUP & LICENSING ===== -->
+      <div class="sec-label"><span class="sec-num">A</span> Business Setup & Licensing</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q1 — What type of establishment best describes your business?</div>
+          <div class="qlabel">A1 — What type of establishment best describes your business?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q1" value="Factory"><span>🏭 Factory</span></label>
-            <label class="opt"><input type="radio" name="q1" value="Office"><span>🏢 Office</span></label>
-            <label class="opt"><input type="radio" name="q1" value="Shop"><span>🛒 Shop</span></label>
-            <label class="opt"><input type="radio" name="q1" value="Combination"><span>⚙ Mixed Setup</span></label>
+            <label class="opt"><input type="radio" name="sa1" value="Factory"><span>🏭 Factory</span></label>
+            <label class="opt"><input type="radio" name="sa1" value="Office"><span>🏢 Office</span></label>
+            <label class="opt"><input type="radio" name="sa1" value="Shop"><span>🛒 Shop</span></label>
+            <label class="opt"><input type="radio" name="sa1" value="Mixed"><span>⚙ Mixed Setup</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q2 — Which license or registration has your business obtained?</div>
-          <div class="opt-row wrap">
-            <label class="opt"><input type="radio" name="q2" value="Factory License"><span>Factory License</span></label>
-            <label class="opt"><input type="radio" name="q2" value="Shops & Establishment License"><span>Shops & Estab.</span></label>
-            <label class="opt"><input type="radio" name="q2" value="Applied"><span>In Process</span></label>
-            <label class="opt"><input type="radio" name="q2" value="Not Yet Taken"><span>Not Yet Taken</span></label>
+          <div class="qlabel">A2 — Is the license in the name of the owner himself?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sa2" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sa2" value="No"><span>❌ No</span></label>
           </div>
         </div>
       </div>
 
-      <div class="sec-label"><span class="sec-num">S2</span> Employee Management</div>
+      <!-- ===== SECTION B: BONUS & SALARY ===== -->
+      <div class="sec-label"><span class="sec-num">B</span> Bonus & Salary Practices</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q3 — Do you maintain basic employee records (ID proof, joining details)?</div>
+          <div class="qlabel">B1 — Do you pay bonus to all employees on Diwali?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q3" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q3" value="No"><span>❌ No</span></label>
-            <label class="opt"><input type="radio" name="q3" value="In Progress"><span>🔄 In Progress</span></label>
+            <label class="opt"><input type="radio" name="sb1" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sb1" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q4 — Do you issue appointment letters / joining confirmation?</div>
+          <div class="qlabel">B2 — Are you aware that as per labour laws, bonus is only paid to employees having wages up to ₹21,000?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q4" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q4" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sb2" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sb2" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">B3 — Typical starting salary for helpers / support staff (₹)</div>
+          <input type="number" id="sb3" placeholder="e.g. 12000" class="solo-input">
+        </div>
+        <div class="qblock">
+          <div class="qlabel">B4 — Do you follow a structured salary format (Basic + Allowances)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sb4" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sb4" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sb4" value="Not Sure"><span>🤷 Not Sure</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">B5 — Are salaries paid on time (on or before 7th of month)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sb5" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sb5" value="No"><span>❌ No</span></label>
           </div>
         </div>
       </div>
 
-      <div class="sec-label"><span class="sec-num">S3</span> Salary Practices</div>
+      <!-- ===== SECTION C: POSH & FEMALE EMPLOYEES ===== -->
+      <div class="sec-label"><span class="sec-num">C</span> POSH — Prevention of Sexual Harassment</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q5 — Typical starting salary for helpers / support staff (₹)</div>
-          <input type="number" id="q5" placeholder="e.g. 12000" class="solo-input">
-        </div>
-        <div class="qblock">
-          <div class="qlabel">Q6 — Do you follow a structured salary format (Basic + Allowances)?</div>
+          <div class="qlabel">C1 — Do you also employ female employees?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q6" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q6" value="No"><span>❌ No</span></label>
-            <label class="opt"><input type="radio" name="q6" value="Not Sure"><span>🤷 Not Sure</span></label>
+            <label class="opt"><input type="radio" name="sc1" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sc1" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q7 — Are salaries paid on time (on or before 7th of month)?</div>
+          <div class="qlabel">C2 — Do you know there is a specific law that governs female employees — POSH Act 2013?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q7" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q7" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sc2" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sc2" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q8 — Do you provide statutory benefits (PF, ESI, etc.)?</div>
+          <div class="qlabel">C3 — Are you conducting periodic awareness sessions under POSH Act 2013?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q8" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q8" value="No"><span>❌ No</span></label>
-            <label class="opt"><input type="radio" name="q8" value="Partial"><span>⚖ Partial</span></label>
+            <label class="opt"><input type="radio" name="sc3" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sc3" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">C4 — Have you formed the Internal Committee (IC) under the POSH Act 2013?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sc4" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sc4" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">C5 — Have you filed the annual return under the POSH Act 2013?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sc5" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sc5" value="No"><span>❌ No</span></label>
           </div>
         </div>
       </div>
 
-      <div class="sec-label"><span class="sec-num">S4</span> Employee Benefits</div>
+      <!-- ===== SECTION D: PF / PROVIDENT FUND ===== -->
+      <div class="sec-label"><span class="sec-num">D</span> Provident Fund (PF)</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q9 — Retirement / Savings benefits such as PF?</div>
+          <div class="qlabel">D1 — Do you contribute to PF on a monthly basis?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q9" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q9" value="Not Yet"><span>🗑 Not Yet</span></label>
-            <label class="opt"><input type="radio" name="q9" value="In Progress"><span>🔄 In Progress</span></label>
+            <label class="opt"><input type="radio" name="sd1" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sd1" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q10 — Medical / Insurance benefits such as ESI?</div>
+          <div class="qlabel">D2 — Do you cap your PF contribution till ₹15,000?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q10" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q10" value="Not Yet"><span>🗑 Not Yet</span></label>
-            <label class="opt"><input type="radio" name="q10" value="Not Applicable"><span>— N/A</span></label>
+            <label class="opt"><input type="radio" name="sd2" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sd2" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">D3 — Are you paying PF for an employee having salary above ₹50,000 or ₹75,000?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sd3" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sd3" value="No"><span>❌ No</span></label>
           </div>
         </div>
       </div>
 
-      <div class="sec-label"><span class="sec-num">S5</span> Leave & Working Conditions</div>
+      <!-- ===== SECTION E: LEAVES ===== -->
+      <div class="sec-label"><span class="sec-num">E</span> Leave Policy</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q11 — Do employees get leaves or time-off?</div>
+          <div class="qlabel">E1 — Are you giving leaves to employees?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q11" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q11" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="se1" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="se1" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q12 — How many leaves annually?</div>
-          <input type="text" id="q12" placeholder="e.g. 18 Casual + 12 Privilege" class="solo-input">
+          <div class="qlabel">E2 — How many leaves on an average are you giving annually?</div>
+          <input type="text" id="se2" placeholder="e.g. 18 Casual + 12 Privilege" class="solo-input">
         </div>
-      </div>
-
-      <div class="sec-label"><span class="sec-num">S6</span> Bonus & Payments</div>
-      <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q13 — Do you provide statutory / festive bonus (e.g. Diwali)?</div>
+          <div class="qlabel">E3 — Do you know that employees covered under ESIC are not entitled for sick leaves separately?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q13" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q13" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="se3" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="se3" value="No"><span>❌ No</span></label>
           </div>
         </div>
       </div>
 
-      <div class="sec-label"><span class="sec-num">S7</span> Workplace Practices</div>
+      <!-- ===== SECTION F: ESI / SALARY STRUCTURE ===== -->
+      <div class="sec-label"><span class="sec-num">F</span> ESI & Salary Structure</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q14 — Is there a formal system for employees to raise complaints?</div>
+          <div class="qlabel">F1 — Do you know that employees having salary up to ₹42,000 are covered under ESI?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q14" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q14" value="Informal System"><span>🗣 Informal</span></label>
-            <label class="opt"><input type="radio" name="q14" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sf1" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sf1" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">F2 — Do you provide statutory benefits (PF, ESI, etc.) to eligible employees?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sf2" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sf2" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sf2" value="Partial"><span>⚖ Partial</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">F3 — Have you restructured your salary as per the new Labour Codes?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sf3" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sf3" value="No"><span>❌ No</span></label>
           </div>
         </div>
       </div>
 
-      <div class="sec-label"><span class="sec-num">S8</span> POSH — Prevention of Sexual Harassment</div>
+      <!-- ===== SECTION G: HR POLICY ===== -->
+      <div class="sec-label"><span class="sec-num">G</span> HR Policy & Documentation</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q15 — Do you conduct POSH awareness sessions?</div>
+          <div class="qlabel">G1 — Have you updated the HR Policy / Leave Policy / Appointment Letter as per the new Labour Codes?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q15" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q15" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sg1" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sg1" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sg1" value="Partial"><span>📄 Partially</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q16 — Is there a designated Internal Committee (ICC)?</div>
+          <div class="qlabel">G2 — Do you maintain written HR policies / guidelines?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q16" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q16" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sg2" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sg2" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sg2" value="Partial"><span>📄 Partial</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">G3 — Do you issue appointment letters / joining confirmation?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sg3" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sg3" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">G4 — Do you maintain basic employee records (ID proof, joining details)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sg4" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sg4" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sg4" value="In Progress"><span>🔄 In Progress</span></label>
           </div>
         </div>
       </div>
 
-      <div class="sec-label"><span class="sec-num">S9</span> HR & Policies</div>
+      <!-- ===== SECTION H: INSPECTIONS & ASSET MANAGEMENT ===== -->
+      <div class="sec-label"><span class="sec-num">H</span> Inspections, Legal & Asset Management</div>
       <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q17 — Do you maintain written HR policies / guidelines?</div>
+          <div class="qlabel">H1 — Have you ever faced challenges dealing with the Labour Inspector during inspection?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q17" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q17" value="No"><span>❌ No</span></label>
-            <label class="opt"><input type="radio" name="q17" value="Partial"><span>📄 Partial</span></label>
+            <label class="opt"><input type="radio" name="sh1" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sh1" value="No"><span>❌ No</span></label>
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">Q18 — Do you review / update practices regularly?</div>
+          <div class="qlabel">H2 — Are there any pending Notices, Inspections or Cases?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q18" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q18" value="Occasionally"><span>🔁 Sometimes</span></label>
-            <label class="opt"><input type="radio" name="q18" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sh2" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sh2" value="No"><span>❌ No</span></label>
           </div>
         </div>
-      </div>
-
-      <div class="sec-label"><span class="sec-num">S10</span> Engagement</div>
-      <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q19 — Would you like a detailed improvement report?</div>
+          <div class="qlabel">H3 — Do you often face challenges when an employee leaves without serving the notice period?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q19" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q19" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sh3" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sh3" value="No"><span>❌ No</span></label>
           </div>
         </div>
-      </div>
-
-      <div class="sec-label"><span class="sec-num">S11</span> Legal Awareness</div>
-      <div class="card">
         <div class="qblock">
-          <div class="qlabel">Q20 — Are you aware your business must file returns under labour laws?</div>
+          <div class="qlabel">H4 — Do you issue Laptop / Phones or any other company assets to employees?</div>
           <div class="opt-row">
-            <label class="opt"><input type="radio" name="q20" value="Yes" id="q20y"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="q20" value="No"><span>❌ No</span></label>
+            <label class="opt"><input type="radio" name="sh4" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sh4" value="No"><span>❌ No</span></label>
           </div>
         </div>
-        <div id="q21box" style="display:none" class="qblock q21-box">
-          <div class="qlabel q21-label">Q21 — Under which labour laws are you currently filing returns?</div>
-          <div class="cbx-list">
-            <label class="cbx-item"><input type="checkbox" name="q21" value="Labour Code on Wages"><span>Labour Code on Wages</span></label>
-            <label class="cbx-item"><input type="checkbox" name="q21" value="Labour Code on Social Security"><span>Labour Code on Social Security</span></label>
-            <label class="cbx-item"><input type="checkbox" name="q21" value="Occupational Safety Code"><span>Occupational Safety, Health & Working Conditions Code</span></label>
-            <label class="cbx-item"><input type="checkbox" name="q21" value="Not Sure"><span>Not Sure / None of the above</span></label>
+        <div class="qblock">
+          <div class="qlabel">H5 — Have you ever faced any situation where employees damaged or left with assets without proper handover?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sh5" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sh5" value="No"><span>❌ No</span></label>
           </div>
         </div>
       </div>
@@ -420,6 +473,7 @@
     </div>
 
     <div id="udashReport" style="display:none">
+      <!-- Score Row -->
       <div class="udash-score-row">
         <div class="udash-score-main">
           <div class="udash-score-label">Overall Compliance Score</div>
@@ -431,15 +485,16 @@
           <div class="udash-score-meta" id="udashScoreMeta">—</div>
         </div>
         <div class="udash-score-stats">
-          <div class="udash-stat-item"><div class="ust-val" id="ustPF">—</div><div class="ust-lbl">PF / Savings</div></div>
-          <div class="udash-stat-item"><div class="ust-val" id="ustESI">—</div><div class="ust-lbl">ESI / Medical</div></div>
-          <div class="udash-stat-item"><div class="ust-val" id="ustPOSH">—</div><div class="ust-lbl">POSH</div></div>
-          <div class="udash-stat-item"><div class="ust-val" id="ustLeave">—</div><div class="ust-lbl">Leave Policy</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustPF">—</div><div class="ust-lbl">PF Monthly</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustESI">—</div><div class="ust-lbl">ESI Aware</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustPOSH">—</div><div class="ust-lbl">POSH IC</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustLeave">—</div><div class="ust-lbl">Leaves Given</div></div>
           <div class="udash-stat-item"><div class="ust-val" id="ustHR">—</div><div class="ust-lbl">HR Policy</div></div>
-          <div class="udash-stat-item"><div class="ust-val" id="ustBonus">—</div><div class="ust-lbl">Bonus</div></div>
+          <div class="udash-stat-item"><div class="ust-val" id="ustBonus">—</div><div class="ust-lbl">Bonus Paid</div></div>
         </div>
       </div>
 
+      <!-- Charts Row 1 -->
       <div class="udash-charts-row">
         <div class="chart-tile">
           <div class="ct-title">Compliance Area Breakdown</div>
@@ -451,6 +506,7 @@
         </div>
       </div>
 
+      <!-- Charts Row 2 -->
       <div class="udash-charts-row">
         <div class="chart-tile">
           <div class="ct-title">Key Compliance Metrics</div>
@@ -462,20 +518,30 @@
         </div>
       </div>
 
+      <!-- Detail Sections -->
       <div class="udash-section-title">📋 Business Profile</div>
       <div class="m-grid" id="udashProfile"></div>
 
-      <div class="udash-section-title">👥 Employee & Salary Practices</div>
-      <div class="m-grid" id="udashEmployeeSalary"></div>
+      <div class="udash-section-title">💰 Bonus & Salary Practices (Section B)</div>
+      <div class="m-grid" id="udashBonus"></div>
 
-      <div class="udash-section-title">🏦 Benefits & Welfare</div>
-      <div class="m-grid" id="udashBenefits"></div>
-
-      <div class="udash-section-title">👩‍⚖️ POSH & HR Governance</div>
+      <div class="udash-section-title">👩‍⚖️ POSH & Female Employment (Section C)</div>
       <div class="m-grid" id="udashPOSH"></div>
 
-      <div class="udash-section-title">⚖️ Legal Awareness</div>
-      <div class="m-grid" id="udashLegal"></div>
+      <div class="udash-section-title">🏦 Provident Fund — PF (Section D)</div>
+      <div class="m-grid" id="udashPFSection"></div>
+
+      <div class="udash-section-title">🏖 Leave Policy (Section E)</div>
+      <div class="m-grid" id="udashLeaves"></div>
+
+      <div class="udash-section-title">🏥 ESI & Salary Structure (Section F)</div>
+      <div class="m-grid" id="udashESI"></div>
+
+      <div class="udash-section-title">📄 HR Policy & Documentation (Section G)</div>
+      <div class="m-grid" id="udashHR"></div>
+
+      <div class="udash-section-title">🔍 Inspections & Asset Management (Section H)</div>
+      <div class="m-grid" id="udashInspection"></div>
 
       <div id="udashGapsSection" style="display:none">
         <div class="udash-section-title">⚠️ Compliance Gaps Identified</div>
@@ -534,17 +600,19 @@
         <div class="loading-bar-fill"></div>
       </div>
 
+      <!-- Stats Grid -->
       <div class="stats-grid admin-stats-grid">
         <div class="stat-tile"><div class="st-val" id="ast0">0</div><div class="st-lbl">Total Submissions</div></div>
         <div class="stat-tile"><div class="st-val gold" id="ast1">—</div><div class="st-lbl">Avg Compliance Score</div></div>
         <div class="stat-tile"><div class="st-val green" id="ast2">—</div><div class="st-lbl">PF Compliant</div></div>
-        <div class="stat-tile"><div class="st-val blue" id="ast3">—</div><div class="st-lbl">ESI Compliant</div></div>
-        <div class="stat-tile"><div class="st-val red" id="ast4">—</div><div class="st-lbl">POSH Active</div></div>
+        <div class="stat-tile"><div class="st-val blue" id="ast3">—</div><div class="st-lbl">ESI Aware</div></div>
+        <div class="stat-tile"><div class="st-val red" id="ast4">—</div><div class="st-lbl">POSH IC Active</div></div>
         <div class="stat-tile"><div class="st-val gold" id="ast5">—</div><div class="st-lbl">High (70%+)</div></div>
         <div class="stat-tile"><div class="st-val blue" id="ast6">—</div><div class="st-lbl">Medium (40–69%)</div></div>
         <div class="stat-tile"><div class="st-val red" id="ast7">—</div><div class="st-lbl">Critical (&lt;40%)</div></div>
       </div>
 
+      <!-- Admin Charts -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Overall Statutory Compliance % Across All Businesses</div>
@@ -562,7 +630,7 @@
           <div class="ct-body"><canvas id="adminChartEmp"></canvas></div>
         </div>
         <div class="chart-tile">
-          <div class="ct-title">HR Policy Coverage</div>
+          <div class="ct-title">HR & POSH Policy Coverage</div>
           <div class="ct-body"><canvas id="adminChartPie"></canvas></div>
         </div>
       </div>
@@ -578,6 +646,7 @@
         </div>
       </div>
 
+      <!-- Admin Table -->
       <div class="tbl-tile">
         <div class="tbl-head">
           <div class="tbl-title">All Submission Records</div>
@@ -617,7 +686,6 @@
   </div>
 </div>
 
-<!-- FAB for sidebar on mobile -->
 <button class="fab-sidebar" onclick="toggleSidebar()" id="fabBtn" aria-label="Toggle sidebar">☰</button>
 
 <script src="script.js"></script>

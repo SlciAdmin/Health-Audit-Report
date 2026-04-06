@@ -1,6 +1,5 @@
 // ============================================================
-// LABOURSHIELD — script.js
-// Light/Dark Mode + Full Responsive + Google Sheets Integration
+// LABOURSHIELD — script.js  (Sections A–H, Complete)
 // ============================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbwyKhpfBAWRxo1qWWFrPKqN2ThJoY9QG6XSuSZ-fot5vPHkNhMZSVGJ4I5RZqOjag/exec";
@@ -16,8 +15,8 @@ let currentUserSubmission = null;
 
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'labourshield@2024';
-const LS_KEY     = 'ls_submissions_v2';
-const LS_LAST    = 'ls_last_submission_id';
+const LS_KEY     = 'ls_submissions_v3';
+const LS_LAST    = 'ls_last_submission_id_v3';
 const LS_ADMIN   = 'ls_admin_session';
 const LS_THEME   = 'ls_theme';
 
@@ -25,7 +24,6 @@ const LS_THEME   = 'ls_theme';
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem(LS_THEME, theme);
-  // Destroy and re-render charts on theme change (colors change)
   Object.keys(charts).forEach(k => { try { charts[k].destroy(); } catch(e){} });
   Object.keys(uCharts).forEach(k => { try { uCharts[k].destroy(); } catch(e){} });
   charts = {}; uCharts = {};
@@ -47,10 +45,10 @@ function toggleTheme() {
 
 // ===== MOBILE MENU =====
 function toggleMobileMenu() {
-  const navCenter   = document.getElementById('navCenter');
-  const hamburger   = document.getElementById('hamburgerBtn');
-  const overlay     = document.getElementById('mobileNavOverlay');
-  const isOpen      = navCenter.classList.contains('mobile-open');
+  const navCenter = document.getElementById('navCenter');
+  const hamburger = document.getElementById('hamburgerBtn');
+  const overlay   = document.getElementById('mobileNavOverlay');
+  const isOpen    = navCenter.classList.contains('mobile-open');
   if (isOpen) {
     navCenter.classList.remove('mobile-open');
     hamburger.classList.remove('open');
@@ -69,42 +67,22 @@ function closeMobileMenu() {
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async () => {
-  // Apply saved theme (default: light)
   const savedTheme = localStorage.getItem(LS_THEME) || 'light';
   applyTheme(savedTheme);
 
-  // Load local cache
   try { localSubmissions = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { localSubmissions = []; }
   submissions = [...localSubmissions];
-  updateNavBadge();
 
-  // Restore admin session
   if (localStorage.getItem(LS_ADMIN) === 'true') {
     isAdmin = true;
     showAdminUI();
   }
 
-  // Restore last user submission
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId) {
     currentUserSubmission = localSubmissions.find(s => String(s.id) === lastId) || null;
   }
 
-  // Q20 toggle Q21
-  document.body.addEventListener('change', e => {
-    if (e.target.name === 'q20') {
-      const box = document.getElementById('q21box');
-      if (!box) return;
-      if (e.target.value === 'Yes') {
-        box.style.display = 'block';
-      } else {
-        box.style.display = 'none';
-        document.querySelectorAll('input[name="q21"]').forEach(c => c.checked = false);
-      }
-    }
-  });
-
-  // Fetch from Sheets
   await loadFromSheets(false);
 
   if (window.location.hash === '#dashboard' && currentUserSubmission) {
@@ -112,18 +90,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Refresh when tab becomes visible (admin)
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && isAdmin) loadFromSheets(true);
 });
 
 // ===== UTILITIES =====
-function updateNavBadge() {
-  // Badge hidden on mobile, shown in admin only
-  const n = submissions.length;
-  // We no longer show a badge in nav for the user side
-}
-
 function showToast(msg, color = 'gold') {
   const existing = document.getElementById('ls-toast');
   if (existing) existing.remove();
@@ -146,11 +117,7 @@ function getRadio(name) {
   const el = document.querySelector(`input[name="${name}"]:checked`);
   return el ? el.value : '';
 }
-function getCbx(name) {
-  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(e => e.value);
-}
 
-// Chart tick colour based on theme
 function getTickColor() {
   return document.documentElement.getAttribute('data-theme') === 'dark' ? '#7a8299' : '#6b7280';
 }
@@ -261,75 +228,135 @@ function goPage1() {
 }
 
 // ===== SCORE & ANALYSIS =====
+// 26 scoring checks mapped to all sections A–H
 function calcScore(d) {
   const checks = [
-    d.q1 !== '',
-    d.q2 !== '' && d.q2 !== 'Not Yet Taken',
-    d.q3 === 'Yes',
-    d.q4 === 'Yes',
-    d.q6 === 'Yes',
-    d.q7 === 'Yes',
-    d.q8 === 'Yes' || d.q8 === 'Partial',
-    d.q9 === 'Yes',
-    d.q10 === 'Yes',
-    d.q11 === 'Yes',
-    d.q13 === 'Yes',
-    d.q14 !== 'No',
-    d.q15 === 'Yes',
-    d.q16 === 'Yes',
-    d.q17 === 'Yes' || d.q17 === 'Partial',
-    d.q18 === 'Yes' || d.q18 === 'Occasionally',
-    (d.q20 === 'Yes' && Array.isArray(d.q21) && d.q21.length > 0 && !d.q21.includes('Not Sure')),
+    // Section A (2)
+    d.sa1 !== '',
+    d.sa2 === 'Yes',
+    // Section B (3)
+    d.sb1 === 'Yes',
+    d.sb2 === 'Yes',
+    d.sb4 === 'Yes',
+    // Section C (5)
+    d.sc2 === 'Yes',
+    d.sc3 === 'Yes',
+    d.sc4 === 'Yes',
+    d.sc5 === 'Yes',
+    // Section D (3)
+    d.sd1 === 'Yes',
+    d.sd2 === 'Yes',
+    d.sd3 === 'No', // NOT paying PF above 50k/75k = correct
+    // Section E (2)
+    d.se1 === 'Yes',
+    d.se3 === 'Yes',
+    // Section F (3)
+    d.sf1 === 'Yes',
+    d.sf2 === 'Yes' || d.sf2 === 'Partial',
+    d.sf3 === 'Yes',
+    // Section G (4)
+    d.sg1 === 'Yes' || d.sg1 === 'Partial',
+    d.sg2 === 'Yes' || d.sg2 === 'Partial',
+    d.sg3 === 'Yes',
+    d.sg4 === 'Yes',
+    // Section H (5 — awareness flags)
+    d.sh1 === 'No',  // never faced labour inspector issue = compliant
+    d.sh2 === 'No',  // no pending notices = compliant
+    d.sh3 === 'No',  // no notice period issues = compliant
+    d.sh4 === 'Yes' && d.sh5 === 'No', // issues assets but no damage = compliant
+    d.sb5 === 'Yes',
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
 function getGaps(d) {
   const gaps = [];
-  if (d.q2 === 'Not Yet Taken' || d.q2 === '') gaps.push('No valid business license obtained');
-  if (d.q3 !== 'Yes') gaps.push('Employee records not properly maintained');
-  if (d.q4 !== 'Yes') gaps.push('Appointment letters not issued to employees');
-  if (d.q6 !== 'Yes') gaps.push('No structured salary format (Basic + Allowances)');
-  if (d.q7 !== 'Yes') gaps.push('Salaries not paid on time (before 7th of month)');
-  if (d.q8 === 'No') gaps.push('No statutory benefits (PF/ESI) being provided');
-  if (d.q9 !== 'Yes') gaps.push('No retirement/PF savings scheme in place');
-  if (d.q10 === 'Not Yet') gaps.push('No medical/ESI coverage for employees');
-  if (d.q11 !== 'Yes') gaps.push('Employees not granted statutory leave');
-  if (d.q13 !== 'Yes') gaps.push('No statutory/festive bonus provided');
-  if (d.q14 === 'No') gaps.push('No complaint/grievance system exists');
-  if (d.q15 !== 'Yes') gaps.push('POSH awareness sessions not conducted');
-  if (d.q16 !== 'Yes') gaps.push('No Internal Committee (ICC) constituted under POSH');
-  if (d.q17 === 'No') gaps.push('Written HR policies not in place');
+
+  // Section A
+  if (d.sa2 !== 'Yes') gaps.push('License is not in the name of the owner himself — this may create legal complications');
+
+  // Section B
+  if (d.sb1 !== 'Yes') gaps.push('Diwali / festive bonus not being paid to all employees');
+  if (d.sb2 !== 'Yes') gaps.push('Unaware that statutory bonus is only for employees with wages up to ₹21,000');
+  if (d.sb4 !== 'Yes') gaps.push('No structured salary format (Basic + Allowances) in place');
+  if (d.sb5 !== 'Yes') gaps.push('Salaries not paid on time — must be paid on or before 7th of each month');
+
+  // Section C
+  if (d.sc2 !== 'Yes') gaps.push('Unaware of POSH Act 2013 — mandatory if female employees are employed');
+  if (d.sc3 !== 'Yes') gaps.push('Periodic POSH awareness sessions not being conducted');
+  if (d.sc4 !== 'Yes') gaps.push('Internal Committee (IC) under POSH Act 2013 not formed');
+  if (d.sc5 !== 'Yes') gaps.push('Annual return under POSH Act 2013 not filed');
+
+  // Section D
+  if (d.sd1 !== 'Yes') gaps.push('PF contribution not being made on a monthly basis');
+  if (d.sd2 !== 'Yes') gaps.push('PF contribution not capped at ₹15,000 — may result in excess liability');
+  if (d.sd3 === 'Yes') gaps.push('Paying PF for employees with salary above ₹50,000/₹75,000 — review need');
+
+  // Section E
+  if (d.se1 !== 'Yes') gaps.push('Employees not receiving statutory leaves');
+  if (d.se3 !== 'Yes') gaps.push('Unaware that ESIC-covered employees are not entitled for separate sick leave');
+
+  // Section F
+  if (d.sf1 !== 'Yes') gaps.push('Unaware that employees earning up to ₹42,000 are covered under ESI');
+  if (d.sf2 === 'No') gaps.push('Statutory benefits (PF/ESI) not being provided to eligible employees');
+  if (d.sf3 !== 'Yes') gaps.push('Salary not restructured as per the new Labour Codes');
+
+  // Section G
+  if (d.sg1 === 'No') gaps.push('HR Policy / Leave Policy / Appointment Letter not updated as per new Labour Codes');
+  if (d.sg2 === 'No') gaps.push('Written HR policies and guidelines not in place');
+  if (d.sg3 !== 'Yes') gaps.push('Appointment letters not issued to employees');
+  if (d.sg4 !== 'Yes') gaps.push('Basic employee records not maintained (ID proof, joining details)');
+
+  // Section H
+  if (d.sh1 === 'Yes') gaps.push('Faced challenges with Labour Inspector — documentation and compliance records must be strengthened');
+  if (d.sh2 === 'Yes') gaps.push('Pending Notices / Inspections / Cases require immediate legal attention');
+  if (d.sh3 === 'Yes') gaps.push('Employees leaving without notice period — employment agreements need enforcement clauses');
+  if (d.sh5 === 'Yes') gaps.push('Employees have damaged or left with assets without proper handover — Asset Agreement Policy required');
+
   return gaps;
 }
 
 function getRecs(gaps) {
   const map = {
-    'No valid business license': 'Obtain Factory License or Shops & Establishment License immediately',
-    'Employee records': 'Start maintaining employee register with joining date, ID proof, wage records',
-    'Appointment letters': 'Issue appointment letters with CTC, designation and terms within 30 days of joining',
-    'structured salary': 'Restructure salary into Basic (50%) + HRA + Allowances to reduce PF liability',
-    'Salaries not paid': 'Implement payroll cycle to ensure salary disbursement before 7th of each month',
-    'statutory benefits': 'Register under EPFO and ESIC immediately if employee count exceeds threshold',
-    'retirement/PF': 'Enrol all eligible employees (₹15,000 wage) under PF within 30 days',
-    'medical/ESI': 'Register under ESIC for employees earning below ₹21,000/month',
-    'statutory leave': 'Define and communicate leave policy (CL/PL/SL) as per state Shops Act',
-    'bonus': 'Pay statutory bonus (8.33% to 20% of wages) under Payment of Bonus Act',
-    'complaint': 'Establish a formal HR grievance mechanism with escalation matrix',
-    'POSH awareness': 'Conduct POSH awareness workshop for all employees annually',
-    'Internal Committee': 'Constitute ICC with at least 50% women members as mandated by POSH Act',
-    'HR policies': 'Draft Employee Handbook covering attendance, leave, code of conduct, disciplinary process',
+    'License is not in the name': 'Transfer or obtain the business license in the owner\'s name immediately to avoid legal disputes',
+    'Diwali / festive bonus': 'Ensure Diwali bonus payment to all eligible employees as per Payment of Bonus Act',
+    'Unaware that statutory bonus': 'Verify bonus eligibility — only employees with wages up to ₹21,000 per month are eligible under the Act',
+    'structured salary format': 'Restructure salary into Basic (50%) + HRA + Other Allowances for proper PF & ESI computation',
+    'Salaries not paid on time': 'Implement payroll cycle — disburse salaries before 7th of every month to avoid penalties',
+    'Unaware of POSH Act': 'Immediately study and implement POSH Act 2013 — mandatory for all businesses employing women',
+    'POSH awareness sessions': 'Conduct POSH awareness workshop at least once a year for all employees',
+    'Internal Committee': 'Constitute Internal Committee (IC) under POSH Act with at least 50% women members',
+    'Annual return under POSH': 'File Annual Return under POSH Act 2013 before 31st January each year',
+    'PF contribution not being made': 'Register and contribute to PF monthly — mandatory for establishments with 20+ employees',
+    'PF contribution not capped': 'Cap PF contribution at ₹15,000 wage ceiling to control employer liability',
+    'Paying PF for employees with salary above': 'Review whether PF is mandatory for high-salary employees — may be avoidable above ₹15,000 basic',
+    'Employees not receiving statutory leaves': 'Implement statutory leave policy — Casual, Privilege, and Sick leave as per State Shops Act',
+    'ESIC-covered employees': 'Educate HR — ESIC-covered employees get medical benefits via ESI scheme; separate sick leave may not apply',
+    'Unaware that employees earning up to ₹42,000': 'Register under ESIC — employees earning up to ₹42,000 gross are mandatorily covered',
+    'Statutory benefits (PF/ESI) not being provided': 'Enrol all eligible employees under EPFO and ESIC within 30 days of crossing threshold',
+    'Salary not restructured': 'Restructure salary components as per the four new Labour Codes — Wages, Social Security, OSH, IR',
+    'HR Policy / Leave Policy / Appointment Letter not updated': 'Update all HR documents to align with the four Labour Codes introduced by the Government',
+    'Written HR policies': 'Draft an Employee Handbook covering attendance, leave, conduct, disciplinary and termination process',
+    'Appointment letters not issued': 'Issue appointment letters to all employees within 30 days of joining with CTC and designation details',
+    'Basic employee records not maintained': 'Maintain employee register with joining date, ID proof, PAN, Aadhaar, and wage records',
+    'Faced challenges with Labour Inspector': 'Maintain compliance files — registers, returns, licences — ready for inspection at all times',
+    'Pending Notices / Inspections': 'Immediately engage a labour law consultant to address pending notices and cases',
+    'Employees leaving without notice': 'Include notice period clauses in appointment letters with recovery provision for shortfall',
+    'Employees have damaged or left with assets': 'Implement an Asset Agreement policy — get employee sign-off on all company assets issued',
   };
   const recs = [];
   gaps.forEach(g => {
     for (const [k, v] of Object.entries(map)) {
-      if (g.toLowerCase().includes(k.toLowerCase())) { recs.push(v); break; }
+      if (g.toLowerCase().includes(k.toLowerCase())) {
+        if (!recs.includes(v)) recs.push(v);
+        break;
+      }
     }
   });
-  return recs.length ? recs : ['Maintain documentation standards and conduct annual compliance audits'];
+  return recs.length ? recs : ['Maintain all compliance documentation and conduct annual internal audits'];
 }
 
-// ===== GOOGLE SHEETS API =====
+// ===== GOOGLE SHEETS =====
 async function sendToSheets(data) {
   try {
     await fetch(API_URL, {
@@ -340,7 +367,7 @@ async function sendToSheets(data) {
     return { success: true };
   } catch(err) {
     console.error('sendToSheets error:', err);
-    return { success: false, error: err.message };
+    return { success: false };
   }
 }
 
@@ -376,8 +403,6 @@ async function loadFromSheets(showLoader = false) {
 
 function normaliseItem(item) {
   const out = { ...item };
-  if (typeof out.q21 === 'string') out.q21 = out.q21 ? out.q21.split(',').map(s=>s.trim()).filter(Boolean) : [];
-  else if (!Array.isArray(out.q21)) out.q21 = [];
   if (typeof out.gaps === 'string') out.gaps = out.gaps ? out.gaps.split('|').map(s=>s.trim()).filter(Boolean) : [];
   else if (!Array.isArray(out.gaps)) out.gaps = [];
   if (typeof out.recs === 'string') out.recs = out.recs ? out.recs.split('|').map(s=>s.trim()).filter(Boolean) : [];
@@ -388,13 +413,14 @@ function normaliseItem(item) {
 
 // ===== FORM SUBMISSION =====
 async function submitAudit() {
-  const required = ['q1','q2','q3','q4','q6','q7','q8','q9','q10','q11','q13','q14','q15','q16','q17','q18','q19','q20'];
+  // Validate required radio groups
+  const requiredRadios = ['sa1','sa2','sb1','sb2','sb4','sb5','sc1','sc2','sc3','sc4','sc5','sd1','sd2','sd3','se1','se3','sf1','sf2','sf3','sg1','sg2','sg3','sg4','sh1','sh2','sh3','sh4','sh5'];
   let missingQ = null;
-  for (const n of required) {
+  for (const n of requiredRadios) {
     if (!getRadio(n)) { missingQ = n; break; }
   }
   if (missingQ) {
-    showToast(`Please answer question ${missingQ.replace('q','')}`, 'red');
+    showToast(`Please answer question ${missingQ.toUpperCase()}`, 'red');
     const el = document.querySelector(`input[name="${missingQ}"]`);
     if (el) el.closest('.qblock')?.scrollIntoView({ behavior:'smooth', block:'center' });
     return;
@@ -403,6 +429,7 @@ async function submitAudit() {
   const d = {
     id: Date.now(),
     submittedAt: new Date().toISOString(),
+    // Profile
     name:        document.getElementById('name')?.value.trim() || '',
     contact:     document.getElementById('contact')?.value.trim() || '',
     state:       document.getElementById('state')?.value || '',
@@ -410,17 +437,30 @@ async function submitAudit() {
     employees:   document.getElementById('employees')?.value || '',
     companyName: document.getElementById('companyName')?.value.trim() || '',
     field:       document.getElementById('field')?.value || '',
-    q1: getRadio('q1'), q2: getRadio('q2'), q3: getRadio('q3'), q4: getRadio('q4'),
-    q5: document.getElementById('q5')?.value || '',
-    q6: getRadio('q6'), q7: getRadio('q7'), q8: getRadio('q8'),
-    q9: getRadio('q9'), q10: getRadio('q10'),
-    q11: getRadio('q11'), q12: document.getElementById('q12')?.value || '',
-    q13: getRadio('q13'), q14: getRadio('q14'),
-    q15: getRadio('q15'), q16: getRadio('q16'),
-    q17: getRadio('q17'), q18: getRadio('q18'),
-    q19: getRadio('q19'), q20: getRadio('q20'),
-    q21: getCbx('q21'),
+    // Section A
+    sa1: getRadio('sa1'), sa2: getRadio('sa2'),
+    // Section B
+    sb1: getRadio('sb1'), sb2: getRadio('sb2'),
+    sb3: document.getElementById('sb3')?.value || '',
+    sb4: getRadio('sb4'), sb5: getRadio('sb5'),
+    // Section C
+    sc1: getRadio('sc1'), sc2: getRadio('sc2'), sc3: getRadio('sc3'),
+    sc4: getRadio('sc4'), sc5: getRadio('sc5'),
+    // Section D
+    sd1: getRadio('sd1'), sd2: getRadio('sd2'), sd3: getRadio('sd3'),
+    // Section E
+    se1: getRadio('se1'),
+    se2: document.getElementById('se2')?.value || '',
+    se3: getRadio('se3'),
+    // Section F
+    sf1: getRadio('sf1'), sf2: getRadio('sf2'), sf3: getRadio('sf3'),
+    // Section G
+    sg1: getRadio('sg1'), sg2: getRadio('sg2'), sg3: getRadio('sg3'), sg4: getRadio('sg4'),
+    // Section H
+    sh1: getRadio('sh1'), sh2: getRadio('sh2'), sh3: getRadio('sh3'),
+    sh4: getRadio('sh4'), sh5: getRadio('sh5'),
   };
+
   d.score = calcScore(d);
   d.gaps  = getGaps(d);
   d.recs  = getRecs(d.gaps);
@@ -464,7 +504,6 @@ function resetForm() {
   document.getElementById('pgSuccess').style.display = 'none';
   document.getElementById('pg1').style.display = 'block';
   document.getElementById('pg2').style.display = 'none';
-  document.getElementById('q21box').style.display = 'none';
   document.querySelectorAll('#view-form input, #view-form select').forEach(el => {
     if (el.id && ['adminUser','adminPass'].includes(el.id)) return;
     if (el.type === 'radio' || el.type === 'checkbox') el.checked = false;
@@ -510,7 +549,7 @@ function renderUserDashboard() {
   set('udashVerdict', verdict);
   const barEl = document.getElementById('udashScoreBar');
   if (barEl) { barEl.style.width = '0'; setTimeout(() => barEl.style.width = sc + '%', 200); }
-  set('udashScoreMeta', `${(s.gaps||[]).length} compliance gap${(s.gaps||[]).length!==1?'s':''} identified out of 17 checks`);
+  set('udashScoreMeta', `${(s.gaps||[]).length} compliance gap${(s.gaps||[]).length!==1?'s':''} identified across all sections`);
 
   const yn = (v, id) => {
     const e = document.getElementById(id); if (!e) return;
@@ -518,46 +557,71 @@ function renderUserDashboard() {
     else if (v === 'No') { e.textContent='No ❌'; e.className='ust-val no'; }
     else { e.textContent=v||'—'; e.className='ust-val partial'; }
   };
-  yn(s.q9,'ustPF'); yn(s.q10,'ustESI'); yn(s.q15,'ustPOSH');
-  yn(s.q11,'ustLeave'); yn(s.q17,'ustHR'); yn(s.q13,'ustBonus');
+  yn(s.sd1,'ustPF'); yn(s.sf1,'ustESI'); yn(s.sc4,'ustPOSH');
+  yn(s.se1,'ustLeave'); yn(s.sg2,'ustHR'); yn(s.sb1,'ustBonus');
 
   renderUserCharts(s);
 
-  function makeGrid(containerId, rows) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    el.innerHTML = rows.map(([l,v]) =>
-      `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`
-    ).join('');
-  }
-
+  // Profile
   document.getElementById('udashProfile').innerHTML = [
     ['Company', s.companyName], ['Contact', s.name], ['Phone', s.contact],
     ['Location', (s.location||'')+(s.state?', '+s.state:'')], ['Industry', s.field],
-    ['Employees', s.employees], ['Est. Type', s.q1||'—'],
-    ['License', s.q2||'—'], ['Starting Salary', s.q5?'₹'+s.q5:'—'],
+    ['Employees', s.employees], ['Est. Type', s.sa1||'—'],
+    ['License in Owner Name', s.sa2||'—'],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div><div class="m-item-val">${v||'—'}</div></div>`).join('');
 
-  makeGrid('udashEmployeeSalary', [
-    ['Emp Records',s.q3],['Appt Letters',s.q4],['Structured Salary',s.q6],
-    ['Timely Payment',s.q7],['Statutory Benefits',s.q8],['Leave Policy',s.q11],
-  ]);
-  makeGrid('udashBenefits', [
-    ['PF / Savings',s.q9],['ESI / Medical',s.q10],['Bonus Paid',s.q13],
-    ['Leaves/Year',s.q12||'—'],['Grievance System',s.q14],['Policy Reviews',s.q18],
-  ]);
-  makeGrid('udashPOSH', [
-    ['POSH Sessions',s.q15],['ICC Constituted',s.q16],['Written HR Policy',s.q17],
-  ]);
-
-  let legalHtml = [
-    ['Labour Law Awareness',s.q20],['Detailed Report',s.q19],
+  // Section B — Bonus & Salary
+  document.getElementById('udashBonus').innerHTML = [
+    ['Bonus on Diwali', s.sb1], ['Aware of ₹21,000 Bonus Rule', s.sb2],
+    ['Structured Salary Format', s.sb4], ['Timely Salary Payment', s.sb5],
+    ['Starting Salary', s.sb3 ? '₹'+s.sb3 : '—'],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
-  if (s.q21?.length) {
-    legalHtml += `<div class="m-item" style="grid-column:1/-1"><div class="m-item-label">Labour Laws Filed Under</div><div class="m-laws" style="margin-top:0.4rem">${s.q21.map(l=>`<div class="m-law-item">✦ ${l}</div>`).join('')}</div></div>`;
-  }
-  document.getElementById('udashLegal').innerHTML = legalHtml;
 
+  // Section C — POSH
+  document.getElementById('udashPOSH').innerHTML = [
+    ['Female Employees', s.sc1], ['Aware of POSH Act 2013', s.sc2],
+    ['POSH Awareness Sessions', s.sc3], ['IC Committee Formed', s.sc4],
+    ['Annual POSH Return Filed', s.sc5],
+  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+
+  // Section D — PF
+  document.getElementById('udashPFSection').innerHTML = [
+    ['PF on Monthly Basis', s.sd1], ['PF Capped at ₹15,000', s.sd2],
+    ['PF on >₹50k/₹75k salary', s.sd3],
+  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+
+  // Section E — Leaves
+  document.getElementById('udashLeaves').innerHTML = [
+    ['Leaves Given to Employees', s.se1],
+    ['Average Annual Leaves', s.se2||'—'],
+    ['Aware: ESIC = No Sick Leave', s.se3],
+  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+
+  // Section F — ESI
+  document.getElementById('udashESI').innerHTML = [
+    ['Aware ESI Coverage ₹42,000', s.sf1],
+    ['Statutory Benefits Provided', s.sf2],
+    ['Salary Restructured per Codes', s.sf3],
+  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+
+  // Section G — HR
+  document.getElementById('udashHR').innerHTML = [
+    ['HR/Leave/Appt Letter Updated', s.sg1],
+    ['Written HR Policies', s.sg2],
+    ['Appointment Letters Issued', s.sg3],
+    ['Employee Records Maintained', s.sg4],
+  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+
+  // Section H — Inspection
+  document.getElementById('udashInspection').innerHTML = [
+    ['Faced Labour Inspector Issues', s.sh1],
+    ['Pending Notices / Cases', s.sh2],
+    ['Notice Period Issues', s.sh3],
+    ['Issues Assets to Employees', s.sh4],
+    ['Asset Damage / Loss Faced', s.sh5],
+  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
+
+  // Gaps
   const gapsSection = document.getElementById('udashGapsSection');
   const gapsEl      = document.getElementById('udashGaps');
   if ((s.gaps||[]).length) {
@@ -567,6 +631,7 @@ function renderUserDashboard() {
     if (gapsSection) gapsSection.style.display = 'none';
   }
 
+  // Recs
   const recsSection = document.getElementById('udashRecsSection');
   const recsEl      = document.getElementById('udashRecs');
   if ((s.recs||[]).length) {
@@ -584,10 +649,9 @@ function ynHtml(v) {
   if (v === 'Yes')          return '<div class="m-item-val yes">✅ Yes</div>';
   if (v === 'No')           return '<div class="m-item-val no">❌ No</div>';
   if (v === 'Partial')      return '<div class="m-item-val partial">⚖ Partial</div>';
+  if (v === 'Partially')    return '<div class="m-item-val partial">📄 Partially</div>';
   if (v === 'In Progress')  return '<div class="m-item-val partial">🔄 In Progress</div>';
-  if (v === 'Occasionally') return '<div class="m-item-val partial">🔁 Sometimes</div>';
-  if (v === 'Not Yet')      return '<div class="m-item-val no">🗑 Not Yet</div>';
-  if (v === 'Not Applicable') return '<div class="m-item-val partial">— N/A</div>';
+  if (v === 'Not Sure')     return '<div class="m-item-val partial">🤷 Not Sure</div>';
   return `<div class="m-item-val">${v||'—'}</div>`;
 }
 
@@ -597,103 +661,119 @@ function renderUserCharts(s) {
   Object.keys(uCharts).forEach(k => { try { uCharts[k].destroy(); } catch(e){} });
   uCharts = {};
 
-  const gold   = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim() || '#d4a843';
-  const green  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#2ecc8a';
-  const red    = getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#e05555';
-  const blue   = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() || '#4e8cff';
+  const gold   = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim()   || '#d4a843';
+  const green  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim()  || '#2ecc8a';
+  const red    = getComputedStyle(document.documentElement).getPropertyValue('--red').trim()    || '#e05555';
+  const blue   = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim()   || '#4e8cff';
   const purple = getComputedStyle(document.documentElement).getPropertyValue('--purple').trim() || '#a78bfa';
 
+  // Radar — 8 sections
   const rc = document.getElementById('uChartRadar');
   if (rc) {
     uCharts['r'] = new Chart(rc, {
       type: 'radar',
       data: {
-        labels: ['Licensing','Records','Salary','Benefits','Leave','POSH','HR Policy','Legal'],
+        labels: ['Sec A\nLicensing','Sec B\nBonus/Salary','Sec C\nPOSH','Sec D\nPF','Sec E\nLeaves','Sec F\nESI','Sec G\nHR Policy','Sec H\nInspection'],
         datasets: [{
-          label: 'Your Compliance',
+          label: 'Your Score',
           data: [
-            s.q2 !== 'Not Yet Taken' && s.q2 !== '' ? 100 : 0,
-            s.q3 === 'Yes' ? 100 : s.q3 === 'In Progress' ? 50 : 0,
-            (s.q6==='Yes'?33:0)+(s.q7==='Yes'?34:0)+(s.q8==='Yes'?33:s.q8==='Partial'?17:0),
-            (s.q9==='Yes'?50:0)+(s.q10==='Yes'?50:0),
-            s.q11==='Yes'?100:0,
-            (s.q15==='Yes'?50:0)+(s.q16==='Yes'?50:0),
-            (s.q17==='Yes'?50:s.q17==='Partial'?25:0)+(s.q18==='Yes'?50:s.q18==='Occasionally'?25:0),
-            s.q20==='Yes'?100:0
+            // A: 2 checks
+            ((s.sa1?50:0) + (s.sa2==='Yes'?50:0)),
+            // B: 5 checks → bonus, awareness, salary struct, timely
+            ((s.sb1==='Yes'?25:0)+(s.sb2==='Yes'?25:0)+(s.sb4==='Yes'?25:0)+(s.sb5==='Yes'?25:0)),
+            // C: 4 checks
+            ((s.sc2==='Yes'?25:0)+(s.sc3==='Yes'?25:0)+(s.sc4==='Yes'?25:0)+(s.sc5==='Yes'?25:0)),
+            // D: 3 checks
+            ((s.sd1==='Yes'?34:0)+(s.sd2==='Yes'?33:0)+(s.sd3==='No'?33:0)),
+            // E: 2 checks
+            ((s.se1==='Yes'?50:0)+(s.se3==='Yes'?50:0)),
+            // F: 3 checks
+            ((s.sf1==='Yes'?34:0)+(s.sf2==='Yes'?33:0)+(s.sf3==='Yes'?33:0)),
+            // G: 4 checks
+            ((s.sg1==='Yes'||s.sg1==='Partial'?25:0)+(s.sg2==='Yes'||s.sg2==='Partial'?25:0)+(s.sg3==='Yes'?25:0)+(s.sg4==='Yes'?25:0)),
+            // H: 4 checks (no issues = compliant)
+            ((s.sh1==='No'?25:0)+(s.sh2==='No'?25:0)+(s.sh3==='No'?25:0)+(s.sh5==='No'?25:0)),
           ],
           backgroundColor: gold + '26', borderColor: gold,
-          pointBackgroundColor: gold, borderWidth:2, pointRadius:4,
+          pointBackgroundColor: gold, borderWidth: 2, pointRadius: 4,
         }]
       },
-      options:{responsive:true,maintainAspectRatio:false,
-        scales:{r:{min:0,max:100,ticks:{color:tick,font:{family:ff,size:9},stepSize:25,backdropColor:'transparent'},
-          grid:{color:grid},pointLabels:{color:tick,font:{family:ff,size:10}}}},
-        plugins:{legend:{display:false}}}
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { r: { min:0, max:100, ticks:{ color:tick, font:{family:ff,size:9}, stepSize:25, backdropColor:'transparent' },
+          grid:{ color:grid }, pointLabels:{ color:tick, font:{family:ff,size:9} } } },
+        plugins: { legend:{ display:false } }
+      }
     });
   }
 
+  // Doughnut — key benefits
   const dc = document.getElementById('uChartDough');
   if (dc) {
-    const active = [s.q9==='Yes',s.q10==='Yes',s.q15==='Yes',s.q13==='Yes'].filter(Boolean).length;
+    const active = [s.sd1==='Yes', s.sf2==='Yes'||s.sf2==='Partial', s.sc4==='Yes', s.sb1==='Yes'].filter(Boolean).length;
     uCharts['d'] = new Chart(dc, {
       type: 'doughnut',
       data: {
-        labels: ['PF Active','ESI Active','POSH Active','Bonus Active','Not Compliant'],
-        datasets: [{ data: [s.q9==='Yes'?1:0,s.q10==='Yes'?1:0,s.q15==='Yes'?1:0,s.q13==='Yes'?1:0,Math.max(0,4-active)],
-          backgroundColor:[green,blue,gold,purple,red+'66'],
-          borderWidth:0,hoverOffset:10 }]
+        labels: ['PF Active','ESI/Benefits','POSH IC','Bonus Paid','Non-Compliant'],
+        datasets: [{ data:[
+          s.sd1==='Yes'?1:0, s.sf2==='Yes'||s.sf2==='Partial'?1:0,
+          s.sc4==='Yes'?1:0, s.sb1==='Yes'?1:0, Math.max(0,4-active)
+        ], backgroundColor:[green,blue,gold,purple,red+'66'], borderWidth:0, hoverOffset:10 }]
       },
-      options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
-        plugins:{legend:{position:'bottom',labels:{color:tick,font:{family:ff,size:10},padding:8}}}}
+      options: { responsive:true, maintainAspectRatio:false, cutout:'68%',
+        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:10}, padding:8 } } } }
     });
   }
 
+  // Bar — key metrics
   const bc = document.getElementById('uChartBar');
   if (bc) {
     const vals = [
-      s.q3==='Yes'?100:s.q3==='In Progress'?50:0,
-      s.q4==='Yes'?100:0,
-      s.q6==='Yes'?100:s.q6==='Not Sure'?30:0,
-      s.q7==='Yes'?100:0,
-      s.q11==='Yes'?100:0,
-      s.q14==='Yes'?100:s.q14==='Informal System'?50:0,
-      s.q17==='Yes'?100:s.q17==='Partial'?60:0,
-      s.q18==='Yes'?100:s.q18==='Occasionally'?50:0,
+      s.sa2==='Yes'?100:0,
+      s.sb5==='Yes'?100:0,
+      s.sc3==='Yes'?100:0,
+      s.sd1==='Yes'?100:0,
+      s.sd2==='Yes'?100:0,
+      s.se1==='Yes'?100:0,
+      s.sf3==='Yes'?100:0,
+      s.sg1==='Yes'?100:s.sg1==='Partial'?60:0,
     ];
     uCharts['b'] = new Chart(bc, {
       type: 'bar',
       data: {
-        labels:['Emp Records','Appt Letters','Salary Struct.','Timely Pay','Leave Policy','Grievance','HR Policies','Policy Review'],
-        datasets:[{label:'% Score',data:vals,
-          backgroundColor:vals.map(v=>v>=80?green:v>=50?gold:red),
-          borderRadius:6,borderSkipped:false}]
+        labels:['License\n(Owner)','Timely\nSalary','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nGiven','Salary\nRestructd','HR Policy\nUpdated'],
+        datasets:[{ label:'% Score', data:vals,
+          backgroundColor: vals.map(v => v>=80?green : v>=50?gold : red),
+          borderRadius:6, borderSkipped:false }]
       },
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
-        scales:{x:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid}},
-          y:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid},beginAtZero:true,max:100}}}
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:8} }, grid:{ color:grid } },
+          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true, max:100 } } }
     });
   }
 
+  // Polar — HR Governance
   const pc = document.getElementById('uChartPolar');
   if (pc) {
     uCharts['p'] = new Chart(pc, {
       type: 'polarArea',
       data: {
-        labels:['POSH Awareness','ICC Committee','HR Written Policy','Policy Review','Grievance System'],
+        labels:['POSH Awareness','IC Committee','HR Written Policy','Appt. Letters','Emp. Records'],
         datasets:[{
-          data:[s.q15==='Yes'?100:0,s.q16==='Yes'?100:0,
-            s.q17==='Yes'?100:s.q17==='Partial'?60:0,
-            s.q18==='Yes'?100:s.q18==='Occasionally'?50:0,
-            s.q14==='Yes'?100:s.q14==='Informal System'?50:0],
+          data:[
+            s.sc3==='Yes'?100:0, s.sc4==='Yes'?100:0,
+            s.sg2==='Yes'?100:s.sg2==='Partial'?60:0,
+            s.sg3==='Yes'?100:0, s.sg4==='Yes'?100:0,
+          ],
           backgroundColor:[gold+'80',blue+'80',green+'80',purple+'80',green+'59'],
           borderWidth:0,
         }]
       },
-      options:{responsive:true,maintainAspectRatio:false,
-        scales:{r:{ticks:{color:tick,font:{family:ff,size:9},backdropColor:'transparent'},
-          grid:{color:grid},min:0,max:100}},
-        plugins:{legend:{position:'bottom',labels:{color:tick,font:{family:ff,size:9},padding:8}}}}
+      options:{ responsive:true, maintainAspectRatio:false,
+        scales:{ r:{ ticks:{ color:tick, font:{family:ff,size:9}, backdropColor:'transparent' },
+          grid:{ color:grid }, min:0, max:100 } },
+        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:9}, padding:8 } } } }
     });
   }
 }
@@ -728,9 +808,9 @@ function updateAdminStats(data) {
   set('ast0', data.length);
   const avg = data.length ? Math.round(data.reduce((a,b)=>a+(b.score||0),0)/data.length) : 0;
   set('ast1', data.length ? avg+'%' : '—');
-  set('ast2', data.length ? Math.round(data.filter(s=>s.q9==='Yes').length/data.length*100)+'%' : '—');
-  set('ast3', data.length ? Math.round(data.filter(s=>s.q10==='Yes').length/data.length*100)+'%' : '—');
-  set('ast4', data.length ? Math.round(data.filter(s=>s.q15==='Yes').length/data.length*100)+'%' : '—');
+  set('ast2', data.length ? Math.round(data.filter(s=>s.sd1==='Yes').length/data.length*100)+'%' : '—');
+  set('ast3', data.length ? Math.round(data.filter(s=>s.sf1==='Yes').length/data.length*100)+'%' : '—');
+  set('ast4', data.length ? Math.round(data.filter(s=>s.sc4==='Yes').length/data.length*100)+'%' : '—');
   set('ast5', data.length ? data.filter(s=>(s.score||0)>=70).length : '—');
   set('ast6', data.length ? data.filter(s=>(s.score||0)>=40&&(s.score||0)<70).length : '—');
   set('ast7', data.length ? data.filter(s=>(s.score||0)<40).length : '—');
@@ -769,81 +849,86 @@ function renderAdminCharts(data) {
   const blue   = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim();
   const purple = getComputedStyle(document.documentElement).getPropertyValue('--purple').trim();
 
-  const pct = (fn) => Math.round(fn(data)/data.length*100);
+  const pct = (fn) => data.length ? Math.round(fn(data)/data.length*100) : 0;
 
+  // Main compliance bar
   const bc = document.getElementById('adminChartBar');
   if (bc) {
     charts['bar'] = new Chart(bc, {
       type:'bar',
       data:{
-        labels:['Licensing','Records','Salary','Timely Pay','PF','ESI','Leave','POSH','HR Policy','Bonus'],
-        datasets:[{label:'% Compliant',
+        labels:['Owner\nLicense','Diwali\nBonus','POSH\nIC','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nGiven','ESI\nAware','HR\nUpdated','Appt\nLetter'],
+        datasets:[{ label:'% Compliant',
           data:[
-            pct(d=>d.filter(s=>s.q2!=='Not Yet Taken'&&s.q2!=='').length),
-            pct(d=>d.filter(s=>s.q3==='Yes').length),
-            pct(d=>d.filter(s=>s.q6==='Yes').length),
-            pct(d=>d.filter(s=>s.q7==='Yes').length),
-            pct(d=>d.filter(s=>s.q9==='Yes').length),
-            pct(d=>d.filter(s=>s.q10==='Yes').length),
-            pct(d=>d.filter(s=>s.q11==='Yes').length),
-            pct(d=>d.filter(s=>s.q15==='Yes').length),
-            pct(d=>d.filter(s=>s.q17==='Yes'||s.q17==='Partial').length),
-            pct(d=>d.filter(s=>s.q13==='Yes').length),
+            pct(d=>d.filter(s=>s.sa2==='Yes').length),
+            pct(d=>d.filter(s=>s.sb1==='Yes').length),
+            pct(d=>d.filter(s=>s.sc4==='Yes').length),
+            pct(d=>d.filter(s=>s.sc3==='Yes').length),
+            pct(d=>d.filter(s=>s.sd1==='Yes').length),
+            pct(d=>d.filter(s=>s.sd2==='Yes').length),
+            pct(d=>d.filter(s=>s.se1==='Yes').length),
+            pct(d=>d.filter(s=>s.sf1==='Yes').length),
+            pct(d=>d.filter(s=>s.sg1==='Yes'||s.sg1==='Partial').length),
+            pct(d=>d.filter(s=>s.sg3==='Yes').length),
           ],
           backgroundColor:[gold,green,blue,purple,green,gold,blue,red,green,gold],
-          borderRadius:6,borderSkipped:false}]
+          borderRadius:6, borderSkipped:false }]
       },
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false}},
-        scales:{x:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid}},
-          y:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid},beginAtZero:true,max:100}}}
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:8} }, grid:{ color:grid } },
+          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true, max:100 } } }
     });
   }
 
+  // Establishment type doughnut
   const dc = document.getElementById('adminChartDough');
   if (dc) {
-    const cnt={}; data.forEach(s=>{if(s.q1) cnt[s.q1]=(cnt[s.q1]||0)+1;});
+    const cnt={}; data.forEach(s=>{ if(s.sa1) cnt[s.sa1]=(cnt[s.sa1]||0)+1; });
     const lbls=Object.keys(cnt).length?Object.keys(cnt):['No Data'];
     const vals=Object.keys(cnt).length?Object.values(cnt):[1];
     charts['dough'] = new Chart(dc, {
       type:'doughnut',
-      data:{labels:lbls,datasets:[{data:vals,backgroundColor:[gold,green,blue,purple,red],borderWidth:0,hoverOffset:10}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
-        plugins:{legend:{position:'bottom',labels:{color:tick,font:{family:ff,size:11},padding:10}}}}
+      data:{ labels:lbls, datasets:[{ data:vals, backgroundColor:[gold,green,blue,purple,red], borderWidth:0, hoverOffset:10 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:11}, padding:10 } } } }
     });
   }
 
+  // Employee size bar
   const ec = document.getElementById('adminChartEmp');
   if (ec) {
     const sizes=['1–10','11–20','21–50','51–100','101–150','151–200','201–300','301–400','401–500','500+'];
-    const cnt={}; sizes.forEach(s=>cnt[s]=0); data.forEach(s=>{if(s.employees) cnt[s.employees]=(cnt[s.employees]||0)+1;});
+    const cnt={}; sizes.forEach(s=>cnt[s]=0); data.forEach(s=>{ if(s.employees) cnt[s.employees]=(cnt[s.employees]||0)+1; });
     charts['emp'] = new Chart(ec, {
       type:'bar',
-      data:{labels:sizes,datasets:[{label:'Companies',data:sizes.map(s=>cnt[s]),backgroundColor:blue,borderRadius:6,borderSkipped:false}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-        scales:{x:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid}},
-          y:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid},beginAtZero:true}}}
+      data:{ labels:sizes, datasets:[{ label:'Companies', data:sizes.map(s=>cnt[s]), backgroundColor:blue, borderRadius:6, borderSkipped:false }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid } },
+          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true } } }
     });
   }
 
+  // HR pie
   const pieC = document.getElementById('adminChartPie');
   if (pieC) {
     charts['pie'] = new Chart(pieC, {
       type:'pie',
       data:{
-        labels:['HR Policies','POSH Aware','Emp. Records','ICC Active'],
-        datasets:[{data:[
-          pct(d=>d.filter(s=>s.q17==='Yes').length),
-          pct(d=>d.filter(s=>s.q15==='Yes').length),
-          pct(d=>d.filter(s=>s.q3==='Yes').length),
-          pct(d=>d.filter(s=>s.q16==='Yes').length),
-        ],backgroundColor:[green,blue,gold,purple],borderWidth:0,hoverOffset:8}]
+        labels:['HR Policy Updated','POSH IC Formed','Appt Letters Issued','Emp Records Maintained'],
+        datasets:[{ data:[
+          pct(d=>d.filter(s=>s.sg1==='Yes').length),
+          pct(d=>d.filter(s=>s.sc4==='Yes').length),
+          pct(d=>d.filter(s=>s.sg3==='Yes').length),
+          pct(d=>d.filter(s=>s.sg4==='Yes').length),
+        ], backgroundColor:[green,blue,gold,purple], borderWidth:0, hoverOffset:8 }]
       },
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom',labels:{color:tick,font:{family:ff,size:11},padding:10}}}}
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:11}, padding:10 } } } }
     });
   }
 
+  // Score distribution
   const sc = document.getElementById('adminChartScore');
   if (sc) {
     const ranges={'0–20%':0,'21–40%':0,'41–60%':0,'61–80%':0,'81–100%':0};
@@ -857,25 +942,26 @@ function renderAdminCharts(data) {
     });
     charts['score'] = new Chart(sc, {
       type:'bar',
-      data:{labels:Object.keys(ranges),datasets:[{label:'Companies',data:Object.values(ranges),
-        backgroundColor:[red,red,gold,green,green],borderRadius:6,borderSkipped:false}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-        scales:{x:{ticks:{color:tick,font:{family:ff,size:10}},grid:{color:grid}},
-          y:{ticks:{color:tick,font:{family:ff,size:10}},grid:{color:grid},beginAtZero:true}}}
+      data:{ labels:Object.keys(ranges), datasets:[{ label:'Companies', data:Object.values(ranges),
+        backgroundColor:[red,red,gold,green,green], borderRadius:6, borderSkipped:false }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:10} }, grid:{ color:grid } },
+          y:{ ticks:{ color:tick, font:{family:ff,size:10} }, grid:{ color:grid }, beginAtZero:true } } }
     });
   }
 
+  // Industry bar
   const ic = document.getElementById('adminChartIndustry');
   if (ic) {
-    const cnt={}; data.forEach(s=>{if(s.field) cnt[s.field]=(cnt[s.field]||0)+1;});
+    const cnt={}; data.forEach(s=>{ if(s.field) cnt[s.field]=(cnt[s.field]||0)+1; });
     const lbls=Object.keys(cnt).length?Object.keys(cnt):['No Data'];
     const vals=Object.keys(cnt).length?Object.values(cnt):[0];
     charts['ind'] = new Chart(ic, {
       type:'bar',
-      data:{labels:lbls,datasets:[{label:'Submissions',data:vals,backgroundColor:purple,borderRadius:6,borderSkipped:false}]},
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-        scales:{x:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid},beginAtZero:true},
-          y:{ticks:{color:tick,font:{family:ff,size:9}},grid:{color:grid}}}}
+      data:{ labels:lbls, datasets:[{ label:'Submissions', data:vals, backgroundColor:purple, borderRadius:6, borderSkipped:false }] },
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true },
+          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid } } } }
     });
   }
 }
@@ -911,7 +997,7 @@ function renderAdminTable() {
       <td style="white-space:nowrap">${s.state||'—'}</td>
       <td style="font-size:0.78rem;white-space:nowrap">${s.field||'—'}</td>
       <td><span class="badge info">${s.employees||'—'}</span></td>
-      <td style="font-size:0.8rem;white-space:nowrap">${s.q1||'—'}</td>
+      <td style="font-size:0.8rem;white-space:nowrap">${s.sa1||'—'}</td>
       <td><span class="badge ${cls}">${sc}%</span></td>
       <td><span class="badge ${gc}">${gl} gaps</span></td>
       <td>
@@ -955,6 +1041,7 @@ function showDetail(id) {
     if (v==='Yes')     return '<span class="m-item-val yes">✅ Yes</span>';
     if (v==='No')      return '<span class="m-item-val no">❌ No</span>';
     if (v==='Partial') return '<span class="m-item-val partial">⚖ Partial</span>';
+    if (v==='Partially') return '<span class="m-item-val partial">📄 Partially</span>';
     if (v==='In Progress') return '<span class="m-item-val partial">🔄 In Progress</span>';
     return `<span class="m-item-val">${v||'—'}</span>`;
   };
@@ -970,48 +1057,78 @@ function showDetail(id) {
         <div class="m-verdict">${verdict}</div>
       </div>
     </div>
+
     <div class="m-section">📋 Business Profile</div>
     <div class="m-grid">
       ${mi('Contact',s.name)} ${mi('Phone',s.contact)} ${mi('Location',(s.location||'')+(s.state?', '+s.state:''))}
-      ${mi('Est. Type',s.q1)} ${mi('License',s.q2)} ${mi('Starting Salary',s.q5?'₹'+s.q5:'—')}
+      ${mi('Est. Type',s.sa1)} <div class="m-item"><div class="m-item-label">License in Owner Name</div>${yn(s.sa2)}</div>
+      ${mi('Industry',s.field)} ${mi('Employees',s.employees)}
     </div>
-    <div class="m-section">👥 Employee & Salary</div>
+
+    <div class="m-section">💰 Bonus & Salary (Section B)</div>
     <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">Employee Records</div>${yn(s.q3)}</div>
-      <div class="m-item"><div class="m-item-label">Appt Letters</div>${yn(s.q4)}</div>
-      <div class="m-item"><div class="m-item-label">Structured Salary</div>${yn(s.q6)}</div>
-      <div class="m-item"><div class="m-item-label">Timely Payment</div>${yn(s.q7)}</div>
-      <div class="m-item"><div class="m-item-label">Statutory Benefits</div>${yn(s.q8)}</div>
-      <div class="m-item"><div class="m-item-label">Leave Policy</div>${yn(s.q11)}</div>
+      <div class="m-item"><div class="m-item-label">Diwali Bonus</div>${yn(s.sb1)}</div>
+      <div class="m-item"><div class="m-item-label">Aware ₹21,000 Bonus Rule</div>${yn(s.sb2)}</div>
+      <div class="m-item"><div class="m-item-label">Structured Salary</div>${yn(s.sb4)}</div>
+      <div class="m-item"><div class="m-item-label">Timely Salary Payment</div>${yn(s.sb5)}</div>
+      ${mi('Starting Salary', s.sb3?'₹'+s.sb3:'—')}
     </div>
-    <div class="m-section">🏦 Benefits & Welfare</div>
+
+    <div class="m-section">👩‍⚖️ POSH (Section C)</div>
     <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">PF / Savings</div>${yn(s.q9)}</div>
-      <div class="m-item"><div class="m-item-label">ESI / Medical</div>${yn(s.q10)}</div>
-      <div class="m-item"><div class="m-item-label">Bonus Paid</div>${yn(s.q13)}</div>
-      ${mi('Leaves/Year',s.q12||'—')}
-      <div class="m-item"><div class="m-item-label">Grievance System</div>${yn(s.q14)}</div>
-      <div class="m-item"><div class="m-item-label">Policy Reviews</div>${yn(s.q18)}</div>
+      <div class="m-item"><div class="m-item-label">Female Employees</div>${yn(s.sc1)}</div>
+      <div class="m-item"><div class="m-item-label">Aware of POSH Act 2013</div>${yn(s.sc2)}</div>
+      <div class="m-item"><div class="m-item-label">POSH Sessions</div>${yn(s.sc3)}</div>
+      <div class="m-item"><div class="m-item-label">IC Committee Formed</div>${yn(s.sc4)}</div>
+      <div class="m-item"><div class="m-item-label">Annual POSH Return</div>${yn(s.sc5)}</div>
     </div>
-    <div class="m-section">👩‍⚖️ POSH & HR</div>
+
+    <div class="m-section">🏦 Provident Fund (Section D)</div>
     <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">POSH Sessions</div>${yn(s.q15)}</div>
-      <div class="m-item"><div class="m-item-label">ICC Constituted</div>${yn(s.q16)}</div>
-      <div class="m-item"><div class="m-item-label">Written HR Policy</div>${yn(s.q17)}</div>
+      <div class="m-item"><div class="m-item-label">PF Monthly</div>${yn(s.sd1)}</div>
+      <div class="m-item"><div class="m-item-label">PF Capped ₹15,000</div>${yn(s.sd2)}</div>
+      <div class="m-item"><div class="m-item-label">PF on >₹50k/₹75k</div>${yn(s.sd3)}</div>
     </div>
-    <div class="m-section">⚖️ Legal Awareness</div>
-    <div style="margin-bottom:1rem">
-      <div class="m-grid" style="margin-bottom:0.5rem">
-        <div class="m-item"><div class="m-item-label">Labour Law Awareness</div>${yn(s.q20)}</div>
-      </div>
-      ${s.q21?.length ? `<div class="m-laws">${s.q21.map(l=>`<div class="m-law-item">✦ ${l}</div>`).join('')}</div>` : ''}
+
+    <div class="m-section">🏖 Leaves (Section E)</div>
+    <div class="m-grid">
+      <div class="m-item"><div class="m-item-label">Leaves Given</div>${yn(s.se1)}</div>
+      ${mi('Average Annual Leaves', s.se2||'—')}
+      <div class="m-item"><div class="m-item-label">ESIC = No Sick Leave</div>${yn(s.se3)}</div>
     </div>
+
+    <div class="m-section">🏥 ESI & Salary Structure (Section F)</div>
+    <div class="m-grid">
+      <div class="m-item"><div class="m-item-label">ESI Aware ₹42,000</div>${yn(s.sf1)}</div>
+      <div class="m-item"><div class="m-item-label">Statutory Benefits</div>${yn(s.sf2)}</div>
+      <div class="m-item"><div class="m-item-label">Salary Restructured</div>${yn(s.sf3)}</div>
+    </div>
+
+    <div class="m-section">📄 HR Policy (Section G)</div>
+    <div class="m-grid">
+      <div class="m-item"><div class="m-item-label">HR/Leave/Appt Updated</div>${yn(s.sg1)}</div>
+      <div class="m-item"><div class="m-item-label">Written HR Policies</div>${yn(s.sg2)}</div>
+      <div class="m-item"><div class="m-item-label">Appointment Letters</div>${yn(s.sg3)}</div>
+      <div class="m-item"><div class="m-item-label">Emp. Records</div>${yn(s.sg4)}</div>
+    </div>
+
+    <div class="m-section">🔍 Inspections & Assets (Section H)</div>
+    <div class="m-grid">
+      <div class="m-item"><div class="m-item-label">Labour Inspector Issues</div>${yn(s.sh1)}</div>
+      <div class="m-item"><div class="m-item-label">Pending Notices/Cases</div>${yn(s.sh2)}</div>
+      <div class="m-item"><div class="m-item-label">Notice Period Issues</div>${yn(s.sh3)}</div>
+      <div class="m-item"><div class="m-item-label">Issues Assets</div>${yn(s.sh4)}</div>
+      <div class="m-item"><div class="m-item-label">Asset Damage/Loss</div>${yn(s.sh5)}</div>
+    </div>
+
     ${gaps.length ? `
       <div class="m-section">⚠️ Compliance Gaps (${gaps.length})</div>
       <div class="m-gaps">${gaps.map(g=>`<div class="m-gap-item"><span class="m-gap-icon">⚠</span><span>${g}</span></div>`).join('')}</div>` : ''}
+
     ${recs.length ? `
       <div class="m-section">✅ Recommended Actions</div>
       <div class="m-recs">${recs.map(r=>`<div class="m-rec-item"><span class="m-rec-icon">→</span><span>${r}</span></div>`).join('')}</div>` : ''}
+
     <div class="m-actions">
       <button class="btn btn-gold" onclick="downloadPDF(${s.id})">⬇ Download PDF</button>
       <button class="btn btn-ghost" onclick="closeModal(true)">Close</button>
@@ -1059,15 +1176,16 @@ async function downloadPDF(id) {
   const addPage = () => {
     doc.addPage();
     doc.setFillColor(...BG); doc.rect(0,0,210,297,'F');
-    y=18;
+    y = 18;
   };
 
+  // Cover header
   doc.setFillColor(...BG);  doc.rect(0,0,210,297,'F');
   doc.setFillColor(...DARK); doc.rect(0,0,210,56,'F');
   doc.setFillColor(...GOLD); doc.rect(0,0,210,2,'F');
 
   doc.setTextColor(...GOLD); doc.setFontSize(7); doc.setFont('helvetica','bold');
-  doc.text('LABOURSHIELD  ·  COMPLIANCE AUDIT REPORT',105,14,{align:'center'});
+  doc.text('LABOURSHIELD  ·  COMPLIANCE AUDIT REPORT  ·  SECTIONS A–H',105,14,{align:'center'});
   doc.setTextColor(255,255,255); doc.setFontSize(18);
   doc.text((s.companyName||'UNKNOWN').toUpperCase(),105,27,{align:'center'});
   doc.setTextColor(...MUTED); doc.setFontSize(8); doc.setFont('helvetica','normal');
@@ -1077,7 +1195,7 @@ async function downloadPDF(id) {
   doc.roundedRect(ml,44,pw-ml-mr,12,2,2,'F');
   doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
   doc.text(`COMPLIANCE SCORE:  ${sc}%   —   ${verdict}`,105,51.5,{align:'center'});
-  y=65;
+  y = 65;
 
   const sec = (title) => {
     if (y>265) addPage();
@@ -1090,78 +1208,95 @@ async function downloadPDF(id) {
   const row = (label, val, col) => {
     if (y>270) addPage();
     doc.setTextColor(...MUTED); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(label,ml+2,y);
+    doc.text(String(label),ml+2,y);
     doc.setTextColor(...(col||DARK)); doc.setFont('helvetica','bold');
-    doc.text(String(val||'—'),ml+90,y); y+=6.5;
+    doc.text(String(val||'—'),ml+100,y); y+=6.5;
   };
 
   const yn2 = v => {
-    if (v==='Yes')    return {t:'Yes',c:GREEN};
-    if (v==='No')     return {t:'No',c:RED};
-    if (v==='Partial'||v==='In Progress'||v==='Occasionally') return {t:v,c:GOLD};
-    return {t:v||'—',c:DARK};
+    if (v==='Yes')     return { t:'Yes',     c:GREEN };
+    if (v==='No')      return { t:'No',      c:RED };
+    if (v==='Partial') return { t:'Partial', c:GOLD };
+    if (v==='Partially') return { t:'Partially', c:GOLD };
+    return { t:v||'—', c:DARK };
   };
 
-  sec('Business Profile');
-  row('Company Name',s.companyName); row('Contact Person',s.name); row('Phone',s.contact);
-  row('Location',`${s.location||'—'}, ${s.state||'—'}`); row('Industry',s.field);
-  row('Employees',s.employees); row('Establishment Type',s.q1); row('License Held',s.q2);
-  row('Starting Salary',s.q5?'₹'+s.q5:'—'); y+=2;
-
-  sec('Employee & Salary Practices');
   let r;
-  r=yn2(s.q3); row('Employee Records Maintained?',r.t,r.c);
-  r=yn2(s.q4); row('Appointment Letters Issued?',r.t,r.c);
-  r=yn2(s.q6); row('Structured Salary Format?',r.t,r.c);
-  r=yn2(s.q7); row('Salaries Paid On Time?',r.t,r.c);
-  r=yn2(s.q8); row('Statutory Benefits (PF/ESI)?',r.t,r.c); y+=2;
 
-  sec('Employee Benefits & Welfare');
-  r=yn2(s.q9);  row('Retirement / PF Savings?',r.t,r.c);
-  r=yn2(s.q10); row('Medical / ESI Coverage?',r.t,r.c);
-  r=yn2(s.q11); row('Leave Policy in Place?',r.t,r.c);
-  row('Annual Leaves Count',s.q12||'—');
-  r=yn2(s.q13); row('Bonus Provided?',r.t,r.c);
-  r=yn2(s.q14); row('Grievance System?',r.t,r.c); y+=2;
+  sec('Section A — Business Setup & Licensing');
+  row('Establishment Type', s.sa1||'—');
+  r=yn2(s.sa2); row('License in Owner Name?', r.t, r.c); y+=2;
 
-  sec('POSH & HR Governance');
-  r=yn2(s.q15); row('POSH Awareness Sessions?',r.t,r.c);
-  r=yn2(s.q16); row('ICC Constituted?',r.t,r.c);
-  r=yn2(s.q17); row('Written HR Policies?',r.t,r.c);
-  r=yn2(s.q18); row('Regular Policy Review?',r.t,r.c); y+=2;
+  sec('Section B — Bonus & Salary Practices');
+  r=yn2(s.sb1); row('Diwali Bonus to All Employees?', r.t, r.c);
+  r=yn2(s.sb2); row('Aware of ₹21,000 Bonus Rule?', r.t, r.c);
+  row('Starting Salary', s.sb3?'₹'+s.sb3:'—');
+  r=yn2(s.sb4); row('Structured Salary Format?', r.t, r.c);
+  r=yn2(s.sb5); row('Salaries Paid On Time?', r.t, r.c); y+=2;
 
-  sec('Legal Awareness');
-  r=yn2(s.q20); row('Labour Law Awareness?',r.t,r.c);
-  if (s.q21?.length) { row('Labour Laws Filed Under:',''); s.q21.forEach(l=>row('  →  '+l,'')); }
-  y+=2;
+  sec('Section C — POSH & Female Employment');
+  r=yn2(s.sc1); row('Female Employees?', r.t, r.c);
+  r=yn2(s.sc2); row('Aware of POSH Act 2013?', r.t, r.c);
+  r=yn2(s.sc3); row('POSH Awareness Sessions?', r.t, r.c);
+  r=yn2(s.sc4); row('IC Committee Formed?', r.t, r.c);
+  r=yn2(s.sc5); row('Annual POSH Return Filed?', r.t, r.c); y+=2;
 
-  const gaps2 = Array.isArray(s.gaps)&&s.gaps.length?s.gaps:getGaps(s);
-  const recs2  = Array.isArray(s.recs)&&s.recs.length?s.recs:getRecs(gaps2);
+  sec('Section D — Provident Fund (PF)');
+  r=yn2(s.sd1); row('PF Contribution Monthly?', r.t, r.c);
+  r=yn2(s.sd2); row('PF Capped at ₹15,000?', r.t, r.c);
+  r=yn2(s.sd3); row('Paying PF on Salary >₹50k/₹75k?', r.t, r.c); y+=2;
+
+  sec('Section E — Leave Policy');
+  r=yn2(s.se1); row('Leaves Given to Employees?', r.t, r.c);
+  row('Average Annual Leaves', s.se2||'—');
+  r=yn2(s.se3); row('Aware: ESIC = No Sick Leave?', r.t, r.c); y+=2;
+
+  sec('Section F — ESI & Salary Structure');
+  r=yn2(s.sf1); row('Aware ESI Coverage ₹42,000?', r.t, r.c);
+  r=yn2(s.sf2); row('Statutory Benefits Provided?', r.t, r.c);
+  r=yn2(s.sf3); row('Salary Restructured per Labour Codes?', r.t, r.c); y+=2;
+
+  sec('Section G — HR Policy & Documentation');
+  r=yn2(s.sg1); row('HR/Leave/Appt Letter Updated?', r.t, r.c);
+  r=yn2(s.sg2); row('Written HR Policies in Place?', r.t, r.c);
+  r=yn2(s.sg3); row('Appointment Letters Issued?', r.t, r.c);
+  r=yn2(s.sg4); row('Employee Records Maintained?', r.t, r.c); y+=2;
+
+  sec('Section H — Inspections, Legal & Assets');
+  r=yn2(s.sh1); row('Faced Labour Inspector Challenges?', r.t, r.c);
+  r=yn2(s.sh2); row('Pending Notices / Cases?', r.t, r.c);
+  r=yn2(s.sh3); row('Notice Period Issues?', r.t, r.c);
+  r=yn2(s.sh4); row('Issues Assets to Employees?', r.t, r.c);
+  r=yn2(s.sh5); row('Asset Damage / Loss Faced?', r.t, r.c); y+=2;
+
+  const gaps2 = Array.isArray(s.gaps)&&s.gaps.length ? s.gaps : getGaps(s);
+  const recs2  = Array.isArray(s.recs)&&s.recs.length ? s.recs  : getRecs(gaps2);
 
   if (gaps2.length) {
     sec(`Compliance Gaps Identified (${gaps2.length})`);
     gaps2.forEach(g => {
       if (y>270) addPage();
       doc.setTextColor(...RED); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.splitTextToSize('⚠  '+g,pw-ml-mr-8).forEach(l=>{doc.text(l,ml+4,y);y+=5.5;});
+      doc.splitTextToSize('⚠  '+g, pw-ml-mr-8).forEach(l=>{ doc.text(l,ml+4,y); y+=5.5; });
     }); y+=2;
   }
+
   if (recs2.length) {
     sec('Recommended Actions');
     recs2.forEach(rec => {
       if (y>270) addPage();
       doc.setTextColor(...GREEN); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.splitTextToSize('→  '+rec,pw-ml-mr-8).forEach(l=>{doc.text(l,ml+4,y);y+=5.5;});
+      doc.splitTextToSize('→  '+rec, pw-ml-mr-8).forEach(l=>{ doc.text(l,ml+4,y); y+=5.5; });
     }); y+=2;
   }
 
   const total = doc.getNumberOfPages();
-  for (let i=1;i<=total;i++) {
+  for (let i=1; i<=total; i++) {
     doc.setPage(i);
     doc.setFillColor(...BG2); doc.rect(0,285,210,12,'F');
     doc.setFillColor(...GOLD); doc.rect(0,285,210,0.8,'F');
     doc.setTextColor(...MUTED); doc.setFontSize(7); doc.setFont('helvetica','normal');
-    doc.text('LabourShield · Business Compliance Audit Portal',ml,292);
+    doc.text('LabourShield · Business Compliance Audit Portal · Sections A–H',ml,292);
     doc.text(`Page ${i} of ${total}`,210-mr,292,{align:'right'});
   }
 

@@ -318,7 +318,7 @@
           <input type="text" id="se2" placeholder="e.g. 18 Casual + 12 Privilege" class="solo-input">
         </div>
         <div class="qblock">
-          <div class="qlabel">E3 — Do you know that employees covered under ESIC are not entitled for sick leaves separately?</div>
+          <div class="qlabel">Do you know that employees covered under ESIC cannot be entitled to separate sick leave benefits?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="se3" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="se3" value="No"><span>❌ No</span></label>
@@ -327,6 +327,7 @@
       </div>
 
       <!-- ===== SECTION F: ESI / SALARY STRUCTURE ===== -->
+      <!-- F2 (Statutory benefits question) REMOVED -->
       <div class="sec-label"><span class="sec-num">F</span> ESI & Salary Structure</div>
       <div class="card">
         <div class="qblock">
@@ -334,14 +335,6 @@
           <div class="opt-row">
             <label class="opt"><input type="radio" name="sf1" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="sf1" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">F2 — Do you provide statutory benefits (PF, ESI, etc.) to eligible employees?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sf2" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sf2" value="No"><span>❌ No</span></label>
-            <label class="opt"><input type="radio" name="sf2" value="Partial"><span>⚖ Partial</span></label>
           </div>
         </div>
         <div class="qblock">
@@ -354,6 +347,7 @@
       </div>
 
       <!-- ===== SECTION G: HR POLICY ===== -->
+      <!-- G2, G3, G4 REMOVED — only G1 remains -->
       <div class="sec-label"><span class="sec-num">G</span> HR Policy & Documentation</div>
       <div class="card">
         <div class="qblock">
@@ -362,29 +356,6 @@
             <label class="opt"><input type="radio" name="sg1" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="sg1" value="No"><span>❌ No</span></label>
             <label class="opt"><input type="radio" name="sg1" value="Partial"><span>📄 Partially</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">G2 — Do you maintain written HR policies / guidelines?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sg2" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sg2" value="No"><span>❌ No</span></label>
-            <label class="opt"><input type="radio" name="sg2" value="Partial"><span>📄 Partial</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">G3 — Do you issue appointment letters / joining confirmation?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sg3" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sg3" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">G4 — Do you maintain basic employee records (ID proof, joining details)?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sg4" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sg4" value="No"><span>❌ No</span></label>
-            <label class="opt"><input type="radio" name="sg4" value="In Progress"><span>🔄 In Progress</span></label>
           </div>
         </div>
       </div>
@@ -501,7 +472,7 @@
           <div class="ct-body"><canvas id="uChartRadar"></canvas></div>
         </div>
         <div class="chart-tile">
-          <div class="ct-title">Statutory Benefits Status</div>
+          <div class="ct-title">Key Compliance Status</div>
           <div class="ct-body"><canvas id="uChartDough"></canvas></div>
         </div>
       </div>
@@ -630,7 +601,7 @@
           <div class="ct-body"><canvas id="adminChartEmp"></canvas></div>
         </div>
         <div class="chart-tile">
-          <div class="ct-title">HR & POSH Policy Coverage</div>
+          <div class="ct-title">POSH Policy Coverage</div>
           <div class="ct-body"><canvas id="adminChartPie"></canvas></div>
         </div>
       </div>

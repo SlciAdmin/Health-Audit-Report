@@ -15,9 +15,9 @@
 <nav id="mainNav">
   <div class="nav-left">
     <div class="nav-logo">
-  <img src="images/Logo.png" alt="SLCI Logo" class="logo-img">
-  <span class="logo-text">SLCI<strong>Shield</strong></span>
-</div>
+      <div class="logo-shield">🛡</div>
+      <span class="logo-text">Labour<strong>Shield</strong></span>
+    </div>
   </div>
 
   <button class="nav-hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Menu">
@@ -78,9 +78,16 @@
 <div id="view-form" class="view active">
 
   <div class="form-hero">
-    <div class="hero-tag">COMPLIANCE ASSESSMENT TOOL</div>
-    <h1 class="hero-title">Labour Law Health<br><em>Check Audit</em></h1>
-    <div class="hero-timer">⚡ Estimated Time: 7 Minutes</div>
+    <div class="hero-bg-glow"></div>
+    <div class="hero-content">
+      <div class="hero-tag">COMPLIANCE ASSESSMENT TOOL</div>
+      <h1 class="hero-title">Labour Law Health<br><em>Check Audit</em></h1>
+      <div class="hero-meta">
+        <span class="hero-timer">⚡ Est. Time: 7 Minutes</span>
+        <span class="hero-divider">·</span>
+        <span class="hero-sections">8 Sections · A to H</span>
+      </div>
+    </div>
   </div>
 
   <div class="form-shell">
@@ -178,7 +185,7 @@
     <!-- PAGE 2: AUDIT SECTIONS A–H -->
     <div id="pg2" style="display:none">
 
-      <!-- ===== SECTION A: BUSINESS SETUP & LICENSING ===== -->
+      <!-- SECTION A -->
       <div class="sec-label"><span class="sec-num">A</span> Business Setup & Licensing</div>
       <div class="card">
         <div class="qblock">
@@ -199,38 +206,44 @@
         </div>
       </div>
 
-      <!-- ===== SECTION B: BONUS & SALARY ===== -->
-<div class="sec-label"><span class="sec-num">B</span> Bonus & Salary Practices</div>
+      <!-- SECTION B -->
+      <div class="sec-label"><span class="sec-num">B</span> Bonus & Salary Practices</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">B1 — Do you pay bonus to all employees on Diwali?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sb1" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sb1" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">B2 — Are you aware that as per labour laws, bonus is only paid to employees having wages up to ₹21,000?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sb2" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sb2" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">B3 — What is the typical starting salary for helpers/support staff (₹)?</div>
+          <input type="number" id="sb3" placeholder="e.g. 12000" class="solo-input">
+        </div>
+        <div class="qblock">
+          <div class="qlabel">B4 — Do you have a structured salary format (Basic + HRA + Allowances)?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sb4" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sb4" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">B5 — Are salaries paid on or before the 7th of every month?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sb5" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sb5" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+      </div>
 
-<div class="card">
-
-  <!-- B1 -->
-  <div class="qblock">
-    <div class="qlabel">B1 — Do you pay bonus to all employees on Diwali?</div>
-    <div class="opt-row">
-      <label class="opt"><input type="radio" name="sb1" value="Yes"><span>✅ Yes</span></label>
-      <label class="opt"><input type="radio" name="sb1" value="No"><span>❌ No</span></label>
-    </div>
-  </div>
-
-  <!-- B2 -->
-  <div class="qblock">
-    <div class="qlabel">B2 — Are you aware that as per labour laws, bonus is only paid to employees having wages up to ₹21,000?</div>
-    <div class="opt-row">
-      <label class="opt"><input type="radio" name="sb2" value="Yes"><span>✅ Yes</span></label>
-      <label class="opt"><input type="radio" name="sb2" value="No"><span>❌ No</span></label>
-    </div>
-  </div>
-
-  <!-- B3 -->
-  <div class="qblock">
-    <div class="qlabel">B3 — What is the typical starting salary for helpers/support staff (₹)?</div>
-    <input type="number" id="sb3" placeholder="e.g. 12000" class="solo-input">
-  </div>
-
-</div>
-
-      <!-- ===== SECTION C: POSH & FEMALE EMPLOYEES ===== -->
+      <!-- SECTION C -->
       <div class="sec-label"><span class="sec-num">C</span> POSH — Prevention of Sexual Harassment</div>
       <div class="card">
         <div class="qblock">
@@ -270,41 +283,33 @@
         </div>
       </div>
 
-      <!-- ===== SECTION D: PF / PROVIDENT FUND ===== -->
-<div class="sec-label"><span class="sec-num">D</span> Provident Fund (PF)</div>
+      <!-- SECTION D -->
+      <div class="sec-label"><span class="sec-num">D</span> Provident Fund (PF)</div>
+      <div class="card">
+        <div class="qblock">
+          <div class="qlabel">D1 — Do you contribute to PF on a monthly basis?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sd1" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sd1" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">D2 — Are you paying PF for an employee having salary above ₹50,000 or ₹75,000?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sd2" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sd2" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qlabel">D3 — Do you cap your PF contribution till ₹15,000?</div>
+          <div class="opt-row">
+            <label class="opt"><input type="radio" name="sd3" value="Yes"><span>✅ Yes</span></label>
+            <label class="opt"><input type="radio" name="sd3" value="No"><span>❌ No</span></label>
+          </div>
+        </div>
+      </div>
 
-<div class="card">
-
-  <!-- D1 -->
-  <div class="qblock">
-    <div class="qlabel">D1 — Do you contribute to PF on a monthly basis?</div>
-    <div class="opt-row">
-      <label class="opt"><input type="radio" name="sd1" value="Yes"><span>✅ Yes</span></label>
-      <label class="opt"><input type="radio" name="sd1" value="No"><span>❌ No</span></label>
-    </div>
-  </div>
-
-  <!-- D2 (Now OLD D3 Question) -->
-  <div class="qblock">
-    <div class="qlabel">D2 — Are you paying PF for an employee having salary above ₹50,000 or ₹75,000?</div>
-    <div class="opt-row">
-      <label class="opt"><input type="radio" name="sd2" value="Yes"><span>✅ Yes</span></label>
-      <label class="opt"><input type="radio" name="sd2" value="No"><span>❌ No</span></label>
-    </div>
-  </div>
-
-  <!-- D3 (Now OLD D2 Question) -->
-  <div class="qblock">
-    <div class="qlabel">D3 — Do you cap your PF contribution till ₹15,000?</div>
-    <div class="opt-row">
-      <label class="opt"><input type="radio" name="sd3" value="Yes"><span>✅ Yes</span></label>
-      <label class="opt"><input type="radio" name="sd3" value="No"><span>❌ No</span></label>
-    </div>
-  </div>
-
-</div>
-
-      <!-- ===== SECTION E: LEAVES ===== -->
+      <!-- SECTION E -->
       <div class="sec-label"><span class="sec-num">E</span> Leave Policy</div>
       <div class="card">
         <div class="qblock">
@@ -327,8 +332,7 @@
         </div>
       </div>
 
-      <!-- ===== SECTION F: ESI / SALARY STRUCTURE ===== -->
-      <!-- F2 (Statutory benefits question) REMOVED -->
+      <!-- SECTION F -->
       <div class="sec-label"><span class="sec-num">F</span> ESI & Salary Structure</div>
       <div class="card">
         <div class="qblock">
@@ -347,8 +351,7 @@
         </div>
       </div>
 
-      <!-- ===== SECTION G: HR POLICY ===== -->
-      <!-- G2, G3, G4 REMOVED — only G1 remains -->
+      <!-- SECTION G -->
       <div class="sec-label"><span class="sec-num">G</span> HR Policy & Documentation</div>
       <div class="card">
         <div class="qblock">
@@ -361,7 +364,7 @@
         </div>
       </div>
 
-      <!-- ===== SECTION H: INSPECTIONS & ASSET MANAGEMENT ===== -->
+      <!-- SECTION H -->
       <div class="sec-label"><span class="sec-num">H</span> Inspections, Legal & Asset Management</div>
       <div class="card">
         <div class="qblock">
@@ -422,7 +425,6 @@
         </div>
       </div>
     </div>
-
   </div>
 </div>
 
@@ -445,6 +447,7 @@
     </div>
 
     <div id="udashReport" style="display:none">
+
       <!-- Score Row -->
       <div class="udash-score-row">
         <div class="udash-score-main">
@@ -469,11 +472,11 @@
       <!-- Charts Row 1 -->
       <div class="udash-charts-row">
         <div class="chart-tile">
-          <div class="ct-title">Compliance Area Breakdown</div>
+          <div class="ct-title">Compliance Area Breakdown (Radar)</div>
           <div class="ct-body"><canvas id="uChartRadar"></canvas></div>
         </div>
         <div class="chart-tile">
-          <div class="ct-title">Key Compliance Status</div>
+          <div class="ct-title">Key Compliance Status (Doughnut)</div>
           <div class="ct-body"><canvas id="uChartDough"></canvas></div>
         </div>
       </div>
@@ -481,11 +484,11 @@
       <!-- Charts Row 2 -->
       <div class="udash-charts-row">
         <div class="chart-tile">
-          <div class="ct-title">Key Compliance Metrics</div>
+          <div class="ct-title">Key Compliance Metrics (Bar)</div>
           <div class="ct-body"><canvas id="uChartBar"></canvas></div>
         </div>
         <div class="chart-tile">
-          <div class="ct-title">HR Governance Score</div>
+          <div class="ct-title">HR Governance Score (Polar)</div>
           <div class="ct-body"><canvas id="uChartPolar"></canvas></div>
         </div>
       </div>
@@ -563,7 +566,7 @@
           <select class="ds-select" id="adminIndustryFilter" onchange="renderAdminDashboard()">
             <option value="">All Industries</option>
           </select>
-          <button class="btn btn-ghost btn-sm" onclick="loadFromSheets()">🔄 Refresh</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadFromSheets(true)">🔄 Refresh</button>
           <button class="btn btn-ghost btn-sm" onclick="logoutAdmin()">🔓 Logout</button>
         </div>
       </div>
@@ -584,7 +587,7 @@
         <div class="stat-tile"><div class="st-val red" id="ast7">—</div><div class="st-lbl">Critical (&lt;40%)</div></div>
       </div>
 
-      <!-- Admin Charts -->
+      <!-- Admin Charts Row 1 -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Overall Statutory Compliance % Across All Businesses</div>
@@ -596,6 +599,7 @@
         </div>
       </div>
 
+      <!-- Admin Charts Row 2 -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Company Size Breakdown</div>
@@ -607,6 +611,7 @@
         </div>
       </div>
 
+      <!-- Admin Charts Row 3 -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Compliance Score Distribution</div>
@@ -622,7 +627,10 @@
       <div class="tbl-tile">
         <div class="tbl-head">
           <div class="tbl-title">All Submission Records</div>
-          <input class="ds-search" id="adminTblSearch" type="text" placeholder="🔍 Filter companies…" oninput="renderAdminTable()">
+          <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+            <input class="ds-search" id="adminTblSearch" type="text" placeholder="🔍 Filter companies…" oninput="renderAdminTable()">
+            <button class="btn btn-ghost btn-sm" onclick="exportToCSV()">📊 Export CSV</button>
+          </div>
         </div>
         <div class="tbl-wrap">
           <table>

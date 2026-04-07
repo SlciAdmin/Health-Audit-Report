@@ -1,22 +1,23 @@
 // ============================================================
-// LABOURSHIELD — script.js  (F2, G2, G3, G4 Removed)
+// LABOURSHIELD — script.js  COMPLETE VERSION
+// Sections A–H | Admin Dashboard | Charts | PDF | CSV Export
 // ============================================================
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwRbCLD6yPU1QTiHn_tHRZRLw9C6gmzOPgNEtxppBoI_tabBuf7FJ0mBeHKaVIP2oo5LQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyjc8epwFBXEElYeiflyULn3IAdSVxZtgeV_XzzKTxE93kD2nBwK3heNwXV-3_7KTRZzw/exec";
 
 // ===== STATE =====
-let submissions        = [];
-let localSubmissions   = [];
-let isAdmin            = false;
-let charts             = {};
-let uCharts            = {};
-let activeDetailId     = null;
+let submissions           = [];
+let localSubmissions      = [];
+let isAdmin               = false;
+let charts                = {};
+let uCharts               = {};
+let activeDetailId        = null;
 let currentUserSubmission = null;
 
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'labourshield@2024';
-const LS_KEY     = 'ls_submissions_v3';
-const LS_LAST    = 'ls_last_submission_id_v3';
+const LS_KEY     = 'ls_submissions_v4';
+const LS_LAST    = 'ls_last_submission_id_v4';
 const LS_ADMIN   = 'ls_admin_session';
 const LS_THEME   = 'ls_theme';
 
@@ -24,18 +25,22 @@ const LS_THEME   = 'ls_theme';
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem(LS_THEME, theme);
-  Object.keys(charts).forEach(k => { try { charts[k].destroy(); } catch(e){} });
-  Object.keys(uCharts).forEach(k => { try { uCharts[k].destroy(); } catch(e){} });
-  charts = {}; uCharts = {};
+  destroyAllCharts();
   if (currentUserSubmission && document.getElementById('udashReport')?.style.display !== 'none') {
-    renderUserCharts(currentUserSubmission);
+    setTimeout(() => renderUserCharts(currentUserSubmission), 50);
   }
   if (isAdmin && document.getElementById('view-admin-dashboard')?.classList.contains('active')) {
     const stateF = document.getElementById('adminStateFilter')?.value || '';
     const indF   = document.getElementById('adminIndustryFilter')?.value || '';
     const filtered = submissions.filter(s => (!stateF || s.state === stateF) && (!indF || s.field === indF));
-    renderAdminCharts(filtered);
+    setTimeout(() => renderAdminCharts(filtered), 50);
   }
+}
+
+function destroyAllCharts() {
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  Object.values(uCharts).forEach(c => { try { c.destroy(); } catch(e){} });
+  charts = {}; uCharts = {};
 }
 
 function toggleTheme() {
@@ -68,7 +73,7 @@ function closeMobileMenu() {
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async () => {
   const savedTheme = localStorage.getItem(LS_THEME) || 'light';
-  applyTheme(savedTheme);
+  document.documentElement.setAttribute('data-theme', savedTheme);
 
   try { localSubmissions = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { localSubmissions = []; }
   submissions = [...localSubmissions];
@@ -98,10 +103,10 @@ document.addEventListener('visibilitychange', () => {
 function showToast(msg, color = 'gold') {
   const existing = document.getElementById('ls-toast');
   if (existing) existing.remove();
-  const colors = { green: '#1a8a5a', red: '#c0392b', gold: '#b8860b', blue: '#2563eb' };
-  const darkColors = { green: '#2ecc8a', red: '#e05555', gold: '#d4a843', blue: '#4e8cff' };
+  const colors    = { green:'#1a8a5a', red:'#c0392b', gold:'#b8860b', blue:'#2563eb' };
+  const darkColors= { green:'#2ecc8a', red:'#e05555', gold:'#d4a843', blue:'#4e8cff' };
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const col = isDark ? (darkColors[color] || darkColors.gold) : (colors[color] || colors.gold);
+  const col = isDark ? (darkColors[color]||darkColors.gold) : (colors[color]||colors.gold);
   const t = document.createElement('div');
   t.id = 'ls-toast';
   t.textContent = msg;
@@ -118,11 +123,24 @@ function getRadio(name) {
   return el ? el.value : '';
 }
 
+function getCSSVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function getTickColor() {
   return document.documentElement.getAttribute('data-theme') === 'dark' ? '#7a8299' : '#6b7280';
 }
 function getGridColor() {
   return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+}
+function getColors() {
+  return {
+    gold:   getCSSVar('--gold')   || '#d4a843',
+    green:  getCSSVar('--green')  || '#2ecc8a',
+    red:    getCSSVar('--red')    || '#e05555',
+    blue:   getCSSVar('--blue')   || '#4e8cff',
+    purple: getCSSVar('--purple') || '#a78bfa',
+  };
 }
 
 // ===== VIEW SWITCHING =====
@@ -227,37 +245,36 @@ function goPage1() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ===== SCORE & ANALYSIS =====
-// F2 (sf2), G2 (sg2), G3 (sg3), G4 (sg4) removed from scoring
-// Remaining checks: 22 total
+// ===== SCORE CALCULATION =====
+// 22 checks total across all sections
 function calcScore(d) {
   const checks = [
-    // Section A (2)
+    // A (2)
     d.sa1 !== '',
     d.sa2 === 'Yes',
-    // Section B (4)
+    // B (4)
     d.sb1 === 'Yes',
     d.sb2 === 'Yes',
     d.sb4 === 'Yes',
     d.sb5 === 'Yes',
-    // Section C (4)
+    // C (4)
     d.sc2 === 'Yes',
     d.sc3 === 'Yes',
     d.sc4 === 'Yes',
     d.sc5 === 'Yes',
-    // Section D (3)
+    // D (3)
     d.sd1 === 'Yes',
-    d.sd2 === 'Yes',
-    d.sd3 === 'No', // NOT paying PF above 50k/75k = correct
-    // Section E (2)
+    d.sd3 === 'Yes',        // Capping PF at 15k is GOOD
+    d.sd2 === 'No',         // NOT paying PF for >50k/75k = correct practice
+    // E (2)
     d.se1 === 'Yes',
     d.se3 === 'Yes',
-    // Section F (2) — F2 removed
+    // F (2)
     d.sf1 === 'Yes',
     d.sf3 === 'Yes',
-    // Section G (1) — G2, G3, G4 removed
+    // G (1)
     d.sg1 === 'Yes' || d.sg1 === 'Partial',
-    // Section H (4)
+    // H (4)
     d.sh1 === 'No',
     d.sh2 === 'No',
     d.sh3 === 'No',
@@ -266,72 +283,79 @@ function calcScore(d) {
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
+// ===== SECTION SCORES (0–100 each) =====
+function getSectionScores(s) {
+  return {
+    A: ((s.sa1 ? 50 : 0) + (s.sa2 === 'Yes' ? 50 : 0)),
+    B: ((s.sb1 === 'Yes' ? 25 : 0) + (s.sb2 === 'Yes' ? 25 : 0) + (s.sb4 === 'Yes' ? 25 : 0) + (s.sb5 === 'Yes' ? 25 : 0)),
+    C: ((s.sc2 === 'Yes' ? 25 : 0) + (s.sc3 === 'Yes' ? 25 : 0) + (s.sc4 === 'Yes' ? 25 : 0) + (s.sc5 === 'Yes' ? 25 : 0)),
+    D: ((s.sd1 === 'Yes' ? 34 : 0) + (s.sd3 === 'Yes' ? 33 : 0) + (s.sd2 === 'No' ? 33 : 0)),
+    E: ((s.se1 === 'Yes' ? 50 : 0) + (s.se3 === 'Yes' ? 50 : 0)),
+    F: ((s.sf1 === 'Yes' ? 50 : 0) + (s.sf3 === 'Yes' ? 50 : 0)),
+    G: (s.sg1 === 'Yes' ? 100 : s.sg1 === 'Partial' ? 60 : 0),
+    H: ((s.sh1 === 'No' ? 25 : 0) + (s.sh2 === 'No' ? 25 : 0) + (s.sh3 === 'No' ? 25 : 0) + (s.sh5 === 'No' ? 25 : 0)),
+  };
+}
+
+// ===== GAPS =====
 function getGaps(d) {
   const gaps = [];
-
-  // Section A
-  if (d.sa2 !== 'Yes') gaps.push('License is not in the name of the owner himself — this may create legal complications');
-
-  // Section B
+  // A
+  if (d.sa2 !== 'Yes') gaps.push('License is not in the name of the owner — this may create legal complications');
+  // B
   if (d.sb1 !== 'Yes') gaps.push('Diwali / festive bonus not being paid to all employees');
-  if (d.sb2 !== 'Yes') gaps.push('Unaware that statutory bonus is only for employees with wages up to ₹21,000');
-  if (d.sb4 !== 'Yes') gaps.push('No structured salary format (Basic + Allowances) in place');
-  if (d.sb5 !== 'Yes') gaps.push('Salaries not paid on time — must be paid on or before 7th of each month');
-
-  // Section C
+  if (d.sb2 !== 'Yes') gaps.push('Unaware that statutory bonus applies only to employees with wages up to ₹21,000');
+  if (d.sb4 !== 'Yes') gaps.push('No structured salary format (Basic + HRA + Allowances) in place');
+  if (d.sb5 !== 'Yes') gaps.push('Salaries not paid on time — must be disbursed on or before 7th of each month');
+  // C
   if (d.sc2 !== 'Yes') gaps.push('Unaware of POSH Act 2013 — mandatory if female employees are employed');
   if (d.sc3 !== 'Yes') gaps.push('Periodic POSH awareness sessions not being conducted');
-  if (d.sc4 !== 'Yes') gaps.push('Internal Committee (IC) under POSH Act 2013 not formed');
+  if (d.sc4 !== 'Yes') gaps.push('Internal Committee (IC) under POSH Act 2013 not yet constituted');
   if (d.sc5 !== 'Yes') gaps.push('Annual return under POSH Act 2013 not filed');
-
-  // Section D
+  // D
   if (d.sd1 !== 'Yes') gaps.push('PF contribution not being made on a monthly basis');
-  if (d.sd2 !== 'Yes') gaps.push('PF contribution not capped at ₹15,000 — may result in excess liability');
-  if (d.sd3 === 'Yes') gaps.push('Paying PF for employees with salary above ₹50,000/₹75,000 — review need');
-
-  // Section E
-  if (d.se1 !== 'Yes') gaps.push('Employees not receiving statutory leaves');
-  if (d.se3 !== 'Yes') gaps.push('Unaware that ESIC-covered employees are not entitled for separate sick leave');
-
-  // Section F (F2 removed)
-  if (d.sf1 !== 'Yes') gaps.push('Unaware that employees earning up to ₹42,000 are covered under ESI');
-  if (d.sf3 !== 'Yes') gaps.push('Salary not restructured as per the new Labour Codes');
-
-  // Section G (G2, G3, G4 removed — only G1 remains)
+  if (d.sd3 !== 'Yes') gaps.push('PF contribution not capped at ₹15,000 wage ceiling — may result in excess liability');
+  if (d.sd2 === 'Yes') gaps.push('Paying PF for employees with salary above ₹50,000/₹75,000 — review necessity');
+  // E
+  if (d.se1 !== 'Yes') gaps.push('Employees not receiving statutory leaves as mandated');
+  if (d.se3 !== 'Yes') gaps.push('Unaware that ESIC-covered employees get medical benefits — no separate sick leave needed');
+  // F
+  if (d.sf1 !== 'Yes') gaps.push('Unaware that employees earning up to ₹42,000 gross are covered under ESI');
+  if (d.sf3 !== 'Yes') gaps.push('Salary structure not restructured as per the four new Labour Codes');
+  // G
   if (d.sg1 === 'No') gaps.push('HR Policy / Leave Policy / Appointment Letter not updated as per new Labour Codes');
-
-  // Section H
-  if (d.sh1 === 'Yes') gaps.push('Faced challenges with Labour Inspector — documentation and compliance records must be strengthened');
+  // H
+  if (d.sh1 === 'Yes') gaps.push('Faced challenges with Labour Inspector — compliance documentation must be strengthened');
   if (d.sh2 === 'Yes') gaps.push('Pending Notices / Inspections / Cases require immediate legal attention');
   if (d.sh3 === 'Yes') gaps.push('Employees leaving without notice period — employment agreements need enforcement clauses');
-  if (d.sh5 === 'Yes') gaps.push('Employees have damaged or left with assets without proper handover — Asset Agreement Policy required');
-
+  if (d.sh5 === 'Yes') gaps.push('Employees have damaged or left with assets — an Asset Agreement Policy is required');
   return gaps;
 }
 
+// ===== RECOMMENDATIONS =====
 function getRecs(gaps) {
   const map = {
-    'License is not in the name': 'Transfer or obtain the business license in the owner\'s name immediately to avoid legal disputes',
-    'Diwali / festive bonus': 'Ensure Diwali bonus payment to all eligible employees as per Payment of Bonus Act',
-    'Unaware that statutory bonus': 'Verify bonus eligibility — only employees with wages up to ₹21,000 per month are eligible under the Act',
-    'structured salary format': 'Restructure salary into Basic (50%) + HRA + Other Allowances for proper PF & ESI computation',
-    'Salaries not paid on time': 'Implement payroll cycle — disburse salaries before 7th of every month to avoid penalties',
-    'Unaware of POSH Act': 'Immediately study and implement POSH Act 2013 — mandatory for all businesses employing women',
-    'POSH awareness sessions': 'Conduct POSH awareness workshop at least once a year for all employees',
-    'Internal Committee': 'Constitute Internal Committee (IC) under POSH Act with at least 50% women members',
-    'Annual return under POSH': 'File Annual Return under POSH Act 2013 before 31st January each year',
-    'PF contribution not being made': 'Register and contribute to PF monthly — mandatory for establishments with 20+ employees',
-    'PF contribution not capped': 'Cap PF contribution at ₹15,000 wage ceiling to control employer liability',
-    'Paying PF for employees with salary above': 'Review whether PF is mandatory for high-salary employees — may be avoidable above ₹15,000 basic',
-    'Employees not receiving statutory leaves': 'Implement statutory leave policy — Casual, Privilege, and Sick leave as per State Shops Act',
-    'ESIC-covered employees': 'Educate HR — ESIC-covered employees get medical benefits via ESI scheme; separate sick leave may not apply',
-    'Unaware that employees earning up to ₹42,000': 'Register under ESIC — employees earning up to ₹42,000 gross are mandatorily covered',
-    'Salary not restructured': 'Restructure salary components as per the four new Labour Codes — Wages, Social Security, OSH, IR',
-    'HR Policy / Leave Policy / Appointment Letter not updated': 'Update all HR documents to align with the four Labour Codes introduced by the Government',
-    'Faced challenges with Labour Inspector': 'Maintain compliance files — registers, returns, licences — ready for inspection at all times',
-    'Pending Notices / Inspections': 'Immediately engage a labour law consultant to address pending notices and cases',
-    'Employees leaving without notice': 'Include notice period clauses in appointment letters with recovery provision for shortfall',
-    'Employees have damaged or left with assets': 'Implement an Asset Agreement policy — get employee sign-off on all company assets issued',
+    'License is not in the name':          'Transfer or obtain the business license in the owner\'s name to avoid legal disputes',
+    'Diwali / festive bonus':              'Ensure Diwali bonus payment to all eligible employees as per Payment of Bonus Act 1965',
+    'statutory bonus applies only':        'Verify bonus eligibility — only employees with wages up to ₹21,000/month qualify under the Act',
+    'structured salary format':            'Restructure salary into Basic (≥50%) + HRA + Other Allowances for correct PF & ESI computation',
+    'Salaries not paid on time':           'Implement payroll cycle — disburse salaries before 7th of every month to avoid statutory penalties',
+    'Unaware of POSH Act':                 'Immediately study and implement POSH Act 2013 — mandatory for all organisations employing women',
+    'POSH awareness sessions':             'Conduct POSH awareness workshop at least once annually for all staff',
+    'Internal Committee':                  'Constitute Internal Committee (IC) under POSH Act with at least 50% women members',
+    'Annual return under POSH':            'File Annual Return under POSH Act 2013 with the District Officer before 31st January each year',
+    'PF contribution not being made':      'Register under EPFO and contribute monthly — mandatory for establishments with 20+ employees',
+    'PF contribution not capped':          'Cap PF contribution at ₹15,000 basic wage ceiling to control employer liability',
+    'Paying PF for employees with salary': 'Review PF applicability — above ₹15,000 basic, PF may not be mandatory for new joiners',
+    'Employees not receiving statutory':   'Implement statutory leave policy — Casual, Privilege, and Sick leave as per State Shops & Establishment Act',
+    'ESIC-covered employees':              'Educate HR team — ESIC provides medical benefits to covered employees; separate sick leave is not required',
+    'employees earning up to ₹42,000':     'Register under ESIC — all employees earning up to ₹42,000 gross monthly are mandatorily covered',
+    'Salary structure not restructured':   'Restructure salary components per the four new Labour Codes: Wages, Social Security, OSH & IR Codes',
+    'HR Policy / Leave Policy':            'Update all HR documents (Policy, Appointment Letters, Standing Orders) per the four Labour Codes',
+    'Faced challenges with Labour':        'Maintain compliance files — registers, returns, licences — ready for inspection at all times',
+    'Pending Notices / Inspections':       'Immediately engage a labour law consultant to address all pending notices, inspections, and legal cases',
+    'Employees leaving without notice':    'Include enforceable notice period clauses with salary recovery provisions in all appointment letters',
+    'Employees have damaged or left':      'Implement an Asset Policy — obtain employee sign-off on all company assets issued; include in onboarding',
   };
   const recs = [];
   gaps.forEach(g => {
@@ -342,7 +366,7 @@ function getRecs(gaps) {
       }
     }
   });
-  return recs.length ? recs : ['Maintain all compliance documentation and conduct annual internal audits'];
+  return recs.length ? recs : ['Maintain all compliance documentation and conduct annual internal audits to stay fully compliant'];
 }
 
 // ===== GOOGLE SHEETS =====
@@ -402,7 +426,6 @@ function normaliseItem(item) {
 
 // ===== FORM SUBMISSION =====
 async function submitAudit() {
-  // F2 (sf2), G2 (sg2), G3 (sg3), G4 (sg4) removed from required radio validation
   const requiredRadios = [
     'sa1','sa2',
     'sb1','sb2','sb4','sb5',
@@ -435,31 +458,29 @@ async function submitAudit() {
     employees:   document.getElementById('employees')?.value || '',
     companyName: document.getElementById('companyName')?.value.trim() || '',
     field:       document.getElementById('field')?.value || '',
-    // Section A
+    // A
     sa1: getRadio('sa1'), sa2: getRadio('sa2'),
-    // Section B
+    // B
     sb1: getRadio('sb1'), sb2: getRadio('sb2'),
     sb3: document.getElementById('sb3')?.value || '',
     sb4: getRadio('sb4'), sb5: getRadio('sb5'),
-    // Section C
+    // C
     sc1: getRadio('sc1'), sc2: getRadio('sc2'), sc3: getRadio('sc3'),
     sc4: getRadio('sc4'), sc5: getRadio('sc5'),
-    // Section D
+    // D
     sd1: getRadio('sd1'), sd2: getRadio('sd2'), sd3: getRadio('sd3'),
-    // Section E
+    // E
     se1: getRadio('se1'),
     se2: document.getElementById('se2')?.value || '',
     se3: getRadio('se3'),
-    // Section F — sf2 removed
+    // F
     sf1: getRadio('sf1'),
-    sf2: '', // stored as empty for backward compatibility with Google Sheets columns
+    sf2: '',
     sf3: getRadio('sf3'),
-    // Section G — sg2, sg3, sg4 removed
+    // G
     sg1: getRadio('sg1'),
-    sg2: '', // stored as empty for backward compatibility
-    sg3: '', // stored as empty for backward compatibility
-    sg4: '', // stored as empty for backward compatibility
-    // Section H
+    sg2: '', sg3: '', sg4: '',
+    // H
     sh1: getRadio('sh1'), sh2: getRadio('sh2'), sh3: getRadio('sh3'),
     sh4: getRadio('sh4'), sh5: getRadio('sh5'),
   };
@@ -479,7 +500,7 @@ async function submitAudit() {
     currentUserSubmission = d;
 
     sendToSheets(d).then(result => {
-      if (result.success) showToast('✅ Synced to cloud successfully!', 'green');
+      if (result.success) showToast('✅ Synced to cloud!', 'green');
       else showToast('⚠️ Saved locally. Will sync when online.', 'gold');
     });
 
@@ -545,13 +566,13 @@ function renderUserDashboard() {
 
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('udashTitle', s.companyName || 'Your Report');
-  set('udashSub', `${s.field||'—'} · ${s.state||'—'} · Submitted on ${fmtDate(s.submittedAt)}`);
+  set('udashSub', `${s.field||'—'} · ${s.state||'—'} · ${s.location||'—'} · Submitted on ${fmtDate(s.submittedAt)}`);
 
   const numEl = document.getElementById('udashScoreNum');
   if (numEl) { numEl.textContent = sc + '%'; numEl.className = 'udash-score-num ' + cls; }
   set('udashVerdict', verdict);
   const barEl = document.getElementById('udashScoreBar');
-  if (barEl) { barEl.style.width = '0'; setTimeout(() => barEl.style.width = sc + '%', 200); }
+  if (barEl) { barEl.style.width = '0'; setTimeout(() => barEl.style.width = sc + '%', 300); }
   set('udashScoreMeta', `${(s.gaps||[]).length} compliance gap${(s.gaps||[]).length!==1?'s':''} identified across all sections`);
 
   const yn = (v, id) => {
@@ -563,55 +584,57 @@ function renderUserDashboard() {
   yn(s.sd1,'ustPF'); yn(s.sf1,'ustESI'); yn(s.sc4,'ustPOSH');
   yn(s.se1,'ustLeave'); yn(s.sg1,'ustHR'); yn(s.sb1,'ustBonus');
 
-  renderUserCharts(s);
+  setTimeout(() => renderUserCharts(s), 100);
 
   // Profile
   document.getElementById('udashProfile').innerHTML = [
-    ['Company', s.companyName], ['Contact', s.name], ['Phone', s.contact],
+    ['Company', s.companyName], ['Contact Person', s.name], ['Phone', s.contact],
     ['Location', (s.location||'')+(s.state?', '+s.state:'')], ['Industry', s.field],
     ['Employees', s.employees], ['Est. Type', s.sa1||'—'],
     ['License in Owner Name', s.sa2||'—'],
+    ['Submitted On', fmtDate(s.submittedAt)],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div><div class="m-item-val">${v||'—'}</div></div>`).join('');
 
-  // Section B — Bonus & Salary
+  // Section B
   document.getElementById('udashBonus').innerHTML = [
-    ['Bonus on Diwali', s.sb1], ['Aware of ₹21,000 Bonus Rule', s.sb2],
+    ['Bonus on Diwali', s.sb1], ['Aware ₹21,000 Bonus Rule', s.sb2],
     ['Structured Salary Format', s.sb4], ['Timely Salary Payment', s.sb5],
-    ['Starting Salary', s.sb3 ? '₹'+s.sb3 : '—'],
+    ['Starting Salary', s.sb3 ? '₹'+Number(s.sb3).toLocaleString('en-IN') : '—'],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section C — POSH
+  // Section C
   document.getElementById('udashPOSH').innerHTML = [
     ['Female Employees', s.sc1], ['Aware of POSH Act 2013', s.sc2],
     ['POSH Awareness Sessions', s.sc3], ['IC Committee Formed', s.sc4],
     ['Annual POSH Return Filed', s.sc5],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section D — PF
+  // Section D
   document.getElementById('udashPFSection').innerHTML = [
-    ['PF on Monthly Basis', s.sd1], ['PF Capped at ₹15,000', s.sd2],
-    ['PF on >₹50k/₹75k salary', s.sd3],
+    ['PF on Monthly Basis', s.sd1],
+    ['PF Capped at ₹15,000', s.sd3],
+    ['PF on >₹50k/₹75k Salary', s.sd2],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section E — Leaves
+  // Section E
   document.getElementById('udashLeaves').innerHTML = [
     ['Leaves Given to Employees', s.se1],
     ['Average Annual Leaves', s.se2||'—'],
-    ['Aware: ESIC = No Sick Leave', s.se3],
+    ['Aware: ESIC Sick Leave Rule', s.se3],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section F — ESI (F2 removed)
+  // Section F
   document.getElementById('udashESI').innerHTML = [
     ['Aware ESI Coverage ₹42,000', s.sf1],
     ['Salary Restructured per Codes', s.sf3],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section G — HR (G2, G3, G4 removed)
+  // Section G
   document.getElementById('udashHR').innerHTML = [
     ['HR/Leave/Appt Letter Updated', s.sg1],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section H — Inspection
+  // Section H
   document.getElementById('udashInspection').innerHTML = [
     ['Faced Labour Inspector Issues', s.sh1],
     ['Pending Notices / Cases', s.sh2],
@@ -645,142 +668,162 @@ function renderUserDashboard() {
 }
 
 function ynHtml(v) {
-  if (v === 'Yes')          return '<div class="m-item-val yes">✅ Yes</div>';
-  if (v === 'No')           return '<div class="m-item-val no">❌ No</div>';
-  if (v === 'Partial')      return '<div class="m-item-val partial">⚖ Partial</div>';
-  if (v === 'Partially')    return '<div class="m-item-val partial">📄 Partially</div>';
-  if (v === 'In Progress')  return '<div class="m-item-val partial">🔄 In Progress</div>';
-  if (v === 'Not Sure')     return '<div class="m-item-val partial">🤷 Not Sure</div>';
+  if (v === 'Yes')         return '<div class="m-item-val yes">✅ Yes</div>';
+  if (v === 'No')          return '<div class="m-item-val no">❌ No</div>';
+  if (v === 'Partial')     return '<div class="m-item-val partial">⚖ Partial</div>';
+  if (v === 'Partially')   return '<div class="m-item-val partial">📄 Partially</div>';
+  if (v === 'In Progress') return '<div class="m-item-val partial">🔄 In Progress</div>';
+  if (v === 'Not Sure')    return '<div class="m-item-val partial">🤷 Not Sure</div>';
   return `<div class="m-item-val">${v||'—'}</div>`;
 }
 
 // ===== USER CHARTS =====
-// F2(sf2), G2(sg2), G3(sg3), G4(sg4) removed from all chart data
 function renderUserCharts(s) {
-  const tick = getTickColor(), grid = getGridColor(), ff = 'Syne';
-  Object.keys(uCharts).forEach(k => { try { uCharts[k].destroy(); } catch(e){} });
+  const tick = getTickColor();
+  const grid = getGridColor();
+  const ff   = 'Syne';
+  const C    = getColors();
+
+  // Destroy old charts
+  Object.values(uCharts).forEach(c => { try { c.destroy(); } catch(e){} });
   uCharts = {};
 
-  const gold   = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim()   || '#d4a843';
-  const green  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim()  || '#2ecc8a';
-  const red    = getComputedStyle(document.documentElement).getPropertyValue('--red').trim()    || '#e05555';
-  const blue   = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim()   || '#4e8cff';
-  const purple = getComputedStyle(document.documentElement).getPropertyValue('--purple').trim() || '#a78bfa';
+  const scores = getSectionScores(s);
 
-  // Radar — 8 sections
-  // F score: sf1 + sf3 (sf2 removed) — 2 checks → each 50
-  // G score: sg1 only (sg2,sg3,sg4 removed) — 1 check → 100
+  // RADAR — Section A–H
   const rc = document.getElementById('uChartRadar');
   if (rc) {
-    uCharts['r'] = new Chart(rc, {
+    uCharts.radar = new Chart(rc, {
       type: 'radar',
       data: {
-        labels: ['Sec A\nLicensing','Sec B\nBonus/Salary','Sec C\nPOSH','Sec D\nPF','Sec E\nLeaves','Sec F\nESI','Sec G\nHR Policy','Sec H\nInspection'],
+        labels: ['A: Licensing','B: Bonus/Salary','C: POSH','D: PF','E: Leaves','F: ESI','G: HR Policy','H: Inspection'],
         datasets: [{
-          label: 'Your Score',
-          data: [
-            // A: 2 checks
-            ((s.sa1?50:0) + (s.sa2==='Yes'?50:0)),
-            // B: 4 checks → 25 each
-            ((s.sb1==='Yes'?25:0)+(s.sb2==='Yes'?25:0)+(s.sb4==='Yes'?25:0)+(s.sb5==='Yes'?25:0)),
-            // C: 4 checks → 25 each
-            ((s.sc2==='Yes'?25:0)+(s.sc3==='Yes'?25:0)+(s.sc4==='Yes'?25:0)+(s.sc5==='Yes'?25:0)),
-            // D: 3 checks
-            ((s.sd1==='Yes'?34:0)+(s.sd2==='Yes'?33:0)+(s.sd3==='No'?33:0)),
-            // E: 2 checks → 50 each
-            ((s.se1==='Yes'?50:0)+(s.se3==='Yes'?50:0)),
-            // F: 2 checks (sf2 removed) → 50 each
-            ((s.sf1==='Yes'?50:0)+(s.sf3==='Yes'?50:0)),
-            // G: 1 check (sg2,sg3,sg4 removed) → 100
-            ((s.sg1==='Yes'?100:s.sg1==='Partial'?60:0)),
-            // H: 4 checks → 25 each
-            ((s.sh1==='No'?25:0)+(s.sh2==='No'?25:0)+(s.sh3==='No'?25:0)+(s.sh5==='No'?25:0)),
-          ],
-          backgroundColor: gold + '26', borderColor: gold,
-          pointBackgroundColor: gold, borderWidth: 2, pointRadius: 4,
+          label: 'Compliance Score',
+          data: [scores.A, scores.B, scores.C, scores.D, scores.E, scores.F, scores.G, scores.H],
+          backgroundColor: C.gold + '28',
+          borderColor: C.gold,
+          pointBackgroundColor: C.gold,
+          pointBorderColor: '#fff',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointHoverRadius: 7,
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        scales: { r: { min:0, max:100, ticks:{ color:tick, font:{family:ff,size:9}, stepSize:25, backdropColor:'transparent' },
-          grid:{ color:grid }, pointLabels:{ color:tick, font:{family:ff,size:9} } } },
-        plugins: { legend:{ display:false } }
+        scales: {
+          r: {
+            min: 0, max: 100,
+            ticks: { color: tick, font: { family: ff, size: 9 }, stepSize: 25, backdropColor: 'transparent' },
+            grid: { color: grid },
+            pointLabels: { color: tick, font: { family: ff, size: 9 } }
+          }
+        },
+        plugins: {
+          legend: { display: true, position: 'bottom', labels: { color: tick, font: { family: ff, size: 10 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } }
+        }
       }
     });
   }
 
-  // Doughnut — key compliance status (sf2 removed, sg1 replaces HR check)
+  // DOUGHNUT — 4 key compliance areas
   const dc = document.getElementById('uChartDough');
   if (dc) {
-    const active = [s.sd1==='Yes', s.sf1==='Yes', s.sc4==='Yes', s.sb1==='Yes'].filter(Boolean).length;
-    uCharts['d'] = new Chart(dc, {
+    const active = [s.sd1 === 'Yes', s.sf1 === 'Yes', s.sc4 === 'Yes', s.sb1 === 'Yes'].filter(Boolean).length;
+    uCharts.dough = new Chart(dc, {
       type: 'doughnut',
       data: {
-        labels: ['PF Active','ESI Aware','POSH IC','Bonus Paid','Non-Compliant'],
-        datasets: [{ data:[
-          s.sd1==='Yes'?1:0,
-          s.sf1==='Yes'?1:0,
-          s.sc4==='Yes'?1:0,
-          s.sb1==='Yes'?1:0,
-          Math.max(0,4-active)
-        ], backgroundColor:[green,blue,gold,purple,red+'66'], borderWidth:0, hoverOffset:10 }]
+        labels: ['PF Active', 'ESI Aware', 'POSH IC', 'Bonus Paid', 'Non-Compliant'],
+        datasets: [{
+          data: [
+            s.sd1 === 'Yes' ? 1 : 0,
+            s.sf1 === 'Yes' ? 1 : 0,
+            s.sc4 === 'Yes' ? 1 : 0,
+            s.sb1 === 'Yes' ? 1 : 0,
+            Math.max(0, 4 - active),
+          ],
+          backgroundColor: [C.green, C.blue, C.gold, C.purple, C.red + '88'],
+          borderWidth: 0,
+          hoverOffset: 12,
+        }]
       },
-      options: { responsive:true, maintainAspectRatio:false, cutout:'68%',
-        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:10}, padding:8 } } } }
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '68%',
+        plugins: {
+          legend: { position: 'bottom', labels: { color: tick, font: { family: ff, size: 10 }, padding: 10 } }
+        }
+      }
     });
   }
 
-  // Bar — key metrics (sf2, sg2, sg3, sg4 removed from bar)
+  // BAR — 8 key metrics
   const bc = document.getElementById('uChartBar');
   if (bc) {
     const vals = [
-      s.sa2==='Yes'?100:0,
-      s.sb5==='Yes'?100:0,
-      s.sc3==='Yes'?100:0,
-      s.sd1==='Yes'?100:0,
-      s.sd2==='Yes'?100:0,
-      s.se1==='Yes'?100:0,
-      s.sf3==='Yes'?100:0,
-      s.sg1==='Yes'?100:s.sg1==='Partial'?60:0,
+      s.sa2 === 'Yes'     ? 100 : 0,
+      s.sb5 === 'Yes'     ? 100 : 0,
+      s.sc3 === 'Yes'     ? 100 : 0,
+      s.sd1 === 'Yes'     ? 100 : 0,
+      s.sd3 === 'Yes'     ? 100 : 0,
+      s.se1 === 'Yes'     ? 100 : 0,
+      s.sf3 === 'Yes'     ? 100 : 0,
+      s.sg1 === 'Yes'     ? 100 : s.sg1 === 'Partial' ? 60 : 0,
     ];
-    uCharts['b'] = new Chart(bc, {
+    uCharts.bar = new Chart(bc, {
       type: 'bar',
       data: {
-        labels:['License\n(Owner)','Timely\nSalary','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nGiven','Salary\nRestructd','HR Policy\nUpdated'],
-        datasets:[{ label:'% Score', data:vals,
-          backgroundColor: vals.map(v => v>=80?green : v>=50?gold : red),
-          borderRadius:6, borderSkipped:false }]
+        labels: ['License\n(Owner)', 'Timely\nSalary', 'POSH\nSessions', 'PF\nMonthly', 'PF\nCapped', 'Leaves\nGiven', 'Salary\nRestructd', 'HR Policy\nUpdated'],
+        datasets: [{
+          label: 'Score %',
+          data: vals,
+          backgroundColor: vals.map(v => v >= 80 ? C.green : v >= 50 ? C.gold : C.red),
+          borderRadius: 7,
+          borderSkipped: false,
+        }]
       },
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:8} }, grid:{ color:grid } },
-          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true, max:100 } } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: tick, font: { family: ff, size: 8 } }, grid: { color: grid } },
+          y: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid }, beginAtZero: true, max: 100 }
+        }
+      }
     });
   }
 
-  // Polar — HR Governance (sg2,sg3,sg4 removed → only POSH + HR G1)
+  // POLAR — HR & POSH Governance
   const pc = document.getElementById('uChartPolar');
   if (pc) {
-    uCharts['p'] = new Chart(pc, {
+    uCharts.polar = new Chart(pc, {
       type: 'polarArea',
       data: {
-        labels:['POSH Awareness','IC Committee','POSH Annual Return','HR Policy Updated','Salary Restructured'],
-        datasets:[{
-          data:[
-            s.sc3==='Yes'?100:0,
-            s.sc4==='Yes'?100:0,
-            s.sc5==='Yes'?100:0,
-            s.sg1==='Yes'?100:s.sg1==='Partial'?60:0,
-            s.sf3==='Yes'?100:0,
+        labels: ['POSH Awareness', 'IC Committee', 'POSH Return', 'HR Updated', 'Salary Restructd'],
+        datasets: [{
+          data: [
+            s.sc3 === 'Yes' ? 100 : 0,
+            s.sc4 === 'Yes' ? 100 : 0,
+            s.sc5 === 'Yes' ? 100 : 0,
+            s.sg1 === 'Yes' ? 100 : s.sg1 === 'Partial' ? 60 : 0,
+            s.sf3 === 'Yes' ? 100 : 0,
           ],
-          backgroundColor:[gold+'80',blue+'80',green+'80',purple+'80',green+'59'],
-          borderWidth:0,
+          backgroundColor: [C.gold + '88', C.blue + '88', C.green + '88', C.purple + '88', C.green + '66'],
+          borderWidth: 0,
         }]
       },
-      options:{ responsive:true, maintainAspectRatio:false,
-        scales:{ r:{ ticks:{ color:tick, font:{family:ff,size:9}, backdropColor:'transparent' },
-          grid:{ color:grid }, min:0, max:100 } },
-        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:9}, padding:8 } } } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          r: {
+            ticks: { color: tick, font: { family: ff, size: 9 }, backdropColor: 'transparent' },
+            grid: { color: grid }, min: 0, max: 100
+          }
+        },
+        plugins: {
+          legend: { position: 'bottom', labels: { color: tick, font: { family: ff, size: 9 }, padding: 8 } }
+        }
+      }
     });
   }
 }
@@ -789,8 +832,8 @@ function renderUserCharts(s) {
 function renderAdminDashboard() {
   if (!isAdmin) return;
   populateAdminFilters();
-  const stateF = document.getElementById('adminStateFilter')?.value || '';
-  const indF   = document.getElementById('adminIndustryFilter')?.value || '';
+  const stateF   = document.getElementById('adminStateFilter')?.value || '';
+  const indF     = document.getElementById('adminIndustryFilter')?.value || '';
   const filtered = submissions.filter(s => (!stateF || s.state === stateF) && (!indF || s.field === indF));
   updateAdminStats(filtered);
   renderAdminSidebar();
@@ -824,8 +867,8 @@ function updateAdminStats(data) {
 }
 
 function renderAdminSidebar() {
-  const q = (document.getElementById('adminSideSearch')?.value||'').toLowerCase();
-  const list = document.getElementById('adminSidebarList');
+  const q       = (document.getElementById('adminSideSearch')?.value||'').toLowerCase();
+  const list    = document.getElementById('adminSidebarList');
   const countEl = document.getElementById('adminSidebarCount');
   if (countEl) countEl.textContent = submissions.length;
   if (!list) return;
@@ -834,9 +877,10 @@ function renderAdminSidebar() {
     (s.name||'').toLowerCase().includes(q) ||
     (s.state||'').toLowerCase().includes(q)
   );
-  if (!filtered.length) { list.innerHTML='<div class="sidebar-empty">No results found.</div>'; return; }
+  if (!filtered.length) { list.innerHTML = '<div class="sidebar-empty">No results found.</div>'; return; }
   list.innerHTML = filtered.map(s => {
-    const sc=s.score||0, cls=sc>=70?'good':sc>=40?'mid':'low';
+    const sc = s.score || 0;
+    const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
     return `<div class="sidebar-card ${activeDetailId===s.id?'active':''}" onclick="showDetail(${s.id})">
       <div class="sc-name">${s.companyName||'Unknown'}</div>
       <div class="sc-meta"><span>${s.state||'—'} · ${fmtDate(s.submittedAt,true)}</span><span class="sc-score ${cls}">${sc}%</span></div>
@@ -844,138 +888,189 @@ function renderAdminSidebar() {
   }).join('');
 }
 
-// Admin charts — F2(sf2), G2(sg2), G3(sg3), G4(sg4) removed
+// ===== ADMIN CHARTS =====
 function renderAdminCharts(data) {
-  const tick = getTickColor(), grid = getGridColor(), ff = 'Syne';
-  Object.keys(charts).forEach(k => { try { charts[k].destroy(); } catch(e){} });
+  const tick = getTickColor();
+  const grid = getGridColor();
+  const ff   = 'Syne';
+  const C    = getColors();
+
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
   charts = {};
   if (!data.length) return;
 
-  const gold   = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim();
-  const green  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim();
-  const red    = getComputedStyle(document.documentElement).getPropertyValue('--red').trim();
-  const blue   = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim();
-  const purple = getComputedStyle(document.documentElement).getPropertyValue('--purple').trim();
+  const pct = (fn) => data.length ? Math.round(fn(data) / data.length * 100) : 0;
 
-  const pct = (fn) => data.length ? Math.round(fn(data)/data.length*100) : 0;
-
-  // Main compliance bar — sf2 removed, sg2/sg3/sg4 removed
+  // 1. MAIN COMPLIANCE BAR — all key areas
   const bc = document.getElementById('adminChartBar');
   if (bc) {
-    charts['bar'] = new Chart(bc, {
-      type:'bar',
-      data:{
-        labels:['Owner\nLicense','Diwali\nBonus','POSH\nIC','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nGiven','ESI\nAware','HR\nUpdated','Salary\nRestructd'],
-        datasets:[{ label:'% Compliant',
-          data:[
-            pct(d=>d.filter(s=>s.sa2==='Yes').length),
-            pct(d=>d.filter(s=>s.sb1==='Yes').length),
-            pct(d=>d.filter(s=>s.sc4==='Yes').length),
-            pct(d=>d.filter(s=>s.sc3==='Yes').length),
-            pct(d=>d.filter(s=>s.sd1==='Yes').length),
-            pct(d=>d.filter(s=>s.sd2==='Yes').length),
-            pct(d=>d.filter(s=>s.se1==='Yes').length),
-            pct(d=>d.filter(s=>s.sf1==='Yes').length),
-            pct(d=>d.filter(s=>s.sg1==='Yes'||s.sg1==='Partial').length),
-            pct(d=>d.filter(s=>s.sf3==='Yes').length),
-          ],
-          backgroundColor:[gold,green,blue,purple,green,gold,blue,red,green,gold],
-          borderRadius:6, borderSkipped:false }]
+    const labels = ['Owner\nLicense','Diwali\nBonus','POSH\nAware','POSH\nIC','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nGiven','ESI\nAware','HR\nUpdated','Salary\nRestructd'];
+    const barVals = [
+      pct(d => d.filter(s => s.sa2 === 'Yes').length),
+      pct(d => d.filter(s => s.sb1 === 'Yes').length),
+      pct(d => d.filter(s => s.sc2 === 'Yes').length),
+      pct(d => d.filter(s => s.sc4 === 'Yes').length),
+      pct(d => d.filter(s => s.sc3 === 'Yes').length),
+      pct(d => d.filter(s => s.sd1 === 'Yes').length),
+      pct(d => d.filter(s => s.sd3 === 'Yes').length),
+      pct(d => d.filter(s => s.se1 === 'Yes').length),
+      pct(d => d.filter(s => s.sf1 === 'Yes').length),
+      pct(d => d.filter(s => s.sg1 === 'Yes' || s.sg1 === 'Partial').length),
+      pct(d => d.filter(s => s.sf3 === 'Yes').length),
+    ];
+    charts.bar = new Chart(bc, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: '% Compliant',
+          data: barVals,
+          backgroundColor: barVals.map(v => v >= 70 ? C.green : v >= 40 ? C.gold : C.red),
+          borderRadius: 7,
+          borderSkipped: false,
+        }]
       },
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:8} }, grid:{ color:grid } },
-          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true, max:100 } } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: tick, font: { family: ff, size: 8 } }, grid: { color: grid } },
+          y: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid }, beginAtZero: true, max: 100 }
+        }
+      }
     });
   }
 
-  // Establishment type doughnut
+  // 2. ESTABLISHMENT TYPE DOUGHNUT
   const dc = document.getElementById('adminChartDough');
   if (dc) {
-    const cnt={}; data.forEach(s=>{ if(s.sa1) cnt[s.sa1]=(cnt[s.sa1]||0)+1; });
-    const lbls=Object.keys(cnt).length?Object.keys(cnt):['No Data'];
-    const vals=Object.keys(cnt).length?Object.values(cnt):[1];
-    charts['dough'] = new Chart(dc, {
-      type:'doughnut',
-      data:{ labels:lbls, datasets:[{ data:vals, backgroundColor:[gold,green,blue,purple,red], borderWidth:0, hoverOffset:10 }] },
-      options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
-        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:11}, padding:10 } } } }
+    const cnt = {}; data.forEach(s => { if (s.sa1) cnt[s.sa1] = (cnt[s.sa1] || 0) + 1; });
+    const lbls = Object.keys(cnt).length ? Object.keys(cnt) : ['No Data'];
+    const vals = Object.keys(cnt).length ? Object.values(cnt) : [1];
+    charts.dough = new Chart(dc, {
+      type: 'doughnut',
+      data: {
+        labels: lbls,
+        datasets: [{ data: vals, backgroundColor: [C.gold, C.green, C.blue, C.purple, C.red], borderWidth: 0, hoverOffset: 12 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { color: tick, font: { family: ff, size: 11 }, padding: 10 } } }
+      }
     });
   }
 
-  // Employee size bar
+  // 3. COMPANY SIZE BAR
   const ec = document.getElementById('adminChartEmp');
   if (ec) {
-    const sizes=['1–10','11–20','21–50','51–100','101–150','151–200','201–300','301–400','401–500','500+'];
-    const cnt={}; sizes.forEach(s=>cnt[s]=0); data.forEach(s=>{ if(s.employees) cnt[s.employees]=(cnt[s.employees]||0)+1; });
-    charts['emp'] = new Chart(ec, {
-      type:'bar',
-      data:{ labels:sizes, datasets:[{ label:'Companies', data:sizes.map(s=>cnt[s]), backgroundColor:blue, borderRadius:6, borderSkipped:false }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid } },
-          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true } } }
+    const sizes = ['1–10','11–20','21–50','51–100','101–150','151–200','201–300','301–400','401–500','500+'];
+    const cnt = {}; sizes.forEach(s => cnt[s] = 0); data.forEach(s => { if (s.employees) cnt[s.employees] = (cnt[s.employees] || 0) + 1; });
+    charts.emp = new Chart(ec, {
+      type: 'bar',
+      data: {
+        labels: sizes,
+        datasets: [{ label: 'Companies', data: sizes.map(s => cnt[s]), backgroundColor: C.blue + 'cc', borderRadius: 7, borderSkipped: false }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: tick, font: { family: ff, size: 8 } }, grid: { color: grid } },
+          y: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid }, beginAtZero: true }
+        }
+      }
     });
   }
 
-  // POSH pie — sg2/sg3/sg4 removed, replaced with POSH-focused metrics
+  // 4. POSH COVERAGE PIE
   const pieC = document.getElementById('adminChartPie');
   if (pieC) {
-    charts['pie'] = new Chart(pieC, {
-      type:'pie',
-      data:{
-        labels:['HR Policy Updated','POSH IC Formed','POSH Sessions Done','POSH Return Filed'],
-        datasets:[{ data:[
-          pct(d=>d.filter(s=>s.sg1==='Yes').length),
-          pct(d=>d.filter(s=>s.sc4==='Yes').length),
-          pct(d=>d.filter(s=>s.sc3==='Yes').length),
-          pct(d=>d.filter(s=>s.sc5==='Yes').length),
-        ], backgroundColor:[green,blue,gold,purple], borderWidth:0, hoverOffset:8 }]
+    charts.pie = new Chart(pieC, {
+      type: 'pie',
+      data: {
+        labels: ['HR Policy Updated', 'POSH IC Formed', 'POSH Sessions Done', 'POSH Return Filed'],
+        datasets: [{
+          data: [
+            pct(d => d.filter(s => s.sg1 === 'Yes').length),
+            pct(d => d.filter(s => s.sc4 === 'Yes').length),
+            pct(d => d.filter(s => s.sc3 === 'Yes').length),
+            pct(d => d.filter(s => s.sc5 === 'Yes').length),
+          ],
+          backgroundColor: [C.green, C.blue, C.gold, C.purple],
+          borderWidth: 0,
+          hoverOffset: 10,
+        }]
       },
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'bottom', labels:{ color:tick, font:{family:ff,size:11}, padding:10 } } } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: tick, font: { family: ff, size: 10 }, padding: 10 } } }
+      }
     });
   }
 
-  // Score distribution
+  // 5. SCORE DISTRIBUTION BAR
   const sc = document.getElementById('adminChartScore');
   if (sc) {
-    const ranges={'0–20%':0,'21–40%':0,'41–60%':0,'61–80%':0,'81–100%':0};
-    data.forEach(s=>{
-      const v=s.score||0;
-      if(v<=20) ranges['0–20%']++;
-      else if(v<=40) ranges['21–40%']++;
-      else if(v<=60) ranges['41–60%']++;
-      else if(v<=80) ranges['61–80%']++;
+    const ranges = { '0–20%': 0, '21–40%': 0, '41–60%': 0, '61–80%': 0, '81–100%': 0 };
+    data.forEach(s => {
+      const v = s.score || 0;
+      if (v <= 20) ranges['0–20%']++;
+      else if (v <= 40) ranges['21–40%']++;
+      else if (v <= 60) ranges['41–60%']++;
+      else if (v <= 80) ranges['61–80%']++;
       else ranges['81–100%']++;
     });
-    charts['score'] = new Chart(sc, {
-      type:'bar',
-      data:{ labels:Object.keys(ranges), datasets:[{ label:'Companies', data:Object.values(ranges),
-        backgroundColor:[red,red,gold,green,green], borderRadius:6, borderSkipped:false }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:10} }, grid:{ color:grid } },
-          y:{ ticks:{ color:tick, font:{family:ff,size:10} }, grid:{ color:grid }, beginAtZero:true } } }
+    charts.score = new Chart(sc, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(ranges),
+        datasets: [{
+          label: 'Companies',
+          data: Object.values(ranges),
+          backgroundColor: [C.red, C.red + 'cc', C.gold, C.green + 'cc', C.green],
+          borderRadius: 7,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: tick, font: { family: ff, size: 10 } }, grid: { color: grid } },
+          y: { ticks: { color: tick, font: { family: ff, size: 10 } }, grid: { color: grid }, beginAtZero: true }
+        }
+      }
     });
   }
 
-  // Industry bar
+  // 6. INDUSTRY HORIZONTAL BAR
   const ic = document.getElementById('adminChartIndustry');
   if (ic) {
-    const cnt={}; data.forEach(s=>{ if(s.field) cnt[s.field]=(cnt[s.field]||0)+1; });
-    const lbls=Object.keys(cnt).length?Object.keys(cnt):['No Data'];
-    const vals=Object.keys(cnt).length?Object.values(cnt):[0];
-    charts['ind'] = new Chart(ic, {
-      type:'bar',
-      data:{ labels:lbls, datasets:[{ label:'Submissions', data:vals, backgroundColor:purple, borderRadius:6, borderSkipped:false }] },
-      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-        scales:{ x:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid }, beginAtZero:true },
-          y:{ ticks:{ color:tick, font:{family:ff,size:9} }, grid:{ color:grid } } } }
+    const cnt = {}; data.forEach(s => { if (s.field) cnt[s.field] = (cnt[s.field] || 0) + 1; });
+    const lbls = Object.keys(cnt).length ? Object.keys(cnt) : ['No Data'];
+    const vals = Object.keys(cnt).length ? Object.values(cnt) : [0];
+    charts.ind = new Chart(ic, {
+      type: 'bar',
+      data: {
+        labels: lbls,
+        datasets: [{ label: 'Submissions', data: vals, backgroundColor: C.purple + 'cc', borderRadius: 7, borderSkipped: false }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid }, beginAtZero: true },
+          y: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid } }
+        }
+      }
     });
   }
 }
 
+// ===== ADMIN TABLE =====
 function renderAdminTable() {
-  const tbody = document.getElementById('adminTblBody');
+  const tbody  = document.getElementById('adminTblBody');
   if (!tbody) return;
   const stateF = document.getElementById('adminStateFilter')?.value || '';
   const indF   = document.getElementById('adminIndustryFilter')?.value || '';
@@ -990,20 +1085,22 @@ function renderAdminTable() {
     return;
   }
   tbody.innerHTML = filtered.map((s, i) => {
-    const sc=s.score||0, cls=sc>=70?'good':sc>=40?'mid':'low';
-    const gl=(s.gaps||[]).length, gc=gl>5?'low':gl>2?'mid':'good';
+    const sc  = s.score || 0;
+    const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
+    const gl  = (s.gaps || []).length;
+    const gc  = gl > 5 ? 'low' : gl > 2 ? 'mid' : 'good';
     return `<tr>
       <td style="color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:0.75rem">${String(i+1).padStart(2,'0')}</td>
       <td>
         <div style="font-weight:700;color:var(--white);font-size:0.85rem">${s.companyName||'Unknown'}</div>
-        <div style="font-size:0.72rem;color:var(--text2)">${s.field||'—'}</div>
+        <div style="font-size:0.72rem;color:var(--text2)">${s.field||'—'} · ${fmtDate(s.submittedAt,true)}</div>
       </td>
       <td>
-        <div style="font-size:0.82rem">${s.name||'—'}</div>
+        <div style="font-size:0.82rem;font-weight:600">${s.name||'—'}</div>
         <div style="font-size:0.7rem;color:var(--text2)">${s.contact||'—'}</div>
       </td>
-      <td style="white-space:nowrap">${s.state||'—'}</td>
-      <td style="font-size:0.78rem;white-space:nowrap">${s.field||'—'}</td>
+      <td style="white-space:nowrap;font-size:0.82rem">${s.state||'—'}</td>
+      <td style="font-size:0.8rem;white-space:nowrap">${s.field||'—'}</td>
       <td><span class="badge info">${s.employees||'—'}</span></td>
       <td style="font-size:0.8rem;white-space:nowrap">${s.sa1||'—'}</td>
       <td><span class="badge ${cls}">${sc}%</span></td>
@@ -1030,38 +1127,38 @@ function deleteSubmission(id) {
 }
 
 // ===== DETAIL MODAL =====
-// F2(sf2), G2(sg2), G3(sg3), G4(sg4) removed from modal display
 function showDetail(id) {
   const s = submissions.find(x => x.id == id);
   if (!s) return;
   activeDetailId = id;
   renderAdminSidebar();
 
-  const sc = s.score||0;
-  const color = sc>=70?'var(--green)':sc>=40?'var(--blue)':'var(--red)';
-  const verdict = sc>=70?'Strong compliance posture. Continue maintaining documentation and annual reviews.'
-    : sc>=40?'Moderate compliance. Address highlighted gaps to avoid regulatory risk.'
+  const sc      = s.score || 0;
+  const color   = sc >= 70 ? 'var(--green)' : sc >= 40 ? 'var(--blue)' : 'var(--red)';
+  const verdict = sc >= 70 ? 'Strong compliance posture. Continue maintaining documentation and annual reviews.'
+    : sc >= 40 ? 'Moderate compliance. Address highlighted gaps to avoid regulatory risk.'
     : 'Critical compliance gaps detected. Immediate corrective action required.';
 
   const gaps = Array.isArray(s.gaps) && s.gaps.length ? s.gaps : getGaps(s);
   const recs  = Array.isArray(s.recs) && s.recs.length ? s.recs  : getRecs(gaps);
 
   const yn = v => {
-    if (v==='Yes')     return '<span class="m-item-val yes">✅ Yes</span>';
-    if (v==='No')      return '<span class="m-item-val no">❌ No</span>';
-    if (v==='Partial') return '<span class="m-item-val partial">⚖ Partial</span>';
-    if (v==='Partially') return '<span class="m-item-val partial">📄 Partially</span>';
-    if (v==='In Progress') return '<span class="m-item-val partial">🔄 In Progress</span>';
+    if (v === 'Yes')       return '<span class="m-item-val yes">✅ Yes</span>';
+    if (v === 'No')        return '<span class="m-item-val no">❌ No</span>';
+    if (v === 'Partial')   return '<span class="m-item-val partial">⚖ Partial</span>';
+    if (v === 'Partially') return '<span class="m-item-val partial">📄 Partially</span>';
+    if (v === 'In Progress') return '<span class="m-item-val partial">🔄 In Progress</span>';
     return `<span class="m-item-val">${v||'—'}</span>`;
   };
 
   document.getElementById('modalContent').innerHTML = `
     <div class="m-title">🏢 ${s.companyName||'Unknown Company'}</div>
     <div class="m-sub">${s.field||'—'} · ${s.state||'—'} · ${s.employees||'—'} employees · ${fmtDate(s.submittedAt)}</div>
+
     <div class="m-score-bar">
       <div class="m-score-num" style="color:${color}">${sc}%</div>
       <div class="m-score-info">
-        <div class="m-score-label">Compliance Score</div>
+        <div class="m-score-label">Compliance Score — Sections A to H</div>
         <div class="m-bar"><div class="m-bar-fill" style="width:${sc}%"></div></div>
         <div class="m-verdict">${verdict}</div>
       </div>
@@ -1069,18 +1166,18 @@ function showDetail(id) {
 
     <div class="m-section">📋 Business Profile</div>
     <div class="m-grid">
-      ${mi('Contact',s.name)} ${mi('Phone',s.contact)} ${mi('Location',(s.location||'')+(s.state?', '+s.state:''))}
-      ${mi('Est. Type',s.sa1)} <div class="m-item"><div class="m-item-label">License in Owner Name</div>${yn(s.sa2)}</div>
-      ${mi('Industry',s.field)} ${mi('Employees',s.employees)}
+      ${mi('Contact', s.name)} ${mi('Phone', s.contact)} ${mi('Location', (s.location||'')+(s.state?', '+s.state:''))}
+      ${mi('Est. Type', s.sa1)} <div class="m-item"><div class="m-item-label">License in Owner Name</div>${yn(s.sa2)}</div>
+      ${mi('Industry', s.field)} ${mi('Employees', s.employees)}
     </div>
 
     <div class="m-section">💰 Bonus & Salary (Section B)</div>
     <div class="m-grid">
       <div class="m-item"><div class="m-item-label">Diwali Bonus</div>${yn(s.sb1)}</div>
-      <div class="m-item"><div class="m-item-label">Aware ₹21,000 Bonus Rule</div>${yn(s.sb2)}</div>
+      <div class="m-item"><div class="m-item-label">Aware ₹21,000 Rule</div>${yn(s.sb2)}</div>
       <div class="m-item"><div class="m-item-label">Structured Salary</div>${yn(s.sb4)}</div>
       <div class="m-item"><div class="m-item-label">Timely Salary Payment</div>${yn(s.sb5)}</div>
-      ${mi('Starting Salary', s.sb3?'₹'+s.sb3:'—')}
+      ${mi('Starting Salary', s.sb3 ? '₹' + Number(s.sb3).toLocaleString('en-IN') : '—')}
     </div>
 
     <div class="m-section">👩‍⚖️ POSH (Section C)</div>
@@ -1095,18 +1192,18 @@ function showDetail(id) {
     <div class="m-section">🏦 Provident Fund (Section D)</div>
     <div class="m-grid">
       <div class="m-item"><div class="m-item-label">PF Monthly</div>${yn(s.sd1)}</div>
-      <div class="m-item"><div class="m-item-label">PF Capped ₹15,000</div>${yn(s.sd2)}</div>
-      <div class="m-item"><div class="m-item-label">PF on >₹50k/₹75k</div>${yn(s.sd3)}</div>
+      <div class="m-item"><div class="m-item-label">PF Capped ₹15,000</div>${yn(s.sd3)}</div>
+      <div class="m-item"><div class="m-item-label">PF on >₹50k/₹75k</div>${yn(s.sd2)}</div>
     </div>
 
     <div class="m-section">🏖 Leaves (Section E)</div>
     <div class="m-grid">
       <div class="m-item"><div class="m-item-label">Leaves Given</div>${yn(s.se1)}</div>
       ${mi('Average Annual Leaves', s.se2||'—')}
-      <div class="m-item"><div class="m-item-label">ESIC = No Sick Leave</div>${yn(s.se3)}</div>
+      <div class="m-item"><div class="m-item-label">Aware: ESIC Sick Leave</div>${yn(s.se3)}</div>
     </div>
 
-    <div class="m-section">🏥 ESI & Salary Structure (Section F)</div>
+    <div class="m-section">🏥 ESI & Salary (Section F)</div>
     <div class="m-grid">
       <div class="m-item"><div class="m-item-label">ESI Aware ₹42,000</div>${yn(s.sf1)}</div>
       <div class="m-item"><div class="m-item-label">Salary Restructured</div>${yn(s.sf3)}</div>
@@ -1152,15 +1249,56 @@ function closeModal(force) {
   if (force === true || (force && force.target === m)) { m.classList.remove('open'); activeDetailId = null; }
 }
 
+// ===== CSV EXPORT =====
+function exportToCSV() {
+  if (!submissions.length) { showToast('No data to export.', 'red'); return; }
+  const headers = [
+    'ID', 'Submitted At', 'Company', 'Contact', 'Phone', 'State', 'Location', 'Employees', 'Industry',
+    'Est Type (A1)', 'License Owner (A2)',
+    'Diwali Bonus (B1)', 'Aware Bonus Rule (B2)', 'Starting Salary (B3)', 'Salary Structure (B4)', 'Timely Salary (B5)',
+    'Female Employees (C1)', 'POSH Aware (C2)', 'POSH Sessions (C3)', 'IC Formed (C4)', 'POSH Return (C5)',
+    'PF Monthly (D1)', 'PF >50k (D2)', 'PF Capped (D3)',
+    'Leaves Given (E1)', 'Avg Leaves (E2)', 'ESIC Sick Leave (E3)',
+    'ESI Aware (F1)', 'Salary Restructd (F3)',
+    'HR Updated (G1)',
+    'Labour Inspector (H1)', 'Pending Cases (H2)', 'Notice Period (H3)', 'Issues Assets (H4)', 'Asset Damage (H5)',
+    'Score', 'Gaps Count', 'Gaps', 'Recommendations'
+  ];
+  const rows = submissions.map(s => [
+    s.id, s.submittedAt, s.companyName, s.name, s.contact, s.state, s.location, s.employees, s.field,
+    s.sa1, s.sa2,
+    s.sb1, s.sb2, s.sb3, s.sb4, s.sb5,
+    s.sc1, s.sc2, s.sc3, s.sc4, s.sc5,
+    s.sd1, s.sd2, s.sd3,
+    s.se1, s.se2, s.se3,
+    s.sf1, s.sf3,
+    s.sg1,
+    s.sh1, s.sh2, s.sh3, s.sh4, s.sh5,
+    s.score, (s.gaps||[]).length,
+    (s.gaps||[]).join(' | '),
+    (s.recs||[]).join(' | ')
+  ].map(v => `"${String(v||'').replace(/"/g,'""')}"`));
+
+  const csv = [headers.map(h => `"${h}"`).join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `LabourShield_Audit_Data_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ CSV exported successfully!', 'green');
+}
+
 // ===== PDF DOWNLOAD =====
-// F2(sf2), G2(sg2), G3(sg3), G4(sg4) removed from PDF output
 async function downloadPDF(id) {
   const s = id ? submissions.find(x => x.id == id) : currentUserSubmission;
-  if (!s) { showToast('Submission not found','red'); return; }
+  if (!s) { showToast('Submission not found', 'red'); return; }
+
+  showToast('⏳ Generating PDF…', 'blue');
 
   if (!window.jspdf?.jsPDF) {
-    showToast('Loading PDF generator…','blue');
-    await new Promise((res,rej) => {
+    await new Promise((res, rej) => {
       const el = document.createElement('script');
       el.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
       el.onload = res; el.onerror = rej;
@@ -1169,153 +1307,190 @@ async function downloadPDF(id) {
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ format:'a4', unit:'mm' });
-  const pw=210, ml=18, mr=18;
-  let y=0;
+  const doc = new jsPDF({ format: 'a4', unit: 'mm' });
+  const pw = 210, ml = 18, mr = 18;
+  let y = 0;
 
-  const BG=[248,249,250],BG2=[255,255,255],GOLD=[184,134,11],GREEN=[26,138,90],
-        RED=[192,57,43],BLUE=[37,99,235],DARK=[17,24,39],MUTED=[107,114,128];
-  const sc = s.score||0;
-  const scoreCol = sc>=70?GREEN:sc>=40?BLUE:RED;
-  const verdict  = sc>=70?'GOOD STANDING':sc>=40?'NEEDS IMPROVEMENT':'CRITICAL ATTENTION';
+  const BG   = [248, 249, 251];
+  const BG2  = [255, 255, 255];
+  const GOLD = [184, 134, 11];
+  const GREEN= [26, 138, 90];
+  const RED  = [192, 57, 43];
+  const BLUE = [37, 99, 235];
+  const DARK = [17, 24, 39];
+  const MUTED= [107, 114, 128];
+  const NAV  = [14, 16, 24];
+
+  const sc       = s.score || 0;
+  const scoreCol = sc >= 70 ? GREEN : sc >= 40 ? BLUE : RED;
+  const verdict  = sc >= 70 ? 'GOOD STANDING ✦' : sc >= 40 ? 'NEEDS IMPROVEMENT' : 'CRITICAL ATTENTION REQUIRED';
 
   const addPage = () => {
     doc.addPage();
-    doc.setFillColor(...BG); doc.rect(0,0,210,297,'F');
+    doc.setFillColor(...BG); doc.rect(0, 0, 210, 297, 'F');
     y = 18;
   };
 
-  // Cover header
-  doc.setFillColor(...BG);  doc.rect(0,0,210,297,'F');
-  doc.setFillColor(...DARK); doc.rect(0,0,210,56,'F');
-  doc.setFillColor(...GOLD); doc.rect(0,0,210,2,'F');
+  // ---- COVER HEADER ----
+  doc.setFillColor(...BG); doc.rect(0, 0, 210, 297, 'F');
+  doc.setFillColor(...NAV); doc.rect(0, 0, 210, 58, 'F');
+  doc.setFillColor(...GOLD); doc.rect(0, 0, 210, 2.5, 'F');
 
-  doc.setTextColor(...GOLD); doc.setFontSize(7); doc.setFont('helvetica','bold');
-  doc.text('LABOURSHIELD  ·  COMPLIANCE AUDIT REPORT  ·  SECTIONS A–H',105,14,{align:'center'});
-  doc.setTextColor(255,255,255); doc.setFontSize(18);
-  doc.text((s.companyName||'UNKNOWN').toUpperCase(),105,27,{align:'center'});
-  doc.setTextColor(...MUTED); doc.setFontSize(8); doc.setFont('helvetica','normal');
-  doc.text(`${s.field||'—'}  ·  ${s.state||'—'}  ·  ${s.employees||'—'} employees  ·  ${fmtDate(s.submittedAt)}`,105,36,{align:'center'});
+  doc.setTextColor(...GOLD); doc.setFontSize(6.5); doc.setFont('helvetica', 'bold');
+  doc.text('LABOURSHIELD  ·  PROFESSIONAL COMPLIANCE AUDIT REPORT  ·  INDIA', 105, 13, { align: 'center' });
+
+  doc.setTextColor(255, 255, 255); doc.setFontSize(20); doc.setFont('helvetica', 'bold');
+  doc.text((s.companyName || 'UNKNOWN COMPANY').toUpperCase(), 105, 27, { align: 'center' });
+
+  doc.setTextColor(...MUTED); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+  doc.text(`${s.field||'—'}  ·  ${s.state||'—'}  ·  ${s.employees||'—'} employees  ·  ${s.location||'—'}  ·  ${fmtDate(s.submittedAt)}`, 105, 37, { align: 'center' });
 
   doc.setFillColor(...scoreCol);
-  doc.roundedRect(ml,44,pw-ml-mr,12,2,2,'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
-  doc.text(`COMPLIANCE SCORE:  ${sc}%   —   ${verdict}`,105,51.5,{align:'center'});
-  y = 65;
+  doc.roundedRect(ml, 44, pw - ml - mr, 13, 2.5, 2.5, 'F');
+  doc.setTextColor(255, 255, 255); doc.setFontSize(9.5); doc.setFont('helvetica', 'bold');
+  doc.text(`COMPLIANCE SCORE: ${sc}%   —   ${verdict}`, 105, 52, { align: 'center' });
 
-  const sec = (title) => {
-    if (y>265) addPage();
-    doc.setFillColor(...BG2); doc.rect(ml,y,pw-ml-mr,8,'F');
-    doc.setFillColor(...GOLD); doc.rect(ml,y,3,8,'F');
-    doc.setTextColor(...GOLD); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-    doc.text(title.toUpperCase(),ml+6,y+5.5); y+=12;
+  y = 68;
+
+  // Section helpers
+  const sec = (title, emoji = '') => {
+    if (y > 262) addPage();
+    doc.setFillColor(...BG2); doc.rect(ml, y, pw - ml - mr, 9, 'F');
+    doc.setFillColor(...GOLD); doc.rect(ml, y, 3.5, 9, 'F');
+    doc.setTextColor(...GOLD); doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
+    doc.text((emoji + ' ' + title).toUpperCase().trim(), ml + 7, y + 6.2);
+    y += 13;
   };
 
   const row = (label, val, col) => {
-    if (y>270) addPage();
-    doc.setTextColor(...MUTED); doc.setFontSize(8); doc.setFont('helvetica','normal');
-    doc.text(String(label),ml+2,y);
-    doc.setTextColor(...(col||DARK)); doc.setFont('helvetica','bold');
-    doc.text(String(val||'—'),ml+100,y); y+=6.5;
+    if (y > 270) addPage();
+    doc.setTextColor(...MUTED); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.text(String(label), ml + 3, y);
+    doc.setTextColor(...(col || DARK)); doc.setFont('helvetica', 'bold');
+    const wrap = doc.splitTextToSize(String(val || '—'), 90);
+    doc.text(wrap, ml + 100, y);
+    y += wrap.length > 1 ? wrap.length * 5 + 1 : 6.5;
   };
 
   const yn2 = v => {
-    if (v==='Yes')     return { t:'Yes',     c:GREEN };
-    if (v==='No')      return { t:'No',      c:RED };
-    if (v==='Partial') return { t:'Partial', c:GOLD };
-    if (v==='Partially') return { t:'Partially', c:GOLD };
-    return { t:v||'—', c:DARK };
+    if (v === 'Yes')       return { t: '✓ Yes',     c: GREEN };
+    if (v === 'No')        return { t: '✗ No',      c: RED };
+    if (v === 'Partial')   return { t: '~ Partial', c: GOLD };
+    if (v === 'Partially') return { t: '~ Partially',c: GOLD };
+    return { t: v || '—', c: DARK };
   };
 
   let r;
 
-  sec('Section A — Business Setup & Licensing');
-  row('Establishment Type', s.sa1||'—');
-  r=yn2(s.sa2); row('License in Owner Name?', r.t, r.c); y+=2;
+  // PROFILE
+  sec('Business Profile & Registration', '📋');
+  row('Company Name', s.companyName || '—');
+  row('Contact Person', s.name || '—');
+  row('Phone Number', s.contact || '—');
+  row('Location', (s.location || '') + (s.state ? ', ' + s.state : ''));
+  row('Industry', s.field || '—');
+  row('Number of Employees', s.employees || '—');
+  y += 2;
 
-  sec('Section B — Bonus & Salary Practices');
-  r=yn2(s.sb1); row('Diwali Bonus to All Employees?', r.t, r.c);
-  r=yn2(s.sb2); row('Aware of ₹21,000 Bonus Rule?', r.t, r.c);
-  row('Starting Salary', s.sb3?'₹'+s.sb3:'—');
-  r=yn2(s.sb4); row('Structured Salary Format?', r.t, r.c);
-  r=yn2(s.sb5); row('Salaries Paid On Time?', r.t, r.c); y+=2;
+  // A
+  sec('Section A — Business Setup & Licensing', '🏢');
+  row('Establishment Type', s.sa1 || '—');
+  r = yn2(s.sa2); row('License in Name of Owner?', r.t, r.c); y += 2;
 
-  sec('Section C — POSH & Female Employment');
-  r=yn2(s.sc1); row('Female Employees?', r.t, r.c);
-  r=yn2(s.sc2); row('Aware of POSH Act 2013?', r.t, r.c);
-  r=yn2(s.sc3); row('POSH Awareness Sessions?', r.t, r.c);
-  r=yn2(s.sc4); row('IC Committee Formed?', r.t, r.c);
-  r=yn2(s.sc5); row('Annual POSH Return Filed?', r.t, r.c); y+=2;
+  // B
+  sec('Section B — Bonus & Salary Practices', '💰');
+  r = yn2(s.sb1); row('Diwali Bonus Paid to All Employees?', r.t, r.c);
+  r = yn2(s.sb2); row('Aware of ₹21,000 Bonus Wage Limit?', r.t, r.c);
+  row('Starting Salary for Helpers', s.sb3 ? '₹' + Number(s.sb3).toLocaleString('en-IN') : '—');
+  r = yn2(s.sb4); row('Structured Salary Format in Place?', r.t, r.c);
+  r = yn2(s.sb5); row('Salaries Paid On or Before 7th?', r.t, r.c); y += 2;
 
-  sec('Section D — Provident Fund (PF)');
-  r=yn2(s.sd1); row('PF Contribution Monthly?', r.t, r.c);
-  r=yn2(s.sd2); row('PF Capped at ₹15,000?', r.t, r.c);
-  r=yn2(s.sd3); row('Paying PF on Salary >₹50k/₹75k?', r.t, r.c); y+=2;
+  // C
+  sec('Section C — POSH Act 2013', '👩‍⚖️');
+  r = yn2(s.sc1); row('Female Employees Employed?', r.t, r.c);
+  r = yn2(s.sc2); row('Aware of POSH Act 2013?', r.t, r.c);
+  r = yn2(s.sc3); row('Periodic POSH Awareness Sessions?', r.t, r.c);
+  r = yn2(s.sc4); row('Internal Committee (IC) Formed?', r.t, r.c);
+  r = yn2(s.sc5); row('Annual POSH Return Filed?', r.t, r.c); y += 2;
 
-  sec('Section E — Leave Policy');
-  r=yn2(s.se1); row('Leaves Given to Employees?', r.t, r.c);
-  row('Average Annual Leaves', s.se2||'—');
-  r=yn2(s.se3); row('Aware: ESIC = No Sick Leave?', r.t, r.c); y+=2;
+  // D
+  sec('Section D — Provident Fund (PF)', '🏦');
+  r = yn2(s.sd1); row('PF Contribution on Monthly Basis?', r.t, r.c);
+  r = yn2(s.sd3); row('PF Capped at ₹15,000 Wage Ceiling?', r.t, r.c);
+  r = yn2(s.sd2); row('Paying PF for Salary >₹50k/₹75k?', r.t, r.c); y += 2;
 
-  // Section F — F2 removed
-  sec('Section F — ESI & Salary Structure');
-  r=yn2(s.sf1); row('Aware ESI Coverage ₹42,000?', r.t, r.c);
-  r=yn2(s.sf3); row('Salary Restructured per Labour Codes?', r.t, r.c); y+=2;
+  // E
+  sec('Section E — Leave Policy', '🏖');
+  r = yn2(s.se1); row('Leaves Given to Employees?', r.t, r.c);
+  row('Average Annual Leaves Provided', s.se2 || '—');
+  r = yn2(s.se3); row('Aware: ESIC Covers Sick Leave?', r.t, r.c); y += 2;
 
-  // Section G — G2, G3, G4 removed
-  sec('Section G — HR Policy & Documentation');
-  r=yn2(s.sg1); row('HR/Leave/Appt Letter Updated?', r.t, r.c); y+=2;
+  // F
+  sec('Section F — ESI & Salary Structure', '🏥');
+  r = yn2(s.sf1); row('Aware ESI Coverage up to ₹42,000?', r.t, r.c);
+  r = yn2(s.sf3); row('Salary Restructured per Labour Codes?', r.t, r.c); y += 2;
 
-  sec('Section H — Inspections, Legal & Assets');
-  r=yn2(s.sh1); row('Faced Labour Inspector Challenges?', r.t, r.c);
-  r=yn2(s.sh2); row('Pending Notices / Cases?', r.t, r.c);
-  r=yn2(s.sh3); row('Notice Period Issues?', r.t, r.c);
-  r=yn2(s.sh4); row('Issues Assets to Employees?', r.t, r.c);
-  r=yn2(s.sh5); row('Asset Damage / Loss Faced?', r.t, r.c); y+=2;
+  // G
+  sec('Section G — HR Policy & Documentation', '📄');
+  r = yn2(s.sg1); row('HR Policy / Leave Policy / Appt Letter Updated?', r.t, r.c); y += 2;
 
-  const gaps2 = Array.isArray(s.gaps)&&s.gaps.length ? s.gaps : getGaps(s);
-  const recs2  = Array.isArray(s.recs)&&s.recs.length ? s.recs  : getRecs(gaps2);
+  // H
+  sec('Section H — Inspections, Legal & Asset Management', '🔍');
+  r = yn2(s.sh1); row('Faced Labour Inspector Challenges?', r.t, r.c);
+  r = yn2(s.sh2); row('Any Pending Notices / Cases?', r.t, r.c);
+  r = yn2(s.sh3); row('Employees Leaving Without Notice?', r.t, r.c);
+  r = yn2(s.sh4); row('Company Assets Issued to Employees?', r.t, r.c);
+  r = yn2(s.sh5); row('Asset Damage or Loss Experienced?', r.t, r.c); y += 2;
+
+  // GAPS
+  const gaps2 = Array.isArray(s.gaps) && s.gaps.length ? s.gaps : getGaps(s);
+  const recs2  = Array.isArray(s.recs) && s.recs.length ? s.recs  : getRecs(gaps2);
 
   if (gaps2.length) {
-    sec(`Compliance Gaps Identified (${gaps2.length})`);
+    sec(`Compliance Gaps Identified (${gaps2.length})`, '⚠️');
     gaps2.forEach(g => {
-      if (y>270) addPage();
-      doc.setTextColor(...RED); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.splitTextToSize('⚠  '+g, pw-ml-mr-8).forEach(l=>{ doc.text(l,ml+4,y); y+=5.5; });
-    }); y+=2;
+      if (y > 270) addPage();
+      doc.setTextColor(...RED); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      const wrap = doc.splitTextToSize('⚠  ' + g, pw - ml - mr - 8);
+      wrap.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
+    });
+    y += 2;
   }
 
   if (recs2.length) {
-    sec('Recommended Actions');
+    sec('Recommended Actions', '✅');
     recs2.forEach(rec => {
-      if (y>270) addPage();
-      doc.setTextColor(...GREEN); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.splitTextToSize('→  '+rec, pw-ml-mr-8).forEach(l=>{ doc.text(l,ml+4,y); y+=5.5; });
-    }); y+=2;
+      if (y > 270) addPage();
+      doc.setTextColor(...GREEN); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      const wrap = doc.splitTextToSize('→  ' + rec, pw - ml - mr - 8);
+      wrap.forEach(l => { doc.text(l, ml + 4, y); y += 5.5; });
+    });
+    y += 2;
   }
 
+  // Footer on all pages
   const total = doc.getNumberOfPages();
-  for (let i=1; i<=total; i++) {
+  for (let i = 1; i <= total; i++) {
     doc.setPage(i);
-    doc.setFillColor(...BG2); doc.rect(0,285,210,12,'F');
-    doc.setFillColor(...GOLD); doc.rect(0,285,210,0.8,'F');
-    doc.setTextColor(...MUTED); doc.setFontSize(7); doc.setFont('helvetica','normal');
-    doc.text('LabourShield · Business Compliance Audit Portal · Sections A–H',ml,292);
-    doc.text(`Page ${i} of ${total}`,210-mr,292,{align:'right'});
+    doc.setFillColor(...BG2); doc.rect(0, 284, 210, 13, 'F');
+    doc.setFillColor(...GOLD); doc.rect(0, 284, 210, 0.8, 'F');
+    doc.setTextColor(...MUTED); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.text('LabourShield — Professional Labour Law Compliance Audit Portal  ·  Sections A–H', ml, 291.5);
+    doc.text(`Page ${i} of ${total}`, 210 - mr, 291.5, { align: 'right' });
   }
 
-  const safe = (s.companyName||'Report').replace(/[^a-z0-9]/gi,'_').substring(0,30);
-  doc.save(`LabourShield_${safe}_Report.pdf`);
-  showToast('✅ PDF downloaded!','green');
+  const safe = (s.companyName || 'Report').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+  doc.save(`LabourShield_${safe}_Compliance_Report.pdf`);
+  showToast('✅ PDF downloaded!', 'green');
 }
 
 // ===== HELPERS =====
-function fmtDate(iso, short=false) {
+function fmtDate(iso, short = false) {
   if (!iso) return '—';
   try {
     const d = new Date(iso);
-    if (short) return d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
-    return d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+    if (short) return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
   } catch(e) { return iso; }
 }
 

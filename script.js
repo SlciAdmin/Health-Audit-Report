@@ -3,7 +3,7 @@
 // Sections A–H | Admin Dashboard | Charts | PDF | CSV Export
 // ============================================================
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyjc8epwFBXEElYeiflyULn3IAdSVxZtgeV_XzzKTxE93kD2nBwK3heNwXV-3_7KTRZzw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwDU_M5SOFZbzYXlyLUX3THANRECySQc2QIUx2APtq0dWa27ATnmY68-Rh3QfS2Gjriow/exec";
 
 // ===== STATE =====
 let submissions           = [];

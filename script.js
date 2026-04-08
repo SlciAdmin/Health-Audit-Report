@@ -601,7 +601,6 @@ function resetForm() {
 
 // ===== USER DASHBOARD =====
 // ===== USER DASHBOARD =====
-// ===== USER DASHBOARD =====
 function renderUserDashboard() {
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId && !currentUserSubmission) {
@@ -653,40 +652,49 @@ function renderUserDashboard() {
   // ============================================
   const gapsSection = document.getElementById('udashGapsSection');
   const gapsEl      = document.getElementById('udashGaps');
-  if ((s.gaps||[]).length) {
+  
+  // Always show gaps section if there are gaps OR if there's a leave compliance issue
+  const lc = getLeaveComplianceStatus(s);
+  const hasGaps = (s.gaps||[]).length > 0;
+  const hasLeaveGap = lc && lc.hasGap;
+  
+  if (hasGaps || hasLeaveGap) {
     if (gapsSection) gapsSection.style.display = 'block';
     if (gapsEl) {
-      const lc = getLeaveComplianceStatus(s);
       let gapsHTML = '';
       
-      // Add leave compliance highlight if there's a gap
+      // Add leave compliance highlight FIRST if there's a gap
       if (lc && lc.hasGap) {
         gapsHTML += `
-          <div class="leave-gap-highlight" style="background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left:4px solid #f59e0b; padding:1.25rem; margin-bottom:1.25rem; border-radius:8px; box-shadow:0 2px 8px rgba(245,158,11,0.15);">
+          <div class="leave-gap-highlight" style="background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left:4px solid #f59e0b; padding:1.25rem; margin-bottom:1.5rem; border-radius:8px; box-shadow:0 4px 12px rgba(245,158,11,0.2);">
             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
               <span style="font-size:1.25rem;">🏖</span>
-              <div style="font-weight:700; color:#92400e; font-size:1rem;">Leave Compliance Issue</div>
+              <div style="font-weight:700; color:#92400e; font-size:1.05rem;">Leave Compliance Issue</div>
             </div>
-            <div style="color:#78350f; font-size:0.95rem; margin-bottom:0.75rem; line-height:1.5;">
+            <div style="color:#78350f; font-size:0.95rem; margin-bottom:0.75rem; line-height:1.6;">
               <strong>${lc.state} Law:</strong> You are giving <strong>${lc.totalGiven} days</strong> but the law requires minimum <strong>${lc.required} days</strong>
-              <div style="margin-top:0.5rem; font-family:'JetBrains Mono',monospace; background:rgba(255,255,255,0.6); padding:0.5rem; border-radius:4px;">
+              <div style="margin-top:0.6rem; font-family:'JetBrains Mono',monospace; background:rgba(255,255,255,0.7); padding:0.6rem; border-radius:4px; font-size:0.9rem;">
                 Breakdown: EL:${lc.ld.EL} + CL:${lc.ld.CL} + SL:${lc.ld.SL} = ${lc.required} days
               </div>
             </div>
-            <div style="background:#fef2f2; border:1px solid #fecaca; padding:0.75rem; border-radius:6px; color:#dc2626; font-weight:700; font-size:0.95rem;">
-              ⚠️ You are ${Math.abs(lc.diff)} days SHORT of mandatory requirement
+            <div style="background:#fef2f2; border:1px solid #fecaca; padding:0.85rem; border-radius:6px; color:#dc2626; font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:0.5rem;">
+              <span>⚠️</span>
+              <span>You are ${Math.abs(lc.diff)} days SHORT of mandatory requirement</span>
             </div>
-            <div style="color:#92400e; font-size:0.85rem; margin-top:0.75rem; font-style:italic;">
-              📜 ${lc.ld.law}
+            <div style="color:#92400e; font-size:0.85rem; margin-top:0.85rem; font-style:italic; display:flex; align-items:center; gap:0.4rem;">
+              <span>📜</span>
+              <span>${lc.ld.law}</span>
             </div>
           </div>
         `;
       }
       
       // Regular gaps
-      gapsHTML += `<div style="margin-top:1.5rem;"><div style="font-weight:700; color:var(--text); margin-bottom:1rem; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em;">All Compliance Gaps</div>`;
-      gapsHTML += s.gaps.map(g => `<div class="m-gap-item" style="padding:0.875rem; margin-bottom:0.75rem; background:var(--card-bg); border-left:3px solid #ef4444; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);"><span class="m-gap-icon" style="margin-right:0.75rem; color:#ef4444;">⚠</span><span style="color:var(--text); line-height:1.5;">${g}</span></div>`).join('');
-      gapsHTML += `</div>`;
+      if (hasGaps) {
+        gapsHTML += `<div style="margin-top:1.5rem;"><div style="font-weight:700; color:var(--text); margin-bottom:1rem; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em;">All Compliance Gaps</div>`;
+        gapsHTML += s.gaps.map(g => `<div class="m-gap-item" style="padding:0.875rem; margin-bottom:0.75rem; background:var(--card-bg); border-left:3px solid #ef4444; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);"><span class="m-gap-icon" style="margin-right:0.75rem; color:#ef4444;">⚠</span><span style="color:var(--text); line-height:1.5;">${g}</span></div>`).join('');
+        gapsHTML += `</div>`;
+      }
       
       gapsEl.innerHTML = gapsHTML;
     }
@@ -734,12 +742,12 @@ function renderUserDashboard() {
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
   // Section E - Simplified
-  const lc = getLeaveComplianceStatus(s);
-  const ld = lc ? lc.ld : null;
+  const leaveCompliance = getLeaveComplianceStatus(s);
+  const leaveData = leaveCompliance ? leaveCompliance.ld : null;
   document.getElementById('udashLeaves').innerHTML = [
     ['Leaves Given to Employees', s.se1],
     ['Total Annual Leaves', s.se2total !== undefined ? `${s.se2total} days` : (s.se2||'—')],
-    ['State Law', ld ? ld.law : (s.state || '—')],
+    ['State Law', leaveData ? leaveData.law : (s.state || '—')],
     ['Aware: ESIC Sick Leave Rule', s.se3],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
@@ -790,6 +798,7 @@ function renderUserDashboard() {
   const pdfBtn = document.getElementById('udashPDFBtn');
   if (pdfBtn) pdfBtn.onclick = () => downloadPDF(s.id);
 }
+
 
 // ===== LEAVE COMPLIANCE DASHBOARD WIDGET =====
 function renderLeaveComplianceDashboard(s) {

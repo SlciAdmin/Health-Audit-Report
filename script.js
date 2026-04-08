@@ -601,6 +601,7 @@ function resetForm() {
 }
 
 // ===== USER DASHBOARD =====
+// ===== USER DASHBOARD =====
 function renderUserDashboard() {
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId && !currentUserSubmission) {
@@ -644,16 +645,16 @@ function renderUserDashboard() {
   yn(s.se1,'ustLeave'); yn(s.sg1,'ustHR'); yn(s.sb1,'ustBonus');
 
   // ============================================
-  // ORDER 1: SCORE (Already rendered above)
+  // ORDER 1: SCORE (Already rendered above) ✓
   // ============================================
 
   // ============================================
-  // ORDER 2: CHARTS (Render charts AFTER score, BEFORE gaps)
+  // ORDER 2: CHARTS (Render immediately after score, BEFORE gaps) ✓
   // ============================================
-  setTimeout(() => renderUserCharts(s), 100);
+  renderUserCharts(s);
 
   // ============================================
-  // ORDER 3: GAPS (NO yellow leave highlight in user dashboard - only regular gaps)
+  // ORDER 3: GAPS (After charts) ✓
   // ============================================
   const gapsSection = document.getElementById('udashGapsSection');
   const gapsEl      = document.getElementById('udashGaps');
@@ -661,8 +662,6 @@ function renderUserDashboard() {
   if ((s.gaps||[]).length) {
     if (gapsSection) gapsSection.style.display = 'block';
     if (gapsEl) {
-      // USER DASHBOARD: Only show regular gaps, NO yellow leave compliance highlight
-      // (Leave compliance highlight is ONLY for admin dashboard)
       let gapsHTML = `<div style="font-weight:700; color:var(--text); margin-bottom:1rem; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em;">Compliance Gaps Identified</div>`;
       gapsHTML += s.gaps.map(g => `<div class="m-gap-item" style="padding:0.875rem; margin-bottom:0.75rem; background:var(--card-bg); border-left:3px solid #ef4444; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);"><span class="m-gap-icon" style="margin-right:0.75rem; color:#ef4444;">⚠</span><span style="color:var(--text); line-height:1.5;">${g}</span></div>`).join('');
       gapsEl.innerHTML = gapsHTML;
@@ -672,7 +671,7 @@ function renderUserDashboard() {
   }
 
   // ============================================
-  // ORDER 4: DETAILS (All sections A-H - Profile & Questions)
+  // ORDER 4: DETAILS (All sections A-H - after gaps) ✓
   // ============================================
   
   // Profile
@@ -705,7 +704,7 @@ function renderUserDashboard() {
     ['PF on >₹50k/₹75k Salary', s.sd2],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section E - Simplified (NO leave compliance highlight in user dashboard)
+  // Section E
   document.getElementById('udashLeaves').innerHTML = [
     ['Leaves Given to Employees', s.se1],
     ['Total Annual Leaves', s.se2total !== undefined ? `${s.se2total} days` : (s.se2||'—')],
@@ -734,7 +733,7 @@ function renderUserDashboard() {
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
   // ============================================
-  // ORDER 5: RECOMMENDED ACTIONS (LAST - at bottom)
+  // ORDER 5: RECOMMENDED ACTIONS (LAST - at bottom) ✓
   // ============================================
   const recsSection = document.getElementById('udashRecsSection');
   const recsEl      = document.getElementById('udashRecs');

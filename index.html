@@ -208,107 +208,129 @@
       </div>
 
       <!-- SECTION B -->
-      <div class="sec-label"><span class="sec-num">B</span> Bonus & Salary Practices</div>
-      <div class="card">
-        <div class="qblock">
-          <div class="qlabel">B1 — Do you pay bonus to all employees on Diwali?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sb1" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sb1" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">B2 — Are you aware that as per labour laws, bonus is only paid to employees having wages up to ₹21,000?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sb2" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sb2" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">B3 — What is the typical starting salary for helpers/support staff (₹) in our company?</div>
-          <input type="number" id="sb3" placeholder="e.g. 12000" class="solo-input">
-        </div>
-        <div class="qblock">
-          <div class="qlabel">B4 — Do you have a structured salary format (Basic + HRA + Allowances)?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sb4" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sb4" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">B5 — Are salaries paid on or before the 7th of every month?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sb5" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sb5" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-      </div>
+<div class="sec-label"><span class="sec-num">B</span> Bonus & Salary Practices</div>
+<div class="card">
+  <div class="qblock">
+    <div class="qlabel">B1 — Do you pay bonus to all employees on Diwali?</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="sb1" value="Yes"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="sb1" value="No"><span>❌ No</span></label>
+    </div>
+  </div>
+  <div class="qblock">
+    <div class="qlabel">B2 — Are you aware that as per labour laws, bonus is only paid to employees having wages up to ₹21,000?</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="sb2" value="Yes"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="sb2" value="No"><span>❌ No</span></label>
+    </div>
+  </div>
+  <div class="qblock">
+    <div class="qlabel">B3 — What is the typical starting salary for helpers/support staff (₹) in our company?</div>
+    <input type="number" id="sb3" placeholder="e.g. 12000" class="solo-input">
+  </div>
+  <div class="qblock">
+    <div class="qlabel">B4 — Do you have a structured salary format (Basic + HRA + Allowances)?</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="sb4" value="Yes"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="sb4" value="No"><span>❌ No</span></label>
+    </div>
+  </div>
+  
+  <!-- 🔥 MODIFIED B5: On-time salary + manual date field -->
+  <div class="qblock">
+    <div class="qlabel">B5 — Do you pay salaries to employees on time, every month?</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="sb5" value="Yes" onchange="toggleSalaryDateField(true)"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="sb5" value="No" onchange="toggleSalaryDateField(false)"><span>❌ No</span></label>
+    </div>
+    <!-- Conditional date input (shown only if Yes selected) -->
+    <div id="sb5DateContainer" style="display:none; margin-top:1rem; padding:0.75rem; background:var(--card-bg); border-radius:8px; border-left:3px solid var(--gold);">
+      <label style="display:block; margin-bottom:0.5rem; font-weight:600; color:var(--text);">📅 Typical Salary Payment Date</label>
+      <input type="text" id="sb5Date" placeholder="e.g. 5th, 10th, 25th, Last working day" class="solo-input" style="max-width:280px">
+      <div style="font-size:0.75rem; color:var(--text2); margin-top:0.35rem">Enter the date of month when salaries are typically credited (e.g., "5th", "10th", "Last Friday")</div>
+    </div>
+  </div>
+</div>
 
       <!-- SECTION C -->
-      <div class="sec-label"><span class="sec-num">C</span> POSH — Prevention of Sexual Harassment</div>
-      <div class="card">
-        <div class="qblock">
-          <div class="qlabel">C1 — Do you also employ female employees?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sc1" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sc1" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">C2 — Do you know there is a specific law that governs female employees — POSH Act 2013?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sc2" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sc2" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">C3 — Are you conducting periodic awareness sessions under POSH Act 2013?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sc3" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sc3" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">C4 — Have you formed the Internal Committee (IC) under the POSH Act 2013?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sc4" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sc4" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">C5 — Have you filed the annual return under the POSH Act 2013?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sc5" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sc5" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
+<div class="sec-label"><span class="sec-num">C</span> POSH — Prevention of Sexual Harassment</div>
+<div class="card">
+  <div class="qblock">
+    <div class="qlabel">C1 — Do you also employ female employees?</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="sc1" value="Yes" onchange="togglePOSHQuestions(true)"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="sc1" value="No" onchange="togglePOSHQuestions(false)"><span>❌ No</span></label>
+    </div>
+  </div>
+  
+  <!-- Conditional POSH questions (shown only if C1=Yes) -->
+  <div id="poshQuestions" style="display:none; margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border);">
+    <div class="qblock">
+      <div class="qlabel">C2 — Do you know there is a specific law that governs female employees — POSH Act 2013?</div>
+      <div class="opt-row">
+        <label class="opt"><input type="radio" name="sc2" value="Yes"><span>✅ Yes</span></label>
+        <label class="opt"><input type="radio" name="sc2" value="No"><span>❌ No</span></label>
       </div>
+    </div>
+    <div class="qblock">
+      <div class="qlabel">C3 — Are you conducting periodic awareness sessions under POSH Act 2013?</div>
+      <div class="opt-row">
+        <label class="opt"><input type="radio" name="sc3" value="Yes"><span>✅ Yes</span></label>
+        <label class="opt"><input type="radio" name="sc3" value="No"><span>❌ No</span></label>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qlabel">C4 — Have you formed the Internal Committee (IC) under the POSH Act 2013?</div>
+      <div class="opt-row">
+        <label class="opt"><input type="radio" name="sc4" value="Yes"><span>✅ Yes</span></label>
+        <label class="opt"><input type="radio" name="sc4" value="No"><span>❌ No</span></label>
+      </div>
+    </div>
+    <div class="qblock">
+      <div class="qlabel">C5 — Have you filed the annual return under the POSH Act 2013?</div>
+      <div class="opt-row">
+        <label class="opt"><input type="radio" name="sc5" value="Yes"><span>✅ Yes</span></label>
+        <label class="opt"><input type="radio" name="sc5" value="No"><span>❌ No</span></label>
+      </div>
+    </div>
+    <div style="font-size:0.75rem; color:var(--text2); margin-top:0.5rem">
+      ℹ️ These questions apply only if you employ female staff. POSH Act 2013 is mandatory for all organizations with women employees.
+    </div>
+  </div>
+</div>
 
-      <!-- SECTION D -->
-      <div class="sec-label"><span class="sec-num">D</span> Provident Fund (PF)</div>
-      <div class="card">
-        <div class="qblock">
-          <div class="qlabel">D1 — Do you contribute to PF on a monthly basis?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sd1" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sd1" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">D2 — Are you paying PF for an employee having salary above ₹50,000 or ₹75,000?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sd2" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sd2" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">D3 — Do you cap your PF contribution till ₹15,000?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="sd3" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="sd3" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
+<!-- SECTION D -->
+<div class="sec-label"><span class="sec-num">D</span> Provident Fund (PF)</div>
+<div class="card">
+  <div class="qblock">
+    <div class="qlabel">D1 — Do you contribute to PF on a monthly basis?</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="sd1" value="Yes" onchange="togglePFQuestions(true)"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="sd1" value="No" onchange="togglePFQuestions(false)"><span>❌ No</span></label>
+    </div>
+  </div>
+  
+  <!-- Conditional PF questions (shown only if D1=Yes) -->
+  <div id="pfQuestions" style="display:none; margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border);">
+    <div class="qblock">
+      <div class="qlabel">D2 — Are you paying PF for an employee having salary above ₹50,000 or ₹75,000?</div>
+      <div class="opt-row">
+        <label class="opt"><input type="radio" name="sd2" value="Yes"><span>✅ Yes</span></label>
+        <label class="opt"><input type="radio" name="sd2" value="No"><span>❌ No</span></label>
       </div>
+    </div>
+    <div class="qblock">
+      <div class="qlabel">D3 — Do you cap your PF contribution till ₹15,000?</div>
+      <div class="opt-row">
+        <label class="opt"><input type="radio" name="sd3" value="Yes"><span>✅ Yes</span></label>
+        <label class="opt"><input type="radio" name="sd3" value="No"><span>❌ No</span></label>
+      </div>
+    </div>
+    <div style="font-size:0.75rem; color:var(--text2); margin-top:0.5rem">
+      ℹ️ These questions apply only if you contribute to PF. PF is mandatory for establishments with 20+ employees.
+    </div>
+  </div>
+</div>
 
       <!-- SECTION E — LEAVE POLICY (with state-specific info) -->
       <div class="sec-label"><span class="sec-num">E</span> Leave Policy</div>

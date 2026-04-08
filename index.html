@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<!-- ===== NAVIGATION ===== -->
+<!-- NAV -->
 <nav id="mainNav">
   <div class="nav-left">
     <div class="nav-logo">
@@ -19,11 +19,9 @@
       <span class="logo-text">Labour<strong>Shield</strong></span>
     </div>
   </div>
-
   <button class="nav-hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
-
   <div class="nav-center" id="navCenter">
     <button class="nav-pill active" id="navForm" onclick="showView('form');closeMobileMenu()">
       <span class="pill-icon">✦</span> New Audit
@@ -35,7 +33,6 @@
       <span class="pill-icon">🛡</span> Admin Panel
     </button>
   </div>
-
   <div class="nav-right">
     <button class="btn-theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">
       <span class="theme-icon-sun">☀️</span>
@@ -47,7 +44,7 @@
 
 <div class="mobile-nav-overlay" id="mobileNavOverlay" onclick="closeMobileMenu()"></div>
 
-<!-- ===== ADMIN LOGIN MODAL ===== -->
+<!-- ADMIN LOGIN MODAL -->
 <div id="adminLoginModal" class="modal-bg" onclick="closeAdminModal(event)">
   <div class="modal-box admin-login-box">
     <button class="modal-x" onclick="closeAdminModal(true)">✕</button>
@@ -74,9 +71,8 @@
   </div>
 </div>
 
-<!-- ===== FORM VIEW ===== -->
+<!-- FORM VIEW -->
 <div id="view-form" class="view active">
-
   <div class="form-hero">
     <div class="hero-bg-glow"></div>
     <div class="hero-content">
@@ -130,18 +126,21 @@
           </div>
           <div class="fg">
             <label>State <span class="req">*</span></label>
-            <select id="state">
+            <select id="state" onchange="updateStateLeaveBadge()">
               <option value="">— Select State —</option>
-              <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
-              <option>Bihar</option><option>Chhattisgarh</option><option>Delhi</option><option>Goa</option>
+              <option>Andaman and Nicobar</option>
+              <option>Andhra Pradesh</option><option>Assam</option>
+              <option>Bihar</option><option>Chandigarh</option><option>Chhattisgarh</option>
+              <option>Dadra and Nagar Haveli</option><option>Daman and Diu</option>
+              <option>Delhi</option><option>Goa</option>
               <option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option>
-              <option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
-              <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option>
-              <option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option>
-              <option>Odisha</option><option>Punjab</option><option>Rajasthan</option>
-              <option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
-              <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option>
-              <option>West Bengal</option>
+              <option>Jammu and Kashmir</option><option>Jharkhand</option><option>Karnataka</option>
+              <option>Kerala</option><option>Madhya Pradesh</option><option>Maharashtra</option>
+              <option>Manipur</option><option>Meghalaya</option><option>Nagaland</option>
+              <option>Odisha</option><option>Pondicherry</option><option>Punjab</option>
+              <option>Rajasthan</option><option>Sikkim</option><option>Tamil Nadu</option>
+              <option>Telangana</option><option>Tripura</option><option>Uttar Pradesh</option>
+              <option>Uttarakhand</option><option>West Bengal</option>
             </select>
           </div>
           <div class="fg">
@@ -175,6 +174,8 @@
             </select>
           </div>
         </div>
+        <!-- State Leave Preview Badge (shows after state selected) -->
+        <div id="stateLeaveBadge" class="state-leave-badge" style="display:none"></div>
       </div>
       <div class="btn-row">
         <div class="btn-hint">All fields marked <span class="req">*</span> are required</div>
@@ -309,8 +310,12 @@
         </div>
       </div>
 
-      <!-- SECTION E -->
+      <!-- SECTION E — LEAVE POLICY (with state-specific info) -->
       <div class="sec-label"><span class="sec-num">E</span> Leave Policy</div>
+
+      <!-- State Leave Info Card (shows dynamically) -->
+      <div id="stateLeaveInfoCard" class="state-leave-info-card" style="display:none"></div>
+
       <div class="card">
         <div class="qblock">
           <div class="qlabel">E1 — Are you giving leaves to employees?</div>
@@ -320,11 +325,23 @@
           </div>
         </div>
         <div class="qblock">
-          <div class="qlabel">E2 — How many leaves on an average are you giving annually?</div>
-          <input type="text" id="se2" placeholder="e.g. 18 Casual + 12 Privilege" class="solo-input">
+          <div class="qlabel">E2 — How many Earned Leaves (EL) are you giving annually?</div>
+          <input type="number" id="se2el" placeholder="e.g. 15" class="solo-input" oninput="updateLeaveGapCard()">
         </div>
         <div class="qblock">
-          <div class="qlabel">E3 — Do you know that employees covered under ESIC can be entitled to separate sick leave benefits?</div>
+          <div class="qlabel">E3 — How many Casual Leaves (CL) are you giving annually?</div>
+          <input type="number" id="se2cl" placeholder="e.g. 12" class="solo-input" oninput="updateLeaveGapCard()">
+        </div>
+        <div class="qblock">
+          <div class="qlabel">E4 — How many Sick Leaves (SL) are you giving annually?</div>
+          <input type="number" id="se2sl" placeholder="e.g. 12" class="solo-input" oninput="updateLeaveGapCard()">
+        </div>
+
+        <!-- Live Leave Gap Card -->
+        <div id="leaveGapCard" class="leave-gap-card" style="display:none"></div>
+
+        <div class="qblock" style="margin-top:1.5rem">
+          <div class="qlabel">E5 — Do you know that employees covered under ESIC can be entitled to separate sick leave benefits?</div>
           <div class="opt-row">
             <label class="opt"><input type="radio" name="se3" value="Yes"><span>✅ Yes</span></label>
             <label class="opt"><input type="radio" name="se3" value="No"><span>❌ No</span></label>
@@ -428,7 +445,7 @@
   </div>
 </div>
 
-<!-- ===== USER DASHBOARD VIEW ===== -->
+<!-- USER DASHBOARD VIEW -->
 <div id="view-user-dashboard" class="view">
   <div class="udash-hero">
     <div class="udash-hero-inner">
@@ -448,7 +465,7 @@
 
     <div id="udashReport" style="display:none">
 
-      <!-- Score Row -->
+      <!-- 1. SCORE ROW (First) -->
       <div class="udash-score-row">
         <div class="udash-score-main">
           <div class="udash-score-label">Overall Compliance Score</div>
@@ -469,7 +486,25 @@
         </div>
       </div>
 
-      <!-- Charts Row 1 -->
+      <!-- 2. LEAVE COMPLIANCE SECTION (State-specific, Second) -->
+      <div id="udashLeaveComplianceSection" style="display:none">
+        <div class="udash-section-title">🏖 Leave Compliance — State Law vs Your Practice</div>
+        <div id="udashLeaveComplianceCard" class="leave-compliance-dashboard"></div>
+      </div>
+
+      <!-- 3. GAPS (Third - before charts) -->
+      <div id="udashGapsSection" style="display:none">
+        <div class="udash-section-title">⚠️ Compliance Gaps Identified</div>
+        <div class="m-gaps" id="udashGaps"></div>
+      </div>
+
+      <!-- 4. RECOMMENDED ACTIONS (Fourth) -->
+      <div id="udashRecsSection" style="display:none">
+        <div class="udash-section-title">✅ Recommended Actions</div>
+        <div class="m-recs" id="udashRecs"></div>
+      </div>
+
+      <!-- 5. CHARTS (Fifth) -->
       <div class="udash-charts-row">
         <div class="chart-tile">
           <div class="ct-title">Compliance Area Breakdown (Radar)</div>
@@ -480,8 +515,6 @@
           <div class="ct-body"><canvas id="uChartDough"></canvas></div>
         </div>
       </div>
-
-      <!-- Charts Row 2 -->
       <div class="udash-charts-row">
         <div class="chart-tile">
           <div class="ct-title">Key Compliance Metrics (Bar)</div>
@@ -493,7 +526,7 @@
         </div>
       </div>
 
-      <!-- Detail Sections -->
+      <!-- 6. DETAIL SECTIONS (Sixth) -->
       <div class="udash-section-title">📋 Business Profile</div>
       <div class="m-grid" id="udashProfile"></div>
 
@@ -506,7 +539,7 @@
       <div class="udash-section-title">🏦 Provident Fund — PF (Section D)</div>
       <div class="m-grid" id="udashPFSection"></div>
 
-      <div class="udash-section-title">🏖 Leave Policy (Section E)</div>
+      <div class="udash-section-title">🏖 Leave Policy — State-Specific (Section E)</div>
       <div class="m-grid" id="udashLeaves"></div>
 
       <div class="udash-section-title">🏥 ESI & Salary Structure (Section F)</div>
@@ -518,16 +551,6 @@
       <div class="udash-section-title">🔍 Inspections & Asset Management (Section H)</div>
       <div class="m-grid" id="udashInspection"></div>
 
-      <div id="udashGapsSection" style="display:none">
-        <div class="udash-section-title">⚠️ Compliance Gaps Identified</div>
-        <div class="m-gaps" id="udashGaps"></div>
-      </div>
-
-      <div id="udashRecsSection" style="display:none">
-        <div class="udash-section-title">✅ Recommended Actions</div>
-        <div class="m-recs" id="udashRecs"></div>
-      </div>
-
       <div class="udash-actions">
         <button class="btn btn-gold" id="udashPDFBtn">⬇ Download PDF Report</button>
         <button class="btn btn-ghost" onclick="showView('form')">+ Submit New Audit</button>
@@ -536,7 +559,7 @@
   </div>
 </div>
 
-<!-- ===== ADMIN DASHBOARD VIEW ===== -->
+<!-- ADMIN DASHBOARD VIEW -->
 <div id="view-admin-dashboard" class="view">
   <div class="dash-layout">
     <aside class="sidebar" id="adminSidebar">
@@ -587,7 +610,7 @@
         <div class="stat-tile"><div class="st-val red" id="ast7">—</div><div class="st-lbl">Critical (&lt;40%)</div></div>
       </div>
 
-      <!-- Admin Charts Row 1 -->
+      <!-- Admin Charts -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Overall Statutory Compliance % Across All Businesses</div>
@@ -598,8 +621,6 @@
           <div class="ct-body"><canvas id="adminChartDough"></canvas></div>
         </div>
       </div>
-
-      <!-- Admin Charts Row 2 -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Company Size Breakdown</div>
@@ -610,8 +631,6 @@
           <div class="ct-body"><canvas id="adminChartPie"></canvas></div>
         </div>
       </div>
-
-      <!-- Admin Charts Row 3 -->
       <div class="charts-row">
         <div class="chart-tile">
           <div class="ct-title">Compliance Score Distribution</div>
@@ -620,6 +639,14 @@
         <div class="chart-tile">
           <div class="ct-title">Industry-wise Submissions</div>
           <div class="ct-body"><canvas id="adminChartIndustry"></canvas></div>
+        </div>
+      </div>
+
+      <!-- State Leave Summary Chart -->
+      <div class="charts-row">
+        <div class="chart-tile" style="grid-column:1/-1">
+          <div class="ct-title">State-wise Leave Compliance Status (EL Given vs Mandated)</div>
+          <div class="ct-body" style="height:260px"><canvas id="adminChartLeave"></canvas></div>
         </div>
       </div>
 
@@ -636,20 +663,13 @@
           <table>
             <thead>
               <tr>
-                <th>#</th>
-                <th>Company</th>
-                <th>Contact</th>
-                <th>State</th>
-                <th>Industry</th>
-                <th>Employees</th>
-                <th>Type</th>
-                <th>Score</th>
-                <th>Gaps</th>
-                <th>Actions</th>
+                <th>#</th><th>Company</th><th>Contact</th><th>State</th>
+                <th>Industry</th><th>Employees</th><th>Type</th>
+                <th>EL Given</th><th>EL Required</th><th>Score</th><th>Gaps</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="adminTblBody">
-              <tr><td colspan="10" class="empty-td">No submissions found.</td></tr>
+              <tr><td colspan="12" class="empty-td">No submissions found.</td></tr>
             </tbody>
           </table>
         </div>
@@ -658,7 +678,7 @@
   </div>
 </div>
 
-<!-- ===== DETAIL MODAL ===== -->
+<!-- DETAIL MODAL -->
 <div id="modal" class="modal-bg" onclick="closeModal(event)">
   <div class="modal-box" id="modalBox">
     <button class="modal-x" onclick="closeModal(true)">✕</button>

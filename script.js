@@ -4,7 +4,7 @@
 // Detailed Leave Compliance shown ONLY in Dashboard/Report
 // ============================================================
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwDU_M5SOFZbzYXlyLUX3THANRECySQc2QIUx2APtq0dWa27ATnmY68-Rh3QfS2Gjriow/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby7nP6aTh4rpqbTB0pZ34T4-R5kX0S4azsZqoLMI0qDcHSdPVmmIoGwM-NOmJ6HlGfpLw/exec";
 
 // ===== STATE LEAVE DATABASE =====
 const STATE_LEAVE_DATA = {

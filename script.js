@@ -601,6 +601,7 @@ function resetForm() {
 
 // ===== USER DASHBOARD =====
 // ===== USER DASHBOARD =====
+// ===== USER DASHBOARD =====
 function renderUserDashboard() {
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId && !currentUserSubmission) {
@@ -643,41 +644,65 @@ function renderUserDashboard() {
   yn(s.sd1,'ustPF'); yn(s.sf1,'ustESI'); yn(s.sc4,'ustPOSH');
   yn(s.se1,'ustLeave'); yn(s.sg1,'ustHR'); yn(s.sb1,'ustBonus');
 
-  // 2. GAPS SECTION (including leave compliance) - MOVED UP
+  // ============================================
+  // ORDER 1: SCORE (Already rendered above)
+  // ============================================
+
+  // ============================================
+  // ORDER 2: GAPS (with leave compliance highlighted)
+  // ============================================
   const gapsSection = document.getElementById('udashGapsSection');
   const gapsEl      = document.getElementById('udashGaps');
   if ((s.gaps||[]).length) {
     if (gapsSection) gapsSection.style.display = 'block';
     if (gapsEl) {
-      // Add leave compliance info at the top of gaps if there's a leave gap
       const lc = getLeaveComplianceStatus(s);
       let gapsHTML = '';
       
+      // Add leave compliance highlight if there's a gap
       if (lc && lc.hasGap) {
         gapsHTML += `
-          <div class="leave-gap-highlight" style="background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left:4px solid #f59e0b; padding:1rem; margin-bottom:1rem; border-radius:8px;">
-            <div style="font-weight:700; color:#92400e; margin-bottom:0.5rem;">🏖 Leave Compliance Issue</div>
-            <div style="color:#78350f; font-size:0.9rem; margin-bottom:0.5rem;">
-              <strong>${lc.state}:</strong> You give ${lc.totalGiven} days but law requires ${lc.required} days 
-              (EL:${lc.ld.EL} + CL:${lc.ld.CL} + SL:${lc.ld.SL})
+          <div class="leave-gap-highlight" style="background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left:4px solid #f59e0b; padding:1.25rem; margin-bottom:1.25rem; border-radius:8px; box-shadow:0 2px 8px rgba(245,158,11,0.15);">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
+              <span style="font-size:1.25rem;">🏖</span>
+              <div style="font-weight:700; color:#92400e; font-size:1rem;">Leave Compliance Issue</div>
             </div>
-            <div style="color:#dc2626; font-weight:600;">⚠️ ${Math.abs(lc.diff)} days SHORT of mandatory requirement</div>
-            <div style="color:#92400e; font-size:0.85rem; margin-top:0.5rem;">${lc.ld.law}</div>
+            <div style="color:#78350f; font-size:0.95rem; margin-bottom:0.75rem; line-height:1.5;">
+              <strong>${lc.state} Law:</strong> You are giving <strong>${lc.totalGiven} days</strong> but the law requires minimum <strong>${lc.required} days</strong>
+              <div style="margin-top:0.5rem; font-family:'JetBrains Mono',monospace; background:rgba(255,255,255,0.6); padding:0.5rem; border-radius:4px;">
+                Breakdown: EL:${lc.ld.EL} + CL:${lc.ld.CL} + SL:${lc.ld.SL} = ${lc.required} days
+              </div>
+            </div>
+            <div style="background:#fef2f2; border:1px solid #fecaca; padding:0.75rem; border-radius:6px; color:#dc2626; font-weight:700; font-size:0.95rem;">
+              ⚠️ You are ${Math.abs(lc.diff)} days SHORT of mandatory requirement
+            </div>
+            <div style="color:#92400e; font-size:0.85rem; margin-top:0.75rem; font-style:italic;">
+              📜 ${lc.ld.law}
+            </div>
           </div>
         `;
       }
       
-      gapsHTML += s.gaps.map(g => `<div class="m-gap-item"><span class="m-gap-icon">⚠</span><span>${g}</span></div>`).join('');
+      // Regular gaps
+      gapsHTML += `<div style="margin-top:1.5rem;"><div style="font-weight:700; color:var(--text); margin-bottom:1rem; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em;">All Compliance Gaps</div>`;
+      gapsHTML += s.gaps.map(g => `<div class="m-gap-item" style="padding:0.875rem; margin-bottom:0.75rem; background:var(--card-bg); border-left:3px solid #ef4444; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);"><span class="m-gap-icon" style="margin-right:0.75rem; color:#ef4444;">⚠</span><span style="color:var(--text); line-height:1.5;">${g}</span></div>`).join('');
+      gapsHTML += `</div>`;
+      
       gapsEl.innerHTML = gapsHTML;
     }
   } else {
     if (gapsSection) gapsSection.style.display = 'none';
   }
 
-  // 3. CHARTS - MOVED UP (before details)
+  // ============================================
+  // ORDER 3: CHARTS (After gaps, before details)
+  // ============================================
   setTimeout(() => renderUserCharts(s), 100);
 
-  // 4. DETAILS SECTIONS - MOVED DOWN (after charts)
+  // ============================================
+  // ORDER 4: DETAILS (All sections A-H)
+  // ============================================
+  
   // Profile
   document.getElementById('udashProfile').innerHTML = [
     ['Company', s.companyName], ['Contact Person', s.name], ['Phone', s.contact],
@@ -708,13 +733,13 @@ function renderUserDashboard() {
     ['PF on >₹50k/₹75k Salary', s.sd2],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section E - Simplified (leave details now in gaps)
+  // Section E - Simplified
   const lc = getLeaveComplianceStatus(s);
   const ld = lc ? lc.ld : null;
   document.getElementById('udashLeaves').innerHTML = [
     ['Leaves Given to Employees', s.se1],
     ['Total Annual Leaves', s.se2total !== undefined ? `${s.se2total} days` : (s.se2||'—')],
-    ['State', ld ? ld.law : (s.state || '—')],
+    ['State Law', ld ? ld.law : (s.state || '—')],
     ['Aware: ESIC Sick Leave Rule', s.se3],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
@@ -738,12 +763,26 @@ function renderUserDashboard() {
     ['Asset Damage / Loss Faced', s.sh5],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // 5. RECOMMENDED ACTIONS - MOVED TO END
+  // ============================================
+  // ORDER 5: RECOMMENDED ACTIONS (LAST - at bottom)
+  // ============================================
   const recsSection = document.getElementById('udashRecsSection');
   const recsEl      = document.getElementById('udashRecs');
   if ((s.recs||[]).length) {
     if (recsSection) recsSection.style.display = 'block';
-    if (recsEl) recsEl.innerHTML = s.recs.map(r => `<div class="m-rec-item"><span class="m-rec-icon">→</span><span>${r}</span></div>`).join('');
+    if (recsEl) {
+      recsEl.innerHTML = `
+        <div style="margin-bottom:1rem; font-weight:700; color:var(--text); font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em;">Action Items to Achieve Compliance</div>
+        ${s.recs.map((r, idx) => `
+          <div class="m-rec-item" style="padding:1rem; margin-bottom:0.75rem; background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left:4px solid #10b981; border-radius:6px; box-shadow:0 1px 3px rgba(16,185,129,0.1);">
+            <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+              <span style="flex-shrink:0; width:24px; height:24px; background:#10b981; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">${idx+1}</span>
+              <span style="color:#065f46; line-height:1.6; flex:1;">${r}</span>
+            </div>
+          </div>
+        `).join('')}
+      `;
+    }
   } else {
     if (recsSection) recsSection.style.display = 'none';
   }

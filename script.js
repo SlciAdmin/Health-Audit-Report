@@ -1,7 +1,8 @@
 // ============================================================
 // LABOURSHIELD — script.js  FINAL VERSION
 // Simplified Leave Input - Single Total Leaves Field
-// Detailed Leave Compliance shown ONLY in Dashboard/Report
+// Detailed Leave Compliance shown ONLY in Admin Dashboard/Report
+// User Dashboard: Score → Charts → Gaps → Details → Recommendations
 // ============================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycby7nP6aTh4rpqbTB0pZ34T4-R5kX0S4azsZqoLMI0qDcHSdPVmmIoGwM-NOmJ6HlGfpLw/exec";
@@ -600,7 +601,6 @@ function resetForm() {
 }
 
 // ===== USER DASHBOARD =====
-// ===== USER DASHBOARD =====
 function renderUserDashboard() {
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId && !currentUserSubmission) {
@@ -648,54 +648,23 @@ function renderUserDashboard() {
   // ============================================
 
   // ============================================
-  // ORDER 2: GAPS (with leave compliance highlighted)
+  // ORDER 2: CHARTS (Render charts AFTER score, BEFORE gaps)
+  // ============================================
+  setTimeout(() => renderUserCharts(s), 100);
+
+  // ============================================
+  // ORDER 3: GAPS (NO yellow leave highlight in user dashboard - only regular gaps)
   // ============================================
   const gapsSection = document.getElementById('udashGapsSection');
   const gapsEl      = document.getElementById('udashGaps');
   
-  // Always show gaps section if there are gaps OR if there's a leave compliance issue
-  const lc = getLeaveComplianceStatus(s);
-  const hasGaps = (s.gaps||[]).length > 0;
-  const hasLeaveGap = lc && lc.hasGap;
-  
-  if (hasGaps || hasLeaveGap) {
+  if ((s.gaps||[]).length) {
     if (gapsSection) gapsSection.style.display = 'block';
     if (gapsEl) {
-      let gapsHTML = '';
-      
-      // Add leave compliance highlight FIRST if there's a gap
-      if (lc && lc.hasGap) {
-        gapsHTML += `
-          <div class="leave-gap-highlight" style="background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left:4px solid #f59e0b; padding:1.25rem; margin-bottom:1.5rem; border-radius:8px; box-shadow:0 4px 12px rgba(245,158,11,0.2);">
-            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem;">
-              <span style="font-size:1.25rem;">🏖</span>
-              <div style="font-weight:700; color:#92400e; font-size:1.05rem;">Leave Compliance Issue</div>
-            </div>
-            <div style="color:#78350f; font-size:0.95rem; margin-bottom:0.75rem; line-height:1.6;">
-              <strong>${lc.state} Law:</strong> You are giving <strong>${lc.totalGiven} days</strong> but the law requires minimum <strong>${lc.required} days</strong>
-              <div style="margin-top:0.6rem; font-family:'JetBrains Mono',monospace; background:rgba(255,255,255,0.7); padding:0.6rem; border-radius:4px; font-size:0.9rem;">
-                Breakdown: EL:${lc.ld.EL} + CL:${lc.ld.CL} + SL:${lc.ld.SL} = ${lc.required} days
-              </div>
-            </div>
-            <div style="background:#fef2f2; border:1px solid #fecaca; padding:0.85rem; border-radius:6px; color:#dc2626; font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:0.5rem;">
-              <span>⚠️</span>
-              <span>You are ${Math.abs(lc.diff)} days SHORT of mandatory requirement</span>
-            </div>
-            <div style="color:#92400e; font-size:0.85rem; margin-top:0.85rem; font-style:italic; display:flex; align-items:center; gap:0.4rem;">
-              <span>📜</span>
-              <span>${lc.ld.law}</span>
-            </div>
-          </div>
-        `;
-      }
-      
-      // Regular gaps
-      if (hasGaps) {
-        gapsHTML += `<div style="margin-top:1.5rem;"><div style="font-weight:700; color:var(--text); margin-bottom:1rem; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em;">All Compliance Gaps</div>`;
-        gapsHTML += s.gaps.map(g => `<div class="m-gap-item" style="padding:0.875rem; margin-bottom:0.75rem; background:var(--card-bg); border-left:3px solid #ef4444; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);"><span class="m-gap-icon" style="margin-right:0.75rem; color:#ef4444;">⚠</span><span style="color:var(--text); line-height:1.5;">${g}</span></div>`).join('');
-        gapsHTML += `</div>`;
-      }
-      
+      // USER DASHBOARD: Only show regular gaps, NO yellow leave compliance highlight
+      // (Leave compliance highlight is ONLY for admin dashboard)
+      let gapsHTML = `<div style="font-weight:700; color:var(--text); margin-bottom:1rem; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em;">Compliance Gaps Identified</div>`;
+      gapsHTML += s.gaps.map(g => `<div class="m-gap-item" style="padding:0.875rem; margin-bottom:0.75rem; background:var(--card-bg); border-left:3px solid #ef4444; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);"><span class="m-gap-icon" style="margin-right:0.75rem; color:#ef4444;">⚠</span><span style="color:var(--text); line-height:1.5;">${g}</span></div>`).join('');
       gapsEl.innerHTML = gapsHTML;
     }
   } else {
@@ -703,12 +672,7 @@ function renderUserDashboard() {
   }
 
   // ============================================
-  // ORDER 3: CHARTS (After gaps, before details)
-  // ============================================
-  setTimeout(() => renderUserCharts(s), 100);
-
-  // ============================================
-  // ORDER 4: DETAILS (All sections A-H)
+  // ORDER 4: DETAILS (All sections A-H - Profile & Questions)
   // ============================================
   
   // Profile
@@ -741,13 +705,11 @@ function renderUserDashboard() {
     ['PF on >₹50k/₹75k Salary', s.sd2],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section E - Simplified
-  const leaveCompliance = getLeaveComplianceStatus(s);
-  const leaveData = leaveCompliance ? leaveCompliance.ld : null;
+  // Section E - Simplified (NO leave compliance highlight in user dashboard)
   document.getElementById('udashLeaves').innerHTML = [
     ['Leaves Given to Employees', s.se1],
     ['Total Annual Leaves', s.se2total !== undefined ? `${s.se2total} days` : (s.se2||'—')],
-    ['State Law', leaveData ? leaveData.law : (s.state || '—')],
+    ['State', s.state || '—'],
     ['Aware: ESIC Sick Leave Rule', s.se3],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
@@ -799,8 +761,7 @@ function renderUserDashboard() {
   if (pdfBtn) pdfBtn.onclick = () => downloadPDF(s.id);
 }
 
-
-// ===== LEAVE COMPLIANCE DASHBOARD WIDGET =====
+// ===== LEAVE COMPLIANCE DASHBOARD WIDGET (ADMIN ONLY) =====
 function renderLeaveComplianceDashboard(s) {
   const lcSection = document.getElementById('udashLeaveComplianceSection');
   const lcCard    = document.getElementById('udashLeaveComplianceCard');
@@ -1199,10 +1160,9 @@ function renderAdminCharts(data) {
     });
   }
 
-  // State Leave EL Chart
+  // State Leave EL Chart (ADMIN ONLY - with yellow highlight logic)
   const lc = document.getElementById('adminChartLeave');
   if (lc) {
-    // Group by state: avg total leaves given vs total required
     const stateData = {};
     data.forEach(s => {
       if (!s.state || !STATE_LEAVE_DATA[s.state]) return;
@@ -1306,7 +1266,7 @@ function deleteSubmission(id) {
   showToast('Removed from view.','gold');
 }
 
-// ===== DETAIL MODAL =====
+// ===== DETAIL MODAL (ADMIN) - WITH YELLOW LEAVE HIGHLIGHT =====
 function showDetail(id) {
   const s = submissions.find(x => x.id == id);
   if (!s) return;
@@ -1334,6 +1294,7 @@ function showDetail(id) {
   const lc = getLeaveComplianceStatus(s);
   const ld = lc ? lc.ld : null;
 
+  // ADMIN MODAL: Show yellow leave compliance highlight
   const leaveHTML = lc ? `
     <div class="m-section">🏖 Leave Policy — State Law vs Practice (Section E)</div>
     <div class="modal-leave-compliance">
@@ -1614,7 +1575,7 @@ async function downloadPDF(id) {
   r = yn2(s.sd3); row('PF Capped at Rs.15,000 Wage Ceiling?', r.t, r.c);
   r = yn2(s.sd2); row('Paying PF for Salary >Rs.50k/Rs.75k?', r.t, r.c); y += 2;
 
-  // E — with state leave details
+  // E — with state leave details (PDF includes leave compliance for both user & admin)
   sec('Section E — Leave Policy (State-Specific)', '🏖');
   const lc = getLeaveComplianceStatus(s);
   const ld = lc ? lc.ld : null;

@@ -3,7 +3,7 @@
 // Leave Gap Card REMOVED from user form - Only shows in Admin Dashboard
 // ============================================================
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxhF9twqD3ytpvuW-YMsEg1DUoAOt3GQlQ-gmOIKZolSqGWQibIS-8_oRFSybjeJbyMlA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyr8xDGZJP2EjNkCwmxFr1RnzOe0dlhwZ1Z3Ifp3QpVxObTCqXOuGFbPm9AV7OOXMdRRw/exec";
 
 // ===== STATE LEAVE DATABASE =====
 const STATE_LEAVE_DATA = {
@@ -363,6 +363,7 @@ async function sendToSheets(data) {
   }
 }
 
+// ===== LOAD FROM SHEETS (OPTIMIZED) =====
 async function loadFromSheets(showLoader = false) {
   const loader = document.getElementById('adminLoadingBar');
   if (showLoader && loader) loader.style.display = 'block';
@@ -371,21 +372,22 @@ async function loadFromSheets(showLoader = false) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const raw = await res.json();
     if (!Array.isArray(raw)) throw new Error('Invalid data format');
-    const normalised = raw.map(normaliseItem);
-    const cloudIds   = new Set(normalised.map(s => String(s.id)));
-    const localOnly  = localSubmissions.filter(s => !cloudIds.has(String(s.id)));
-    submissions      = [...normalised, ...localOnly];
+    
+    const cloudIds = new Set(raw.map(s => String(s.id)));
+    // Keep local-only items that aren't in cloud yet
+    const localOnly = localSubmissions.filter(s => !cloudIds.has(String(s.id)));
+    submissions = [...raw, ...localOnly];
     submissions.sort((a,b) => new Date(b.submittedAt||0) - new Date(a.submittedAt||0));
-    localSubmissions = submissions;
+    localSubmissions = [...submissions];
     localStorage.setItem(LS_KEY, JSON.stringify(localSubmissions));
+    
     if (isAdmin && document.getElementById('view-admin-dashboard')?.classList.contains('active')) {
       renderAdminDashboard();
     }
     return { success: true };
   } catch(err) {
-    submissions = [...localSubmissions];
-    submissions.sort((a,b) => new Date(b.submittedAt||0) - new Date(a.submittedAt||0));
-    if (showLoader) showToast('Using cached data (offline mode)', 'blue');
+    console.warn('Sync fallback:', err);
+    if (showLoader) showToast('⚠️ Using cached data (Offline)', 'gold');
     return { success: false };
   } finally {
     if (loader) loader.style.display = 'none';
@@ -1824,14 +1826,32 @@ function renderAdminTable() {
 }
 
 // ===== DELETE =====
-function deleteSubmission(id) {
+// ===== DELETE (CLOUD + LOCAL) =====
+async function deleteSubmission(id) {
   if (!isAdmin) { showToast('Admin access required.','red'); return; }
-  if (!confirm('Delete this submission?\n\nNote: This removes it from local view. To permanently delete from Google Sheets, remove the row there directly.')) return;
-  submissions      = submissions.filter(s => s.id !== id);
-  localSubmissions = localSubmissions.filter(s => s.id !== id);
+  if (!confirm('⚠️ This will PERMANENTLY delete the record from Google Sheets. Continue?')) return;
+  
+  // Optimistic UI Update
+  const prevSubs = [...submissions];
+  submissions = submissions.filter(s => s.id !== id);
+  localSubmissions = submissions;
   localStorage.setItem(LS_KEY, JSON.stringify(localSubmissions));
   renderAdminDashboard();
-  showToast('Removed from view.','gold');
+  
+  try {
+    await fetch(API_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', id: String(id) })
+    });
+    showToast('✅ Deleted from Cloud & Local Dashboard', 'green');
+  } catch(err) {
+    showToast('⚠️ Cloud delete failed (Offline/Sync issue)', 'red');
+    // Rollback UI
+    submissions = prevSubs; localSubmissions = prevSubs;
+    localStorage.setItem(LS_KEY, JSON.stringify(prevSubs));
+    renderAdminDashboard();
+  }
 }
 
 // ===== DETAIL MODAL (ADMIN) =====
@@ -2362,6 +2382,38 @@ function showView(name) {
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// ============================================================
+// 🔁 ADMIN AUTO-SYNC (Every 15s when dashboard is visible)
+// ============================================================
+let adminSyncInterval = null;
+
+function startAdminSync() {
+  if (adminSyncInterval) clearInterval(adminSyncInterval);
+  adminSyncInterval = setInterval(() => {
+    if (isAdmin && document.getElementById('view-admin-dashboard')?.classList.contains('active')) {
+      loadFromSheets(false); // Silent background refresh
+    }
+  }, 15000); // 15 seconds
+}
+
+function stopAdminSync() {
+  if (adminSyncInterval) { 
+    clearInterval(adminSyncInterval); 
+    adminSyncInterval = null; 
+  }
+}
+
+// Hook into existing showView function
+const _origShowView = showView;
+showView = function(name) {
+  _origShowView(name); // Call original function first
+  if (name === 'admin-dashboard') {
+    startAdminSync();  // Start auto-sync when admin view opens
+  } else {
+    stopAdminSync();   // Stop when leaving admin view
+  }
+};
 
 // ===== ADMIN AUTH =====
 function toggleAdminLogin() {

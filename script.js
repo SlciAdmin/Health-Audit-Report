@@ -3,7 +3,7 @@
 // Leave Gap Card REMOVED from user form - Only shows in Admin Dashboard
 // ============================================================
 
-const API_URL = "https://script.google.com/macros/s/AKfycby7nP6aTh4rpqbTB0pZ34T4-R5kX0S4azsZqoLMI0qDcHSdPVmmIoGwM-NOmJ6HlGfpLw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxhF9twqD3ytpvuW-YMsEg1DUoAOt3GQlQ-gmOIKZolSqGWQibIS-8_oRFSybjeJbyMlA/exec";
 
 // ===== STATE LEAVE DATABASE =====
 const STATE_LEAVE_DATA = {

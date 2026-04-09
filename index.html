@@ -334,43 +334,44 @@
 </div>
 
       <!-- SECTION E — LEAVE POLICY (with state-specific info) -->
-      <div class="sec-label"><span class="sec-num">E</span> Leave Policy</div>
+      <!-- SECTION E — LEAVE POLICY (Single Total Leaves Input) -->
+<div class="sec-label"><span class="sec-num">E</span> Leave Policy</div>
 
-      <!-- State Leave Info Card (shows dynamically) -->
-      <div id="stateLeaveInfoCard" class="state-leave-info-card" style="display:none"></div>
+<!-- State Leave Info Card (shows dynamically) -->
+<div id="stateLeaveInfoCard" class="state-leave-info-card" style="display:none"></div>
 
-      <div class="card">
-        <div class="qblock">
-          <div class="qlabel">E1 — Are you giving leaves to employees?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="se1" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="se1" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-        <div class="qblock">
-          <div class="qlabel">E2 — How many Earned Leaves (EL) are you giving annually?</div>
-          <input type="number" id="se2el" placeholder="e.g. 15" class="solo-input" oninput="updateLeaveGapCard()">
-        </div>
-        <div class="qblock">
-          <div class="qlabel">E3 — How many Casual Leaves (CL) are you giving annually?</div>
-          <input type="number" id="se2cl" placeholder="e.g. 12" class="solo-input" oninput="updateLeaveGapCard()">
-        </div>
-        <div class="qblock">
-          <div class="qlabel">E4 — How many Sick Leaves (SL) are you giving annually?</div>
-          <input type="number" id="se2sl" placeholder="e.g. 12" class="solo-input" oninput="updateLeaveGapCard()">
-        </div>
+<div class="card">
+  <div class="qblock">
+    <div class="qlabel">E1 — Are you giving leaves to employees?</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="se1" value="Yes"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="se1" value="No"><span>❌ No</span></label>
+    </div>
+  </div>
+  
+  <!-- 🔥 SINGLE QUESTION: Total Annual Leaves (replaces EL/CL/SL separate inputs) -->
+  <div class="qblock">
+    <div class="qlabel">E2 — What is the TOTAL number of annual leaves (all types combined) you provide to employees?</div>
+    <input type="number" id="se2total" placeholder="e.g. 30" class="solo-input" oninput="updateLeaveGapCard()" min="0" max="100">
+    <div style="font-size:0.75rem; color:var(--text2); margin-top:0.35rem">
+      ℹ️ Enter the combined total of Earned + Casual + Sick leaves per year. 
+      <span id="stateLeaveHint" style="display:none; color:var(--gold); font-weight:600;"> 
+        Your state (<span id="stateHintName"></span>) mandates minimum <span id="stateHintTotal"></span> days.
+      </span>
+    </div>
+  </div>
 
-        <!-- Live Leave Gap Card -->
-        <div id="leaveGapCard" class="leave-gap-card" style="display:none"></div>
+  <!-- Live Leave Gap Card -->
+  <div id="leaveGapCard" class="leave-gap-card" style="display:none"></div>
 
-        <div class="qblock" style="margin-top:1.5rem">
-          <div class="qlabel">E5 — Do you know that employees covered under ESIC cannot be entitled to separate sick leave benefits?</div>
-          <div class="opt-row">
-            <label class="opt"><input type="radio" name="se3" value="Yes"><span>✅ Yes</span></label>
-            <label class="opt"><input type="radio" name="se3" value="No"><span>❌ No</span></label>
-          </div>
-        </div>
-      </div>
+  <div class="qblock" style="margin-top:1.5rem">
+    <div class="qlabel">E3 — Do you know that employees covered under ESIC cannot be entitled to separate sick leave benefits?</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="se3" value="Yes"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="se3" value="No"><span>❌ No</span></label>
+    </div>
+  </div>
+</div>
 
       <!-- SECTION F -->
       <div class="sec-label"><span class="sec-num">F</span> ESI & Salary Structure</div>

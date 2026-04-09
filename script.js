@@ -1,7 +1,8 @@
 // ============================================================
-// LABOURSHIELD — script.js FINAL VERSION (MODIFIED B5, C, D)
+// LABOURSHIELD — script.js FINAL VERSION
+// Section E: SINGLE "Total Annual Leaves" input (replaces EL/CL/SL)
+// Gap calculation: User Total vs State Mandatory Total (EL+CL+SL)
 // Section C: C3-C5 visible ONLY if C1="Yes" AND C2="Yes"
-// If C1="No" OR C2="No" → C3-C5 hidden + auto-filled as "No"
 // ============================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycby7nP6aTh4rpqbTB0pZ34T4-R5kX0S4azsZqoLMI0qDcHSdPVmmIoGwM-NOmJ6HlGfpLw/exec";
@@ -120,36 +121,27 @@ function toggleSalaryDateField(show) {
   }
 }
 
-// ===== 🔥 UPDATED: Toggle POSH Questions (C Section) - C3-C5 visible ONLY if C1="Yes" AND C2="Yes" =====
+// ===== UPDATED: Toggle POSH Questions (C Section) - C3-C5 visible ONLY if C1="Yes" AND C2="Yes" =====
 function togglePOSHQuestions() {
   const c1Val = getRadio('sc1');
   const c2Val = getRadio('sc2');
-  const container = document.getElementById('poshQuestions');
-  const c3c4c5Wrapper = document.getElementById('poshAdvancedQuestions'); // NEW wrapper for C3-C5
-  
-  // Show C2 only if C1="Yes", otherwise hide C2 too (optional - based on your preference)
+  const c3c4c5Wrapper = document.getElementById('poshAdvancedQuestions');
   const c2Block = document.querySelector('[data-qname="sc2"]')?.closest('.qblock');
   
   if (c1Val === 'Yes') {
-    // Show C2 question
     if (c2Block) c2Block.style.display = 'block';
-    
-    // Show C3-C5 ONLY if C2 is also "Yes"
     if (c2Val === 'Yes' && c3c4c5Wrapper) {
       c3c4c5Wrapper.style.display = 'block';
     } else if (c3c4c5Wrapper) {
       c3c4c5Wrapper.style.display = 'none';
-      // Auto-fill C3, C4, C5 as "No" when hidden
       ['sc3','sc4','sc5'].forEach(name => {
         const radio = document.querySelector(`input[name="${name}"][value="No"]`);
         if (radio) radio.checked = true;
       });
     }
   } else {
-    // C1 = "No" → Hide C2 AND C3-C5, auto-fill all as "No"
     if (c2Block) c2Block.style.display = 'none';
     if (c3c4c5Wrapper) c3c4c5Wrapper.style.display = 'none';
-    
     ['sc2','sc3','sc4','sc5'].forEach(name => {
       const radio = document.querySelector(`input[name="${name}"][value="No"]`);
       if (radio) radio.checked = true;
@@ -157,18 +149,92 @@ function togglePOSHQuestions() {
   }
 }
 
-// ===== NEW: Toggle PF Questions (D Section) =====
+// ===== Toggle PF Questions (D Section) =====
 function togglePFQuestions(show) {
   const container = document.getElementById('pfQuestions');
   if (container) {
     container.style.display = show ? 'block' : 'none';
   }
   if (!show) {
-    // Auto-fill D2-D3 as "No" when D1="No"
     ['sd2','sd3'].forEach(name => {
       const radio = document.querySelector(`input[name="${name}"][value="No"]`);
       if (radio) radio.checked = true;
     });
+  }
+}
+
+// ===== UPDATED: Update State Leave Badge & Hint =====
+function updateStateLeaveBadge() {
+  const state = document.getElementById('state')?.value;
+  const badge = document.getElementById('stateLeaveBadge');
+  const hint = document.getElementById('stateLeaveHint');
+  const hintName = document.getElementById('stateHintName');
+  const hintTotal = document.getElementById('stateHintTotal');
+  
+  if (!state || !STATE_LEAVE_DATA[state]) {
+    if (badge) badge.style.display = 'none';
+    if (hint) hint.style.display = 'none';
+    return;
+  }
+  
+  const ld = STATE_LEAVE_DATA[state];
+  const mandatoryTotal = ld.EL + ld.CL + ld.SL;
+  
+  // Update hint for total leaves input
+  if (hint && hintName && hintTotal) {
+    hintName.textContent = state;
+    hintTotal.textContent = mandatoryTotal;
+    hint.style.display = 'inline';
+  }
+  
+  // Update leave gap card if on page 2
+  updateLeaveGapCard();
+}
+
+// ===== UPDATED: Update Leave Gap Card (Single Total Comparison) =====
+function updateLeaveGapCard() {
+  const state = document.getElementById('state')?.value;
+  const totalGiven = parseInt(document.getElementById('se2total')?.value) || 0;
+  const card = document.getElementById('leaveGapCard');
+  
+  if (!state || !STATE_LEAVE_DATA[state] || !totalGiven) {
+    if (card) card.style.display = 'none';
+    return;
+  }
+  
+  const ld = STATE_LEAVE_DATA[state];
+  const mandatoryTotal = ld.EL + ld.CL + ld.SL;
+  const diff = totalGiven - mandatoryTotal;
+  const hasGap = totalGiven < mandatoryTotal;
+  
+  if (card) {
+    card.style.display = 'block';
+    card.className = `leave-gap-card ${hasGap ? 'gap' : 'ok'}`;
+    card.innerHTML = `
+      <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem">
+        <span style="font-size:1.25rem">${hasGap ? '⚠️' : '✅'}</span>
+        <strong style="color:var(--text)">${hasGap ? 'Leave Deficit Detected' : 'Leave Policy Compliant'}</strong>
+      </div>
+      <div style="font-size:0.85rem; color:var(--text2); margin-bottom:0.75rem">
+        ${state} law mandates minimum <strong>${mandatoryTotal} total leaves</strong> annually 
+        (EL:${ld.EL} + CL:${ld.CL} + SL:${ld.SL}) under ${ld.law}
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.82rem">
+        <div style="padding:0.5rem 0.75rem; background:var(--card-bg); border-radius:6px">
+          <div style="color:var(--text2); font-size:0.75rem">Your Total Leaves</div>
+          <div style="font-weight:700; color:var(--text)">${totalGiven} days</div>
+        </div>
+        <div style="padding:0.5rem 0.75rem; background:var(--card-bg); border-radius:6px">
+          <div style="color:var(--text2); font-size:0.75rem">Mandatory Minimum</div>
+          <div style="font-weight:700; color:var(--text)">${mandatoryTotal} days</div>
+        </div>
+      </div>
+      ${hasGap ? `<div style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(239,68,68,0.1); border-left:3px solid #ef4444; border-radius:4px; font-size:0.8rem; color:#ef4444">
+        ⚠️ You are <strong>${Math.abs(diff)} days short</strong> of the mandatory requirement. This may lead to penalties during labour inspections.
+      </div>` : `<div style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(34,197,94,0.1); border-left:3px solid #22c55e; border-radius:4px; font-size:0.8rem; color:#22c55e">
+        ✅ Your leave policy meets the state law requirement. Maintain documentation for compliance proof.
+      </div>`}
+    `;
   }
 }
 
@@ -196,11 +262,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     showView('user-dashboard');
   }
   
-  // Initialize conditional fields visibility on page load
+  // Initialize conditional fields
   const sb5Yes = document.querySelector('input[name="sb5"][value="Yes"]');
   if (sb5Yes?.checked) toggleSalaryDateField(true);
   
-  // Initialize POSH questions with NEW logic
   const c1Val = getRadio('sc1');
   const c2Val = getRadio('sc2');
   if (c1Val || c2Val) togglePOSHQuestions();
@@ -208,10 +273,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const d1Yes = document.querySelector('input[name="sd1"][value="Yes"]');
   if (d1Yes?.checked) togglePFQuestions(true);
   
-  // Add event listeners for C1 and C2 to trigger POSH logic
+  // Event listeners
   document.querySelectorAll('input[name="sc1"], input[name="sc2"]').forEach(radio => {
     radio.addEventListener('change', togglePOSHQuestions);
   });
+  
+  // State change listener for leave hint
+  document.getElementById('state')?.addEventListener('change', updateStateLeaveBadge);
+  document.getElementById('se2total')?.addEventListener('input', updateLeaveGapCard);
 });
 
 document.addEventListener('visibilitychange', () => {
@@ -345,14 +414,12 @@ function goPage2() {
   });
   if (!ok) { showToast('Please fill all required fields.','red'); return; }
   
-  // Validate required radio buttons including C1, C2
   const requiredRadios = ['sa1','sa2','sb1','sb2','sb4','sb5','sc1','sc2','sd1','se1','se3','sf1','sf3','sg1','sh1','sh2','sh3','sh4','sh5'];
   let missingQ = null;
   for (const n of requiredRadios) {
     if (!getRadio(n)) { missingQ = n; break; }
   }
   if (missingQ && missingQ.startsWith('sc')) {
-    // If C1 or C2 missing, scroll to Section C
     document.querySelector('.sec-label:has([class*="sec-num"]):nth-child(3)')?.scrollIntoView({ behavior:'smooth', block:'center' });
     showToast(`Please answer POSH question ${missingQ.toUpperCase()}`, 'red');
     return;
@@ -378,19 +445,20 @@ function goPage1() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ===== LEAVE COMPLIANCE CHECK =====
+// ===== UPDATED: LEAVE COMPLIANCE CHECK (Single Total) =====
 function getLeaveComplianceStatus(d) {
   const state = d.state;
   if (!state || !STATE_LEAVE_DATA[state]) return null;
   const ld = STATE_LEAVE_DATA[state];
-  const totalGiven = parseInt(d.se2total) || 0;
-  const required = ld.EL + ld.CL + ld.SL;
+  const totalGiven = parseInt(d.se2total) || 0; // SINGLE TOTAL VALUE
+  const mandatoryTotal = ld.EL + ld.CL + ld.SL; // STATE MANDATORY TOTAL
+  
   return {
     state, ld,
     totalGiven,
-    required,
-    diff: totalGiven - required,
-    hasGap: totalGiven < required,
+    mandatoryTotal,
+    diff: totalGiven - mandatoryTotal,
+    hasGap: totalGiven < mandatoryTotal,
   };
 }
 
@@ -407,15 +475,15 @@ function calcScore(d) {
     d.sb2 === 'Yes',
     d.sb4 === 'Yes',
     d.sb5 === 'Yes',
-    // C (4) - NEW LOGIC: if C1="No" OR C2="No", score C3-C5 as compliant (N/A)
+    // C (4) - NEW LOGIC
     d.sc1 === 'No' ? true : (d.sc2 === 'No' ? true : (d.sc3 === 'Yes')),
     d.sc1 === 'No' ? true : (d.sc2 === 'No' ? true : (d.sc4 === 'Yes')),
     d.sc1 === 'No' ? true : (d.sc2 === 'No' ? true : (d.sc5 === 'Yes')),
-    d.sc1 === 'Yes' && d.sc2 === 'Yes' ? (d.sc2 === 'Yes') : true, // C2 scored only if C1=Yes
-    // D (3) - if D1=No, auto-score D2-D3 as compliant (N/A)
+    d.sc1 === 'Yes' && d.sc2 === 'Yes' ? (d.sc2 === 'Yes') : true,
+    // D (3)
     d.sd1 === 'No' ? true : (d.sd3 === 'Yes'),
     d.sd1 === 'No' ? true : (d.sd2 === 'No'),
-    // E (3)
+    // E (3) - UPDATED: Single total comparison
     d.se1 === 'Yes',
     leaveOk,
     d.se3 === 'Yes',
@@ -439,23 +507,18 @@ function getSectionScores(s) {
   const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
   
   // Section C: NEW LOGIC
-  // If C1="No" → entire section N/A = 100%
-  // If C1="Yes" but C2="No" → C2 scored, C3-C5 N/A
-  // If C1="Yes" AND C2="Yes" → score all C2-C5 normally
   let cScore = 0;
   if (s.sc1 === 'No') {
-    cScore = 100; // N/A
+    cScore = 100;
   } else if (s.sc2 === 'No') {
-    cScore = 25; // Only C2 answered "No", C3-C5 N/A
+    cScore = 25;
   } else {
-    // C1=Yes AND C2=Yes → score C2, C3, C4, C5 normally (25% each)
     cScore = (s.sc2 === 'Yes' ? 25 : 0) + 
              (s.sc3 === 'Yes' ? 25 : 0) + 
              (s.sc4 === 'Yes' ? 25 : 0) + 
              (s.sc5 === 'Yes' ? 25 : 0);
   }
   
-  // Section D: if D1=No, score 100% (N/A), else calculate normally
   const dScore = s.sd1 === 'No' ? 100 : (
     (s.sd2 === 'No' ? 33 : 0) + (s.sd3 === 'Yes' ? 33 : 0) + (s.sd1 === 'Yes' ? 34 : 0)
   );
@@ -483,40 +546,38 @@ function getGaps(d) {
   if (d.sb4 !== 'Yes') gaps.push('No structured salary format (Basic + HRA + Allowances) in place');
   if (d.sb5 !== 'Yes') gaps.push('Salaries not paid on time — must be disbursed consistently as per employment agreements and state regulations');
   
-  // C - NEW LOGIC: Only show POSH gaps if C1="Yes" AND C2="Yes"
+  // C - NEW LOGIC
   if (d.sc1 === 'Yes' && d.sc2 === 'Yes') {
     if (d.sc3 !== 'Yes') gaps.push('Periodic POSH awareness sessions not being conducted');
     if (d.sc4 !== 'Yes') gaps.push('Internal Committee (IC) under POSH Act 2013 not yet constituted');
     if (d.sc5 !== 'Yes') gaps.push('Annual return under POSH Act 2013 not filed');
   } else if (d.sc1 === 'Yes' && d.sc2 !== 'Yes') {
-    // C1=Yes but C2=No → show gap about unawareness of POSH Act
     gaps.push('Employ female staff but unaware of POSH Act 2013 applicability — mandatory compliance risk');
-  } else if (d.sc1 !== 'Yes') {
-    // C1=No → no POSH gaps (N/A)
   }
   
-  // D - Only show gaps if D1=Yes (PF is contributed)
+  // D
   if (d.sd1 === 'Yes') {
     if (d.sd3 !== 'Yes') gaps.push('PF contribution not capped at ₹15,000 wage ceiling — may result in excess liability');
     if (d.sd2 === 'Yes') gaps.push('Paying PF for employees with salary above ₹50,000/₹75,000 — review necessity');
   }
-  // E
+  
+  // E - UPDATED: Single total comparison
   if (d.se1 !== 'Yes') gaps.push('Employees not receiving any statutory leaves as mandated');
   const lc = getLeaveComplianceStatus(d);
   if (lc && lc.hasGap) {
-    gaps.push(`Leave deficit: You give ${lc.totalGiven} total days but ${lc.state} law mandates minimum ${lc.required} days (EL:${lc.ld.EL} + CL:${lc.ld.CL} + SL:${lc.ld.SL}) annually under ${lc.ld.law}`);
+    gaps.push(`Leave deficit: You provide ${lc.totalGiven} total leaves but ${lc.state} law mandates minimum ${lc.mandatoryTotal} days (EL:${lc.ld.EL}+CL:${lc.ld.CL}+SL:${lc.ld.SL}) under ${lc.ld.law}`);
   }
   if (d.se3 !== 'Yes') gaps.push('Unaware that ESIC-covered employees get medical benefits — no separate sick leave needed');
-  // F
+  
+  // F, G, H
   if (d.sf1 !== 'Yes') gaps.push('Unaware that employees earning up to ₹42,000 gross are covered under ESI');
   if (d.sf3 !== 'Yes') gaps.push('Salary structure not restructured as per the four new Labour Codes');
-  // G
   if (d.sg1 === 'No') gaps.push('HR Policy / Leave Policy / Appointment Letter not updated as per new Labour Codes');
-  // H
   if (d.sh1 === 'Yes') gaps.push('Faced challenges with Labour Inspector — compliance documentation must be strengthened');
   if (d.sh2 === 'Yes') gaps.push('Pending Notices / Inspections / Cases require immediate legal attention');
   if (d.sh3 === 'Yes') gaps.push('Employees leaving without notice period — employment agreements need enforcement clauses');
   if (d.sh5 === 'Yes') gaps.push('Employees have damaged or left with assets — an Asset Agreement Policy is required');
+  
   return gaps;
 }
 
@@ -615,13 +676,7 @@ function normaliseItem(item) {
 
 // ===== FORM SUBMISSION =====
 async function submitAudit() {
-  const requiredRadios = [
-    'sa1','sa2','sb1','sb2','sb4','sb5',
-    'sc1','sc2', // C1 and C2 always required
-    'sd1','sd2','sd3','se1','se3',
-    'sf1','sf3','sg1',
-    'sh1','sh2','sh3','sh4','sh5'
-  ];
+  const requiredRadios = ['sa1','sa2','sb1','sb2','sb4','sb5','sc1','sc2','sd1','se1','se3','sf1','sf3','sg1','sh1','sh2','sh3','sh4','sh5'];
   let missingQ = null;
   for (const n of requiredRadios) {
     if (!getRadio(n)) { missingQ = n; break; }
@@ -634,19 +689,19 @@ async function submitAudit() {
   }
 
   const state = document.getElementById('state')?.value || '';
-  const totalLeaves = parseInt(document.getElementById('se2total')?.value) || 0;
+  const totalLeaves = parseInt(document.getElementById('se2total')?.value) || 0; // SINGLE TOTAL
   const sb5Date = (getRadio('sb5') === 'Yes') ? (document.getElementById('sb5Date')?.value.trim() || '') : '';
 
   const d = {
     id: Date.now(),
     submittedAt: new Date().toISOString(),
-    name:        document.getElementById('name')?.value.trim() || '',
-    contact:     document.getElementById('contact')?.value.trim() || '',
+    name: document.getElementById('name')?.value.trim() || '',
+    contact: document.getElementById('contact')?.value.trim() || '',
     state,
-    location:    document.getElementById('location')?.value.trim() || '',
-    employees:   document.getElementById('employees')?.value || '',
+    location: document.getElementById('location')?.value.trim() || '',
+    employees: document.getElementById('employees')?.value || '',
     companyName: document.getElementById('companyName')?.value.trim() || '',
-    field:       document.getElementById('field')?.value || '',
+    field: document.getElementById('field')?.value || '',
     // A
     sa1: getRadio('sa1'), sa2: getRadio('sa2'),
     // B
@@ -654,7 +709,7 @@ async function submitAudit() {
     sb3: document.getElementById('sb3')?.value || '',
     sb4: getRadio('sb4'), sb5: getRadio('sb5'),
     sb5Date: sb5Date,
-    // C - NEW LOGIC: C3-C5 auto-filled as "No" if not visible
+    // C
     sc1: getRadio('sc1'), 
     sc2: getRadio('sc2'),
     sc3: (getRadio('sc1') === 'Yes' && getRadio('sc2') === 'Yes') ? getRadio('sc3') : 'No',
@@ -662,16 +717,14 @@ async function submitAudit() {
     sc5: (getRadio('sc1') === 'Yes' && getRadio('sc2') === 'Yes') ? getRadio('sc5') : 'No',
     // D
     sd1: getRadio('sd1'), sd2: getRadio('sd2'), sd3: getRadio('sd3'),
-    // E
+    // E - UPDATED: Single total leaves
     se1: getRadio('se1'),
     se2total: totalLeaves,
-    se2: `Total: ${totalLeaves} days`,
+    se2: `Total: ${totalLeaves} days`, // For backward compatibility
     se3: getRadio('se3'),
-    // F
+    // F, G, H
     sf1: getRadio('sf1'), sf2: '', sf3: getRadio('sf3'),
-    // G
     sg1: getRadio('sg1'), sg2: '', sg3: '', sg4: '',
-    // H
     sh1: getRadio('sh1'), sh2: getRadio('sh2'), sh3: getRadio('sh3'),
     sh4: getRadio('sh4'), sh5: getRadio('sh5'),
   };
@@ -725,7 +778,7 @@ function resetForm() {
     el.classList?.remove('error');
   });
   toggleSalaryDateField(false);
-  togglePOSHQuestions(); // Reset POSH logic
+  togglePOSHQuestions();
   togglePFQuestions(false);
   
   const sd1 = document.getElementById('sd1');
@@ -776,7 +829,6 @@ function renderUserDashboard() {
     else { e.textContent=v||'—'; e.className='ust-val partial'; }
   };
   yn(s.sd1,'ustPF'); yn(s.sf1,'ustESI'); 
-  // POSH: show IC status only if applicable
   if (s.sc1 === 'Yes' && s.sc2 === 'Yes') {
     yn(s.sc4,'ustPOSH');
   } else {
@@ -833,7 +885,7 @@ function renderUserDashboard() {
         (s.sc1 === 'Yes' && s.sc2 === 'No' ? [['POSH Advanced Compliance', 'N/A — POSH Act awareness not confirmed']] : []))
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section D - Show N/A if D1=No
+  // Section D
   document.getElementById('udashPFSection').innerHTML = [
     ['PF on Monthly Basis', s.sd1],
     ...(s.sd1 === 'Yes' ? [
@@ -842,9 +894,10 @@ function renderUserDashboard() {
     ] : [['PF Details', 'N/A — No PF contribution']]),
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
+  // Section E - UPDATED: Single Total Leaves
   document.getElementById('udashLeaves').innerHTML = [
     ['Leaves Given to Employees', s.se1],
-    ['Total Annual Leaves', s.se2total !== undefined ? `${s.se2total} days` : (s.se2||'—')],
+    ['Total Annual Leaves (All Types)', s.se2total !== undefined ? `${s.se2total} days` : (s.se2||'—')],
     ['State', s.state || '—'],
     ['Aware: ESIC Sick Leave Rule', s.se3],
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
@@ -980,7 +1033,6 @@ function renderUserCharts(s) {
     const vals = [
       s.sa2 === 'Yes' ? 100 : 0,
       s.sb5 === 'Yes' ? 100 : 0,
-      // POSH Sessions: only scored if C1=Yes AND C2=Yes
       (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc3 === 'Yes' ? 100 : 0) : 100,
       s.sd1 === 'No' ? 100 : (s.sd1 === 'Yes' ? 100 : 0),
       s.sd1 === 'No' ? 100 : (s.sd3 === 'Yes' ? 100 : 0),
@@ -1069,7 +1121,6 @@ function updateAdminStats(data) {
   set('ast1', data.length ? avg+'%' : '—');
   set('ast2', data.length ? Math.round(data.filter(s=>s.sd1==='Yes').length/data.length*100)+'%' : '—');
   set('ast3', data.length ? Math.round(data.filter(s=>s.sf1==='Yes').length/data.length*100)+'%' : '—');
-  // POSH IC: only count if C1=Yes AND C2=Yes AND C4=Yes
   set('ast4', data.length ? Math.round(data.filter(s=>s.sc1==='Yes' && s.sc2==='Yes' && s.sc4==='Yes').length / data.filter(s=>s.sc1==='Yes' && s.sc2==='Yes').length * 100 || 0)+'%' : '—');
   set('ast5', data.length ? data.filter(s=>(s.score||0)>=70).length : '—');
   set('ast6', data.length ? data.filter(s=>(s.score||0)>=40&&(s.score||0)<70).length : '—');
@@ -1113,19 +1164,16 @@ function renderAdminCharts(data) {
 
   const bc = document.getElementById('adminChartBar');
   if (bc) {
-    const labels = ['Owner\nLicense','Diwali\nBonus','POSH\nAware','POSH\nIC','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nGiven','ESI\nAware','HR\nUpdated','Salary\nRestructd'];
+    const labels = ['Owner\nLicense','Diwali\nBonus','POSH\nAware','POSH\nIC','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nCompliant','ESI\nAware','HR\nUpdated','Salary\nRestructd'];
     const barVals = [
       pct(d => d.filter(s => s.sa2 === 'Yes').length),
       pct(d => d.filter(s => s.sb1 === 'Yes').length),
-      // POSH Aware: C1=Yes AND C2=Yes
       pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes').length),
-      // POSH IC: C1=Yes AND C2=Yes AND C4=Yes
       pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes').length),
-      // POSH Sessions: C1=Yes AND C2=Yes AND C3=Yes
       pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc3 === 'Yes').length),
       pct(d => d.filter(s => s.sd1 === 'Yes').length),
       pct(d => d.filter(s => s.sd1 === 'Yes' && s.sd3 === 'Yes').length),
-      pct(d => d.filter(s => s.se1 === 'Yes').length),
+      pct(d => d.filter(s => { const lc = getLeaveComplianceStatus(s); return lc ? !lc.hasGap : s.se1 === 'Yes'; }).length),
       pct(d => d.filter(s => s.sf1 === 'Yes').length),
       pct(d => d.filter(s => s.sg1 === 'Yes' || s.sg1 === 'Partial').length),
       pct(d => d.filter(s => s.sf3 === 'Yes').length),
@@ -1347,7 +1395,7 @@ function deleteSubmission(id) {
   showToast('Removed from view.','gold');
 }
 
-// ===== DETAIL MODAL (ADMIN) - UPDATED FOR NEW C LOGIC =====
+// ===== DETAIL MODAL (ADMIN) - UPDATED FOR SINGLE TOTAL LEAVES =====
 function showDetail(id) {
   const s = submissions.find(x => x.id == id);
   if (!s) return;
@@ -1383,15 +1431,15 @@ function showDetail(id) {
         ${lc.hasGap ? '⚠️ Leave Deficit' : '✅ Compliant'} — ${lc.state} · ${ld.law}
       </div>
       <div class="m-grid">
-        <div class="m-item"><div class="m-item-label">Total Leaves Given</div><div class="m-item-val">${lc.totalGiven} days</div></div>
-        <div class="m-item"><div class="m-item-label">Mandatory Breakdown</div><div class="m-item-val">EL:${ld.EL} + CL:${ld.CL} + SL:${ld.SL} = ${ld.EL + ld.CL + ld.SL} days</div></div>
+        <div class="m-item"><div class="m-item-label">Your Total Leaves Given</div><div class="m-item-val">${lc.totalGiven} days</div></div>
+        <div class="m-item"><div class="m-item-label">Mandatory Minimum (Law)</div><div class="m-item-val">${lc.mandatoryTotal} days (EL:${ld.EL}+CL:${ld.CL}+SL:${ld.SL})</div></div>
         <div class="m-item"><div class="m-item-label">Compliance Status</div><div class="m-item-val ${lc.hasGap ? 'no' : 'yes'}">${lc.hasGap ? '❌ '+Math.abs(lc.diff)+' days SHORT' : '✅ Compliant'}</div></div>
       </div>
     </div>` : `
     <div class="m-section">🏖 Leaves (Section E)</div>
     <div class="m-grid">
       <div class="m-item"><div class="m-item-label">Leaves Given</div>${yn(s.se1)}</div>
-      ${mi('Total Annual Leaves', s.se2||'—')}
+      ${mi('Total Annual Leaves', s.se2total ? `${s.se2total} days` : (s.se2||'—'))}
       <div class="m-item"><div class="m-item-label">Aware: ESIC Sick Leave</div>${yn(s.se3)}</div>
     </div>`;
 
@@ -1501,7 +1549,7 @@ function closeModal(force) {
   if (force === true || (force && force.target === m)) { m.classList.remove('open'); activeDetailId = null; }
 }
 
-// ===== CSV EXPORT =====
+// ===== CSV EXPORT - UPDATED HEADERS =====
 function exportToCSV() {
   if (!submissions.length) { showToast('No data to export.', 'red'); return; }
   const headers = [
@@ -1510,7 +1558,7 @@ function exportToCSV() {
     'Diwali Bonus (B1)', 'Aware Bonus Rule (B2)', 'Starting Salary (B3)', 'Salary Structure (B4)', 'On-Time Salary (B5)', 'Salary Payment Date',
     'Female Employees (C1)', 'POSH Aware (C2)', 'POSH Sessions (C3)', 'IC Formed (C4)', 'POSH Return (C5)',
     'PF Monthly (D1)', 'PF >50k (D2)', 'PF Capped (D3)',
-    'Leaves Given (E1)', 'Total Leaves Given', 'State EL Required', 'State CL Required', 'State SL Required', 'Total Required', 'Leave Gap',
+    'Leaves Given (E1)', 'Total Annual Leaves (E2)', 'State EL Required', 'State CL Required', 'State SL Required', 'Total Mandatory', 'Leave Gap',
     'ESIC Sick Leave (E3)',
     'ESI Aware (F1)', 'Salary Restructd (F3)',
     'HR Updated (G1)',
@@ -1520,15 +1568,15 @@ function exportToCSV() {
   const rows = submissions.map(s => {
     const ld = STATE_LEAVE_DATA[s.state];
     const totalGiven = parseInt(s.se2total) || 0;
-    const totalReq = ld ? ld.EL + ld.CL + ld.SL : 0;
-    const gap = ld ? (totalGiven - totalReq) : 0;
+    const totalMandatory = ld ? ld.EL + ld.CL + ld.SL : 0;
+    const gap = ld ? (totalGiven - totalMandatory) : 0;
     return [
       s.id, s.submittedAt, s.companyName, s.name, s.contact, s.state, s.location, s.employees, s.field,
       s.sa1, s.sa2, s.sb1, s.sb2, s.sb3, s.sb4, s.sb5, s.sb5Date || '',
       s.sc1, s.sc2, s.sc3, s.sc4, s.sc5,
       s.sd1, s.sd2, s.sd3,
       s.se1, totalGiven,
-      ld ? ld.EL : '', ld ? ld.CL : '', ld ? ld.SL : '', totalReq, gap,
+      ld ? ld.EL : '', ld ? ld.CL : '', ld ? ld.SL : '', totalMandatory, gap,
       s.se3, s.sf1, s.sf3, s.sg1,
       s.sh1, s.sh2, s.sh3, s.sh4, s.sh5,
       s.score, (s.gaps||[]).length, (s.gaps||[]).join(' | '), (s.recs||[]).join(' | ')
@@ -1546,7 +1594,7 @@ function exportToCSV() {
   showToast('✅ CSV exported successfully!', 'green');
 }
 
-// ===== PDF DOWNLOAD =====
+// ===== PDF DOWNLOAD - UPDATED FOR SINGLE TOTAL LEAVES =====
 async function downloadPDF(id) {
   const s = id ? submissions.find(x => x.id == id) : currentUserSubmission;
   if (!s) { showToast('Submission not found', 'red'); return; }
@@ -1687,16 +1735,16 @@ async function downloadPDF(id) {
   const ld = lc ? lc.ld : null;
   r = yn2(s.se1); row('Leaves Given to Employees?', r.t, r.c);
   if (ld) {
-    row('Total Annual Leaves Given', `${lc.totalGiven} days`);
+    row('Your Total Annual Leaves', `${lc.totalGiven} days`);
     row('Applicable State Law', ld.law);
-    row('Mandatory Breakdown', `EL:${ld.EL} + CL:${ld.CL} + SL:${ld.SL} = ${ld.EL + ld.CL + ld.SL} days minimum`);
+    row('Mandatory Minimum (EL+CL+SL)', `${ld.EL}+${ld.CL}+${ld.SL} = ${ld.EL + ld.CL + ld.SL} days`);
     row('Leave Compliance Status', lc.hasGap ? 'NON-COMPLIANT — Deficit in leave entitlement' : 'COMPLIANT — Meets state law minimum', lc.hasGap ? RED : GREEN);
     if (lc.hasGap) {
       row('Deficit', `${Math.abs(lc.diff)} days short of mandatory requirement`, RED);
     }
     row('EL Note', ld.ELNote);
   } else {
-    row('Total Annual Leaves', s.se2 || '—');
+    row('Total Annual Leaves', s.se2total ? `${s.se2total} days` : (s.se2 || '—'));
   }
   r = yn2(s.se3); row('Aware: ESIC Covers Sick Leave?', r.t, r.c); y += 2;
 

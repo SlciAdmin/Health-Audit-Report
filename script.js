@@ -678,52 +678,87 @@ function ynHtml(v) {
 }
 
 // ===== USER CHARTS =====
-// ===== USER CHARTS - UPDATED WITH LINE GRAPH & PROPER COLORS =====
+// ===== USER CHARTS =====
 function renderUserCharts(s) {
   const tick = getTickColor();
   const grid = getGridColor();
-  const ff   = 'Syne, sans-serif';
+  const ff   = 'Syne';
   const C    = getColors();
 
-  // Destroy existing charts to prevent memory leaks
+  // Destroy existing charts
   Object.values(uCharts).forEach(c => { try { c.destroy(); } catch(e){} });
   uCharts = {};
 
   const scores = getSectionScores(s);
-  const sectionLabels = ['A: Licensing', 'B: Bonus/Salary', 'C: POSH', 'D: PF', 'E: Leaves', 'F: ESI', 'G: HR Policy', 'H: Inspection'];
-  const sectionScores = [scores.A, scores.B, scores.C, scores.D, scores.E, scores.F, scores.G, scores.H];
 
-  // 🔹 1. LINE GRAPH: Compliance Area Breakdown (REPLACES RADAR)
-  const lineCanvas = document.getElementById('uChartRadar');
-  if (lineCanvas) {
-    // Determine point colors based on score thresholds
-    const pointColors = sectionScores.map(score => 
-      score >= 70 ? C.green : score >= 40 ? C.gold : C.red
-    );
-    
-    uCharts.line = new Chart(lineCanvas, {
+  // 📈 CHART 1: Compliance Area Breakdown (LINE CHART - Changed from Radar)
+  const rc = document.getElementById('uChartRadar');
+  if (rc) {
+    uCharts.radar = new Chart(rc, {
       type: 'line',
       data: {
-        labels: sectionLabels,
+        labels: ['A: Licensing', 'B: Bonus/Salary', 'C: POSH', 'D: PF', 'E: Leaves', 'F: ESI', 'G: HR Policy', 'H: Inspection'],
         datasets: [{
           label: 'Compliance Score %',
-          data: sectionScores,
+          data: [scores.A, scores.B, scores.C, scores.D, scores.E, scores.F, scores.G, scores.H],
           borderColor: C.gold,
-          backgroundColor: C.gold + '20',
+          backgroundColor: C.gold + '33',
           borderWidth: 3,
-          fill: true,
-          tension: 0.3, // Smooth curves
-          pointRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: C.gold,
+          pointBorderWidth: 2.5,
+          pointRadius: 5,
           pointHoverRadius: 8,
-          pointBackgroundColor: pointColors,
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointStyle: 'circle',
+          pointHoverBackgroundColor: C.gold,
+          pointHoverBorderColor: '#fff',
+          fill: true,
+          tension: 0.35,
+          cubicInterpolationMode: 'monotone'
         }]
       },
       options: {
-        responsive: true,
+        responsive: true, 
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        scales: {
+          x: {
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 9, weight: '600' },
+              padding: 8
+            },
+            grid: { 
+              color: grid,
+              drawBorder: false
+            },
+            border: { color: grid }
+          },
+          y: {
+            min: 0, 
+            max: 100,
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 9 }, 
+              stepSize: 25,
+              callback: function(value) { return value + '%'; },
+              padding: 8
+            },
+            grid: { 
+              color: grid,
+              drawBorder: false
+            },
+            border: { color: grid },
+            title: {
+              display: true,
+              text: 'Score %',
+              color: tick,
+              font: { family: ff, size: 10, weight: '600' }
+            }
+          }
+        },
         plugins: {
           legend: { 
             display: true, 
@@ -731,125 +766,98 @@ function renderUserCharts(s) {
             labels: { 
               color: tick, 
               font: { family: ff, size: 10, weight: '600' },
+              padding: 15,
+              usePointStyle: true,
+              pointStyle: 'circle'
+            } 
+          },
+          tooltip: {
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
+            titleColor: '#fff',
+            titleFont: { family: ff, size: 12, weight: '700' },
+            bodyColor: '#fff',
+            bodyFont: { family: ff, size: 11 },
+            borderColor: C.gold,
+            borderWidth: 2,
+            padding: 12,
+            displayColors: true,
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.y}%`;
+              },
+              title: function(context) {
+                return context[0].label;
+              }
+            }
+          }
+        },
+        elements: {
+          line: {
+            borderCapStyle: 'round',
+            borderJoinStyle: 'round'
+          },
+          point: {
+            hitRadius: 10
+          }
+        }
+      }
+    });
+  }
+
+  // 🍩 CHART 2: Key Compliance Status (Doughnut - Unchanged, Enhanced)
+  const dc = document.getElementById('uChartDough');
+  if (dc) {
+    const active = [s.sd1 === 'Yes', s.sf1 === 'Yes', (s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes'), s.sb1 === 'Yes'].filter(Boolean).length;
+    const doughData = [
+      s.sd1 === 'Yes' ? 1 : 0, 
+      s.sf1 === 'Yes' ? 1 : 0, 
+      (s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes') ? 1 : 0, 
+      s.sb1 === 'Yes' ? 1 : 0, 
+      Math.max(0, 4 - active)
+    ];
+    const doughLabels = ['PF Active', 'ESI Aware', 'POSH IC', 'Bonus Paid', 'Non-Compliant'];
+    const doughColors = [C.green, C.blue, C.gold, C.purple, C.red + '88'];
+    
+    uCharts.dough = new Chart(dc, {
+      type: 'doughnut',
+      data: {
+        labels: doughLabels,
+        datasets: [{
+          data: doughData,
+          backgroundColor: doughColors,
+          borderWidth: 0, 
+          hoverOffset: 12,
+          hoverBorderColor: '#fff',
+          hoverBorderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '70%',
+        plugins: { 
+          legend: { 
+            position: 'bottom', 
+            labels: { 
+              color: tick, 
+              font: { family: ff, size: 10, weight: '500' }, 
               padding: 12,
               usePointStyle: true,
               pointStyle: 'circle'
             } 
           },
           tooltip: {
-            backgroundColor: 'rgba(20, 24, 40, 0.95)',
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
             titleColor: '#fff',
-            bodyColor: '#e5e7eb',
+            bodyColor: '#fff',
             borderColor: C.gold,
-            borderWidth: 1,
+            borderWidth: 2,
             padding: 12,
-            displayColors: true,
             callbacks: {
               label: function(context) {
-                const score = context.parsed.y;
-                const status = score >= 70 ? '✅ Strong' : score >= 40 ? '⚠️ Moderate' : '❌ Critical';
-                return ` ${context.dataset.label}: ${score}% ${status}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 8, weight: '500' },
-              maxRotation: 45,
-              minRotation: 45
-            },
-            grid: { color: grid, display: false },
-            border: { color: tick }
-          },
-          y: {
-            min: 0,
-            max: 100,
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 9 },
-              callback: function(value) { return value + '%'; },
-              stepSize: 25
-            },
-            grid: { 
-              color: grid,
-              drawBorder: false
-            },
-            border: { color: tick },
-            title: {
-              display: true,
-              text: 'Compliance Score (%)',
-              color: tick,
-              font: { family: ff, size: 9, weight: '600' }
-            }
-          }
-        },
-        interaction: {
-          intersect: false,
-          mode: 'index'
-        }
-      }
-    });
-  }
-
-  // 🔹 2. DOUGHNUT: Key Compliance Status (with proper colors & labels)
-  const doughCanvas = document.getElementById('uChartDough');
-  if (doughCanvas) {
-    const pfActive    = s.sd1 === 'Yes' ? 1 : 0;
-    const esiAware    = s.sf1 === 'Yes' ? 1 : 0;
-    const poshIC      = (s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes') ? 1 : 0;
-    const bonusPaid   = s.sb1 === 'Yes' ? 1 : 0;
-    const nonCompliant = 4 - (pfActive + esiAware + poshIC + bonusPaid);
-    
-    uCharts.dough = new Chart(doughCanvas, {
-      type: 'doughnut',
-      data: {
-        labels: ['PF Active', 'ESI Aware', 'POSH IC', 'Bonus Paid', 'Pending'],
-        datasets: [{
-          data: [pfActive, esiAware, poshIC, bonusPaid, Math.max(0, nonCompliant)],
-          backgroundColor: [
-            pfActive ? C.green : C.red + '66',
-            esiAware ? C.blue : C.red + '66', 
-            poshIC ? C.gold : C.red + '66',
-            bonusPaid ? C.purple : C.red + '66',
-            C.red + '44'
-          ],
-          borderColor: '#fff',
-          borderWidth: 2,
-          hoverOffset: 15,
-          hoverBorderColor: C.gold,
-          hoverBorderWidth: 3
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-          legend: { 
-            position: 'bottom', 
-            labels: { 
-              color: tick, 
-              font: { family: ff, size: 9, weight: '500' }, 
-              padding: 10,
-              boxWidth: 12,
-              usePointStyle: true
-            } 
-          },
-          tooltip: {
-            backgroundColor: 'rgba(20, 24, 40, 0.95)',
-            titleColor: '#fff',
-            bodyColor: '#e5e7eb',
-            borderColor: C.gold,
-            borderWidth: 1,
-            padding: 10,
-            callbacks: {
-              label: function(context) {
-                const total = context.dataset.data.reduce((a,b) => a+b, 0);
-                const pct = total > 0 ? Math.round(context.parsed / total * 100) : 0;
-                return ` ${context.label}: ${pct}%`;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? Math.round((context.parsed * 100) / total) : 0;
+                return ` ${context.label}: ${context.parsed} (${pct}%)`;
               }
             }
           }
@@ -858,24 +866,12 @@ function renderUserCharts(s) {
     });
   }
 
-  // 🔹 3. BAR CHART: Key Compliance Metrics (with color-coded bars)
-  const barCanvas = document.getElementById('uChartBar');
-  if (barCanvas) {
+  // 📊 CHART 3: Key Compliance Metrics (Bar - Enhanced)
+  const bc = document.getElementById('uChartBar');
+  if (bc) {
     const lc = getLeaveComplianceStatus(s);
     const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
-    
-    const barLabels = [
-      'License\n(Owner)', 
-      'Timely\nSalary', 
-      'POSH\nSessions', 
-      'PF\nMonthly', 
-      'PF\nCapped', 
-      'Leave\nCompliant', 
-      'Salary\nRestructd', 
-      'HR Policy\nUpdated'
-    ];
-    
-    const barValues = [
+    const vals = [
       s.sa2 === 'Yes' ? 100 : 0,
       s.sb5 === 'Yes' ? 100 : 0,
       (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc3 === 'Yes' ? 100 : 0) : 100,
@@ -885,176 +881,155 @@ function renderUserCharts(s) {
       s.sf3 === 'Yes' ? 100 : 0,
       s.sg1 === 'Yes' ? 100 : s.sg1 === 'Partial' ? 60 : 0,
     ];
+    const barColors = vals.map(v => v >= 80 ? C.green : v >= 50 ? C.gold : C.red);
     
-    // Color each bar based on score
-    const barColors = barValues.map(v => 
-      v >= 80 ? C.green : v >= 50 ? C.gold : C.red
-    );
-    
-    uCharts.bar = new Chart(barCanvas, {
+    uCharts.bar = new Chart(bc, {
       type: 'bar',
       data: {
-        labels: barLabels,
+        labels: ['License\n(Owner)', 'Timely\nSalary', 'POSH\nSessions', 'PF\nMonthly', 'PF\nCapped', 'Leave\nCompliant', 'Salary\nRestructd', 'HR Policy\nUpdated'],
         datasets: [{
           label: 'Score %',
-          data: barValues,
+          data: vals,
           backgroundColor: barColors,
-          borderColor: barColors.map(c => c.replace(')', ', 0.8)').replace('rgb', 'rgba')),
+          borderColor: barColors.map(c => c + 'cc'),
           borderWidth: 1,
-          borderRadius: 8,
+          borderRadius: 8, 
           borderSkipped: false,
-          barPercentage: 0.7,
-          categoryPercentage: 0.8
+          hoverBorderColor: '#fff',
+          hoverBorderWidth: 2
         }]
       },
       options: {
-        responsive: true,
+        responsive: true, 
         maintainAspectRatio: false,
-        plugins: {
+        plugins: { 
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(20, 24, 40, 0.95)',
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
             titleColor: '#fff',
-            bodyColor: '#e5e7eb',
+            bodyColor: '#fff',
             borderColor: C.gold,
-            borderWidth: 1,
-            padding: 10,
+            borderWidth: 2,
+            padding: 12,
             callbacks: {
               label: function(context) {
-                const val = context.parsed.y;
-                const status = val >= 80 ? '✅ Excellent' : val >= 50 ? '⚠️ Needs Work' : '❌ Critical';
-                return ` ${context.dataset.label}: ${val}% ${status}`;
+                return ` ${context.dataset.label}: ${context.parsed.y}%`;
               }
             }
           }
         },
         scales: {
-          x: {
+          x: { 
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 7, weight: '500' },
-              maxRotation: 50,
-              minRotation: 50
+              font: { family: ff, size: 8, weight: '500' },
+              padding: 4
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
             },
-            grid: { color: grid, display: false },
-            border: { color: tick }
+            border: { color: grid }
           },
-          y: {
-            min: 0,
-            max: 100,
+          y: { 
             ticks: { 
               color: tick, 
               font: { family: ff, size: 9 },
               callback: function(value) { return value + '%'; },
-              stepSize: 25
-            },
-            grid: { color: grid },
-            border: { color: tick }
+              padding: 8
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
+            }, 
+            border: { color: grid },
+            beginAtZero: true, 
+            max: 100,
+            title: {
+              display: true,
+              text: 'Score %',
+              color: tick,
+              font: { family: ff, size: 10, weight: '600' }
+            }
           }
         }
       }
     });
   }
 
-  // 🔹 4. POLAR AREA: HR Governance Score (with proper gradients & labels)
-  const polarCanvas = document.getElementById('uChartPolar');
-  if (polarCanvas) {
-    const poshAware = (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc3 === 'Yes' ? 100 : 0) : 100;
-    const icFormed  = (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc4 === 'Yes' ? 100 : 0) : 100;
-    const poshReturn= (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc5 === 'Yes' ? 100 : 0) : 100;
-    const hrUpdated = s.sg1 === 'Yes' ? 100 : s.sg1 === 'Partial' ? 60 : 0;
-    const salaryRestruct = s.sf3 === 'Yes' ? 100 : 0;
+  // 🎯 CHART 4: HR Governance Score (Polar - Enhanced)
+  const pc = document.getElementById('uChartPolar');
+  if (pc) {
+    const polarData = [
+      (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc3 === 'Yes' ? 100 : 0) : 100,
+      (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc4 === 'Yes' ? 100 : 0) : 100,
+      (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc5 === 'Yes' ? 100 : 0) : 100,
+      s.sg1 === 'Yes' ? 100 : s.sg1 === 'Partial' ? 60 : 0,
+      s.sf3 === 'Yes' ? 100 : 0,
+    ];
+    const polarColors = [C.gold+'88', C.blue+'88', C.green+'88', C.purple+'88', C.green+'66'];
+    const polarLabels = ['POSH Awareness', 'IC Committee', 'POSH Return', 'HR Updated', 'Salary Restructd'];
     
-    const polarData = [poshAware, icFormed, poshReturn, hrUpdated, salaryRestruct];
-    const polarColors = polarData.map(v => {
-      const baseColor = v >= 80 ? C.green : v >= 50 ? C.gold : C.red;
-      return baseColor + (v >= 80 ? '99' : v >= 50 ? '77' : '55'); // opacity based on score
-    });
-    
-    uCharts.polar = new Chart(polarCanvas, {
+    uCharts.polar = new Chart(pc, {
       type: 'polarArea',
       data: {
-        labels: ['POSH Awareness', 'IC Committee', 'POSH Return', 'HR Updated', 'Salary Restruct'],
+        labels: polarLabels,
         datasets: [{
           data: polarData,
           backgroundColor: polarColors,
-          borderColor: '#fff',
-          borderWidth: 2,
-          hoverBorderColor: C.gold,
+          borderWidth: 0,
+          hoverBorderColor: '#fff',
           hoverBorderWidth: 3
         }]
       },
       options: {
-        responsive: true,
+        responsive: true, 
         maintainAspectRatio: false,
-        scales: {
-          r: {
-            min: 0,
-            max: 100,
+        scales: { 
+          r: { 
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 8 },
+              font: { family: ff, size: 9 }, 
               backdropColor: 'transparent',
-              callback: function(value) { return value + '%'; },
-              stepSize: 25
-            },
-            grid: { color: grid },
+              callback: function(value) { return value + '%'; }
+            }, 
+            grid: { color: grid }, 
+            min: 0, 
+            max: 100,
             pointLabels: {
               color: tick,
-              font: { family: ff, size: 8, weight: '500' },
-              padding: 8
-            },
-            angleLines: { color: grid },
-            border: { color: tick }
-          }
+              font: { family: ff, size: 9, weight: '500' }
+            }
+          } 
         },
-        plugins: {
+        plugins: { 
           legend: { 
             position: 'bottom', 
             labels: { 
               color: tick, 
-              font: { family: ff, size: 8, weight: '500' }, 
-              padding: 6,
-              boxWidth: 10
+              font: { family: ff, size: 9, weight: '500' }, 
+              padding: 10,
+              usePointStyle: true,
+              pointStyle: 'circle'
             } 
           },
           tooltip: {
-            backgroundColor: 'rgba(20, 24, 40, 0.95)',
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
             titleColor: '#fff',
-            bodyColor: '#e5e7eb',
+            bodyColor: '#fff',
             borderColor: C.gold,
-            borderWidth: 1,
-            padding: 10,
+            borderWidth: 2,
+            padding: 12,
             callbacks: {
               label: function(context) {
-                const val = context.parsed.r;
-                const status = val >= 80 ? '✅ Compliant' : val >= 50 ? '⚠️ Partial' : '❌ Gap';
-                return ` ${context.label}: ${val}% ${status}`;
+                return ` ${context.label}: ${context.parsed}%`;
               }
             }
           }
-        },
-        animation: {
-          animateRotate: true,
-          animateScale: true
         }
       }
     });
   }
-
-  // 🎨 Add chart container hover effects for better UX
-  document.querySelectorAll('.chart-tile').forEach(tile => {
-    tile.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
-    tile.style.cursor = 'default';
-    tile.addEventListener('mouseenter', function() {
-      this.style.transform = 'translateY(-2px)';
-      this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.12)';
-    });
-    tile.addEventListener('mouseleave', function() {
-      this.style.transform = 'translateY(0)';
-      this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-    });
-  });
 }
 
 // ===== ADMIN DASHBOARD =====
@@ -1118,22 +1093,25 @@ function renderAdminSidebar() {
 }
 
 // ===== ADMIN CHARTS =====
+// ===== ADMIN CHARTS =====
 function renderAdminCharts(data) {
   const tick = getTickColor();
   const grid = getGridColor();
   const ff   = 'Syne';
   const C    = getColors();
 
+  // Destroy existing charts
   Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
   charts = {};
   if (!data.length) return;
 
   const pct = (fn) => data.length ? Math.round(fn(data) / data.length * 100) : 0;
 
+  // 📈 CHART 1: Overall Statutory Compliance % (LINE CHART - Changed from Bar)
   const bc = document.getElementById('adminChartBar');
   if (bc) {
-    const labels = ['Owner\nLicense','Diwali\nBonus','POSH\nAware','POSH\nIC','POSH\nSessions','PF\nMonthly','PF\nCapped','Leaves\nCompliant','ESI\nAware','HR\nUpdated','Salary\nRestructd'];
-    const barVals = [
+    const labels = ['Owner\nLicense', 'Diwali\nBonus', 'POSH\nAware', 'POSH\nIC', 'POSH\nSessions', 'PF\nMonthly', 'PF\nCapped', 'Leaves\nCompliant', 'ESI\nAware', 'HR\nUpdated', 'Salary\nRestructd'];
+    const lineVals = [
       pct(d => d.filter(s => s.sa2 === 'Yes').length),
       pct(d => d.filter(s => s.sb1 === 'Yes').length),
       pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes').length),
@@ -1146,73 +1124,311 @@ function renderAdminCharts(data) {
       pct(d => d.filter(s => s.sg1 === 'Yes' || s.sg1 === 'Partial').length),
       pct(d => d.filter(s => s.sf3 === 'Yes').length),
     ];
+    
     charts.bar = new Chart(bc, {
-      type: 'bar',
+      type: 'line',
       data: {
-        labels,
-        datasets: [{ label: '% Compliant', data: barVals, backgroundColor: barVals.map(v => v >= 70 ? C.green : v >= 40 ? C.gold : C.red), borderRadius: 7, borderSkipped: false }]
+        labels: labels,
+        datasets: [{ 
+          label: '% Compliant', 
+          data: lineVals, 
+          borderColor: C.gold,
+          backgroundColor: C.gold + '33',
+          borderWidth: 3,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: C.gold,
+          pointBorderWidth: 2.5,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          pointHoverBackgroundColor: C.gold,
+          pointHoverBorderColor: '#fff',
+          fill: true,
+          tension: 0.35,
+          cubicInterpolationMode: 'monotone'
+        }]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        responsive: true, 
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
         scales: {
-          x: { ticks: { color: tick, font: { family: ff, size: 8 } }, grid: { color: grid } },
-          y: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid }, beginAtZero: true, max: 100 }
+          x: { 
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 8, weight: '600' },
+              padding: 6
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
+            },
+            border: { color: grid }
+          },
+          y: { 
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 9 },
+              callback: function(value) { return value + '%'; },
+              padding: 8
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
+            }, 
+            border: { color: grid },
+            beginAtZero: true, 
+            max: 100,
+            title: {
+              display: true,
+              text: 'Compliance %',
+              color: tick,
+              font: { family: ff, size: 10, weight: '600' }
+            }
+          }
+        },
+        plugins: {
+          legend: { 
+            display: true, 
+            position: 'bottom', 
+            labels: { 
+              color: tick, 
+              font: { family: ff, size: 10, weight: '600' },
+              padding: 15,
+              usePointStyle: true,
+              pointStyle: 'circle'
+            } 
+          },
+          tooltip: {
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
+            titleColor: '#fff',
+            titleFont: { family: ff, size: 12, weight: '700' },
+            bodyColor: '#fff',
+            bodyFont: { family: ff, size: 11 },
+            borderColor: C.gold,
+            borderWidth: 2,
+            padding: 12,
+            displayColors: true,
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.y}%`;
+              },
+              title: function(context) {
+                return context[0].label;
+              }
+            }
+          }
+        },
+        elements: {
+          line: {
+            borderCapStyle: 'round',
+            borderJoinStyle: 'round'
+          },
+          point: {
+            hitRadius: 10
+          }
         }
       }
     });
   }
 
+  // 🍩 CHART 2: Establishment Type Distribution (Doughnut - Enhanced)
   const dc = document.getElementById('adminChartDough');
   if (dc) {
-    const cnt = {}; data.forEach(s => { if (s.sa1) cnt[s.sa1] = (cnt[s.sa1] || 0) + 1; });
+    const cnt = {}; 
+    data.forEach(s => { if (s.sa1) cnt[s.sa1] = (cnt[s.sa1] || 0) + 1; });
     const lbls = Object.keys(cnt).length ? Object.keys(cnt) : ['No Data'];
     const vals = Object.keys(cnt).length ? Object.values(cnt) : [1];
+    const doughColors = [C.gold, C.green, C.blue, C.purple, C.red];
+    
     charts.dough = new Chart(dc, {
       type: 'doughnut',
-      data: { labels: lbls, datasets: [{ data: vals, backgroundColor: [C.gold, C.green, C.blue, C.purple, C.red], borderWidth: 0, hoverOffset: 12 }] },
-      options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: tick, font: { family: ff, size: 11 }, padding: 10 } } } }
+      data: { 
+        labels: lbls, 
+        datasets: [{ 
+          data: vals, 
+          backgroundColor: doughColors, 
+          borderWidth: 0, 
+          hoverOffset: 12,
+          hoverBorderColor: '#fff',
+          hoverBorderWidth: 3
+        }] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '68%', 
+        plugins: { 
+          legend: { 
+            position: 'bottom', 
+            labels: { 
+              color: tick, 
+              font: { family: ff, size: 11, weight: '500' }, 
+              padding: 12,
+              usePointStyle: true,
+              pointStyle: 'circle'
+            } 
+          },
+          tooltip: {
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: C.gold,
+            borderWidth: 2,
+            padding: 12,
+            callbacks: {
+              label: function(context) {
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? Math.round((context.parsed * 100) / total) : 0;
+                return ` ${context.label}: ${context.parsed} (${pct}%)`;
+              }
+            }
+          }
+        } 
+      }
     });
   }
 
+  // 📊 CHART 3: Company Size Breakdown (Bar - Enhanced)
   const ec = document.getElementById('adminChartEmp');
   if (ec) {
     const sizes = ['1–10','11–20','21–50','51–100','101–150','151–200','201–300','301–400','401–500','500+'];
-    const cnt = {}; sizes.forEach(s => cnt[s] = 0); data.forEach(s => { if (s.employees) cnt[s.employees] = (cnt[s.employees] || 0) + 1; });
+    const cnt = {}; 
+    sizes.forEach(s => cnt[s] = 0); 
+    data.forEach(s => { if (s.employees) cnt[s.employees] = (cnt[s.employees] || 0) + 1; });
+    
     charts.emp = new Chart(ec, {
       type: 'bar',
-      data: { labels: sizes, datasets: [{ label: 'Companies', data: sizes.map(s => cnt[s]), backgroundColor: C.blue + 'cc', borderRadius: 7, borderSkipped: false }] },
+      data: { 
+        labels: sizes, 
+        datasets: [{ 
+          label: 'Companies', 
+          data: sizes.map(s => cnt[s]), 
+          backgroundColor: C.blue + 'cc', 
+          borderColor: C.blue + '99',
+          borderWidth: 1,
+          borderRadius: 8, 
+          borderSkipped: false,
+          hoverBorderColor: '#fff',
+          hoverBorderWidth: 2
+        }] 
+      },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: C.gold,
+            borderWidth: 2,
+            padding: 12,
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.y} companies`;
+              }
+            }
+          }
+        },
         scales: {
-          x: { ticks: { color: tick, font: { family: ff, size: 8 } }, grid: { color: grid } },
-          y: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid }, beginAtZero: true }
+          x: { 
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 8, weight: '500' },
+              padding: 4
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
+            },
+            border: { color: grid }
+          },
+          y: { 
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 9 },
+              padding: 8
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
+            }, 
+            border: { color: grid },
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Number of Companies',
+              color: tick,
+              font: { family: ff, size: 10, weight: '600' }
+            }
+          }
         }
       }
     });
   }
 
+  // 🥧 CHART 4: POSH Policy Coverage (Pie - Enhanced)
   const pieC = document.getElementById('adminChartPie');
   if (pieC) {
+    const pieData = [
+      pct(d => d.filter(s => s.sg1 === 'Yes').length),
+      pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes').length),
+      pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc3 === 'Yes').length),
+      pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc5 === 'Yes').length),
+    ];
+    const pieLabels = ['HR Policy Updated', 'POSH IC Formed', 'POSH Sessions Done', 'POSH Return Filed'];
+    const pieColors = [C.green, C.blue, C.gold, C.purple];
+    
     charts.pie = new Chart(pieC, {
       type: 'pie',
       data: {
-        labels: ['HR Policy Updated', 'POSH IC Formed', 'POSH Sessions Done', 'POSH Return Filed'],
+        labels: pieLabels,
         datasets: [{
-          data: [
-            pct(d => d.filter(s => s.sg1 === 'Yes').length),
-            pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes').length),
-            pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc3 === 'Yes').length),
-            pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc5 === 'Yes').length),
-          ],
-          backgroundColor: [C.green, C.blue, C.gold, C.purple], borderWidth: 0, hoverOffset: 10,
+          data: pieData,
+          backgroundColor: pieColors, 
+          borderWidth: 0, 
+          hoverOffset: 10,
+          hoverBorderColor: '#fff',
+          hoverBorderWidth: 3
         }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: tick, font: { family: ff, size: 10 }, padding: 10 } } } }
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { 
+          legend: { 
+            position: 'bottom', 
+            labels: { 
+              color: tick, 
+              font: { family: ff, size: 10, weight: '500' }, 
+              padding: 12,
+              usePointStyle: true,
+              pointStyle: 'circle'
+            } 
+          },
+          tooltip: {
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: C.gold,
+            borderWidth: 2,
+            padding: 12,
+            callbacks: {
+              label: function(context) {
+                return ` ${context.label}: ${context.parsed}%`;
+              }
+            }
+          }
+        } 
+      }
     });
   }
 
+  // 📊 CHART 5: Compliance Score Distribution (Bar - Enhanced)
   const sc = document.getElementById('adminChartScore');
   if (sc) {
     const ranges = { '0–20%': 0, '21–40%': 0, '41–60%': 0, '61–80%': 0, '81–100%': 0 };
@@ -1224,39 +1440,162 @@ function renderAdminCharts(data) {
       else if (v <= 80) ranges['61–80%']++;
       else ranges['81–100%']++;
     });
+    const rangeColors = [C.red, C.red+'cc', C.gold, C.green+'cc', C.green];
+    
     charts.score = new Chart(sc, {
       type: 'bar',
-      data: { labels: Object.keys(ranges), datasets: [{ label: 'Companies', data: Object.values(ranges), backgroundColor: [C.red, C.red+'cc', C.gold, C.green+'cc', C.green], borderRadius: 7, borderSkipped: false }] },
+      data: { 
+        labels: Object.keys(ranges), 
+        datasets: [{ 
+          label: 'Companies', 
+          data: Object.values(ranges), 
+          backgroundColor: rangeColors, 
+          borderColor: rangeColors.map(c => c + '99'),
+          borderWidth: 1,
+          borderRadius: 8, 
+          borderSkipped: false,
+          hoverBorderColor: '#fff',
+          hoverBorderWidth: 2
+        }] 
+      },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: C.gold,
+            borderWidth: 2,
+            padding: 12,
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.y} companies`;
+              }
+            }
+          }
+        },
         scales: {
-          x: { ticks: { color: tick, font: { family: ff, size: 10 } }, grid: { color: grid } },
-          y: { ticks: { color: tick, font: { family: ff, size: 10 } }, grid: { color: grid }, beginAtZero: true }
+          x: { 
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 10, weight: '500' },
+              padding: 4
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
+            },
+            border: { color: grid }
+          },
+          y: { 
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 10 },
+              padding: 8
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
+            }, 
+            border: { color: grid },
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Number of Companies',
+              color: tick,
+              font: { family: ff, size: 10, weight: '600' }
+            }
+          }
         }
       }
     });
   }
 
+  // 📊 CHART 6: Industry-wise Submissions (Horizontal Bar - Enhanced)
   const ic = document.getElementById('adminChartIndustry');
   if (ic) {
-    const cnt = {}; data.forEach(s => { if (s.field) cnt[s.field] = (cnt[s.field] || 0) + 1; });
+    const cnt = {}; 
+    data.forEach(s => { if (s.field) cnt[s.field] = (cnt[s.field] || 0) + 1; });
     const lbls = Object.keys(cnt).length ? Object.keys(cnt) : ['No Data'];
     const vals = Object.keys(cnt).length ? Object.values(cnt) : [0];
+    
     charts.ind = new Chart(ic, {
       type: 'bar',
-      data: { labels: lbls, datasets: [{ label: 'Submissions', data: vals, backgroundColor: C.purple + 'cc', borderRadius: 7, borderSkipped: false }] },
+      data: { 
+        labels: lbls, 
+        datasets: [{ 
+          label: 'Submissions', 
+          data: vals, 
+          backgroundColor: C.purple + 'cc', 
+          borderColor: C.purple + '99',
+          borderWidth: 1,
+          borderRadius: 8, 
+          borderSkipped: false,
+          hoverBorderColor: '#fff',
+          hoverBorderWidth: 2
+        }] 
+      },
       options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        indexAxis: 'y', 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(14, 16, 24, 0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: C.gold,
+            borderWidth: 2,
+            padding: 12,
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.x} submissions`;
+              }
+            }
+          }
+        },
         scales: {
-          x: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid }, beginAtZero: true },
-          y: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid } }
+          x: { 
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 9 },
+              padding: 8
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
+            }, 
+            border: { color: grid },
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Submissions',
+              color: tick,
+              font: { family: ff, size: 10, weight: '600' }
+            }
+          },
+          y: { 
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 9, weight: '500' },
+              padding: 4
+            }, 
+            grid: { 
+              color: grid,
+              drawBorder: false
+            },
+            border: { color: grid }
+          }
         }
       }
     });
   }
 
+  // 📊 CHART 7: State-wise Leave Compliance (Bar - Enhanced)
   const lc = document.getElementById('adminChartLeave');
   if (lc) {
     const stateData = {};
@@ -1279,16 +1618,86 @@ function renderAdminCharts(data) {
         data: {
           labels: stateLabels,
           datasets: [
-            { label: 'Avg Total Leaves Given', data: givenVals, backgroundColor: C.blue + 'bb', borderRadius: 5, borderSkipped: false },
-            { label: 'Total Required (Law)', data: reqVals, backgroundColor: C.gold + 'bb', borderRadius: 5, borderSkipped: false },
+            { 
+              label: 'Avg Total Leaves Given', 
+              data: givenVals, 
+              backgroundColor: C.blue + 'bb', 
+              borderColor: C.blue + '99',
+              borderWidth: 1,
+              borderRadius: 6, 
+              borderSkipped: false 
+            },
+            { 
+              label: 'Total Required (Law)', 
+              data: reqVals, 
+              backgroundColor: C.gold + 'bb', 
+              borderColor: C.gold + '99',
+              borderWidth: 1,
+              borderRadius: 6, 
+              borderSkipped: false 
+            },
           ]
         },
         options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'top', labels: { color: tick, font: { family: ff, size: 10 } } } },
+          responsive: true, 
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { 
+              position: 'top', 
+              labels: { 
+                color: tick, 
+                font: { family: ff, size: 10, weight: '600' },
+                padding: 12,
+                usePointStyle: true,
+                pointStyle: 'circle'
+              } 
+            },
+            tooltip: {
+              backgroundColor: 'rgba(14, 16, 24, 0.95)',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+              borderColor: C.gold,
+              borderWidth: 2,
+              padding: 12,
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.dataset.label}: ${context.parsed.y} days`;
+                }
+              }
+            }
+          },
           scales: {
-            x: { ticks: { color: tick, font: { family: ff, size: 8 } }, grid: { color: grid } },
-            y: { ticks: { color: tick, font: { family: ff, size: 9 } }, grid: { color: grid }, beginAtZero: true }
+            x: { 
+              ticks: { 
+                color: tick, 
+                font: { family: ff, size: 8, weight: '500' },
+                padding: 4
+              }, 
+              grid: { 
+                color: grid,
+                drawBorder: false
+              },
+              border: { color: grid }
+            },
+            y: { 
+              ticks: { 
+                color: tick, 
+                font: { family: ff, size: 9 },
+                padding: 8
+              }, 
+              grid: { 
+                color: grid,
+                drawBorder: false
+              }, 
+              border: { color: grid },
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Number of Days',
+                color: tick,
+                font: { family: ff, size: 10, weight: '600' }
+              }
+            }
           }
         }
       });

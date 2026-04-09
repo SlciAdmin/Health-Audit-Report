@@ -682,6 +682,7 @@ function ynHtml(v) {
 // ===== USER CHARTS =====
 // ===== USER CHARTS =====
 // ===== USER CHARTS =====
+// ===== USER CHARTS =====
 function renderUserCharts(s) {
   const tick = getTickColor();
   const grid = getGridColor();
@@ -729,10 +730,10 @@ function renderUserCharts(s) {
         },
         layout: {
           padding: {
-            top: 10,
-            bottom: 10,
-            left: 5,
-            right: 5
+            top: 20,      // ✅ Increased from 10
+            bottom: 20,   // ✅ Increased from 10
+            left: 10,
+            right: 10
           }
         },
         scales: {
@@ -744,8 +745,8 @@ function renderUserCharts(s) {
             },
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 9.5, weight: '600' },
-              padding: 10,
+              font: { family: ff, size: 10, weight: '600' }, // ✅ Increased from 9.5
+              padding: 12,  // ✅ Increased from 10
               maxRotation: 0,
               autoSkip: true,
               maxTicksLimit: 8
@@ -762,10 +763,10 @@ function renderUserCharts(s) {
             },
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 10 }, 
+              font: { family: ff, size: 11 }, // ✅ Increased from 10
               stepSize: 20,
               callback: function(value) { return value + '%'; },
-              padding: 10,
+              padding: 12,  // ✅ Increased from 10
               autoSkip: true,
               maxTicksLimit: 6
             },
@@ -774,8 +775,8 @@ function renderUserCharts(s) {
               display: true,
               text: 'Score %',
               color: tick,
-              font: { family: ff, size: 11, weight: '700' },
-              padding: { top: 10 }
+              font: { family: ff, size: 12, weight: '700' }, // ✅ Increased from 11
+              padding: { top: 15 } // ✅ Increased from 10
             }
           }
         },
@@ -859,13 +860,13 @@ function renderUserCharts(s) {
       options: {
         responsive: true, 
         maintainAspectRatio: false, 
-        cutout: '70%',
+        cutout: '60%',  // ✅ Changed from 70% to 60% for better visibility
         plugins: { 
           legend: { 
             position: 'bottom', 
             labels: { 
               color: tick, 
-              font: { family: ff, size: 10, weight: '500' }, 
+              font: { family: ff, size: 11, weight: '500' }, // ✅ Increased from 10
               padding: 12,
               usePointStyle: true,
               pointStyle: 'circle'
@@ -949,8 +950,8 @@ function renderUserCharts(s) {
           x: { 
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 8.5, weight: '500' },
-              padding: 8
+              font: { family: ff, size: 9, weight: '500' }, // ✅ Increased from 8.5
+              padding: 10  // ✅ Increased from 8
             }, 
             grid: { 
               color: grid,
@@ -961,9 +962,9 @@ function renderUserCharts(s) {
           y: { 
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 9 },
+              font: { family: ff, size: 10 }, // ✅ Increased from 9
               callback: function(value) { return value + '%'; },
-              padding: 8
+              padding: 10  // ✅ Increased from 8
             }, 
             grid: { 
               color: grid,
@@ -976,7 +977,8 @@ function renderUserCharts(s) {
               display: true,
               text: 'Score %',
               color: tick,
-              font: { family: ff, size: 10, weight: '600' }
+              font: { family: ff, size: 11, weight: '600' }, // ✅ Increased from 10
+              padding: { top: 12 }  // ✅ Added
             }
           }
         }
@@ -1016,19 +1018,20 @@ function renderUserCharts(s) {
           r: { 
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 9 }, 
+              font: { family: ff, size: 10 }, // ✅ Increased from 9
               backdropColor: 'transparent',
               callback: function(value) { return value + '%'; },
               stepSize: 25,
-              maxTicksLimit: 5
+              maxTicksLimit: 5,
+              padding: 8  // ✅ Added
             }, 
             grid: { color: grid }, 
             min: 0, 
             max: 100,
             pointLabels: {
               color: tick,
-              font: { family: ff, size: 9.5, weight: '500' },
-              padding: 10
+              font: { family: ff, size: 10, weight: '500' }, // ✅ Increased from 9.5
+              padding: 12  // ✅ Increased from 10
             }
           } 
         },
@@ -1037,8 +1040,8 @@ function renderUserCharts(s) {
             position: 'bottom', 
             labels: { 
               color: tick, 
-              font: { family: ff, size: 9, weight: '500' }, 
-              padding: 10,
+              font: { family: ff, size: 10, weight: '500' }, // ✅ Increased from 9
+              padding: 12,
               usePointStyle: true,
               pointStyle: 'circle'
             } 
@@ -1187,10 +1190,10 @@ function renderAdminCharts(data) {
         },
         layout: {
           padding: {
-            top: 10,
-            bottom: 10,
-            left: 5,
-            right: 5
+            top: 20,      // ✅ Increased from 10
+            bottom: 20,   // ✅ Increased from 10
+            left: 10,
+            right: 10
           }
         },
         scales: {
@@ -1202,8 +1205,8 @@ function renderAdminCharts(data) {
             },
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 9, weight: '600' },
-              padding: 10,
+              font: { family: ff, size: 10, weight: '600' }, // ✅ Increased from 9
+              padding: 12,  // ✅ Increased from 10
               maxRotation: 45,
               minRotation: 45,
               autoSkip: true,
@@ -1221,9 +1224,9 @@ function renderAdminCharts(data) {
             },
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 10 },
+              font: { family: ff, size: 11 }, // ✅ Increased from 10
               callback: function(value) { return value + '%'; },
-              padding: 10,
+              padding: 12,  // ✅ Increased from 10
               stepSize: 20,
               autoSkip: true,
               maxTicksLimit: 6
@@ -1233,8 +1236,8 @@ function renderAdminCharts(data) {
               display: true,
               text: 'Compliance %',
               color: tick,
-              font: { family: ff, size: 11, weight: '700' },
-              padding: { top: 10 }
+              font: { family: ff, size: 12, weight: '700' }, // ✅ Increased from 11
+              padding: { top: 15 } // ✅ Increased from 10
             }
           }
         },
@@ -1313,7 +1316,7 @@ function renderAdminCharts(data) {
       options: { 
         responsive: true, 
         maintainAspectRatio: false, 
-        cutout: '68%', 
+        cutout: '60%',  // ✅ Changed from 68% to 60% for better visibility
         plugins: { 
           legend: { 
             position: 'bottom', 
@@ -1394,32 +1397,27 @@ function renderAdminCharts(data) {
           x: { 
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 8.5, weight: '500' },
-              padding: 8
+              font: { family: ff, size: 9, weight: '500' }, // ✅ Slightly increased
+              padding: 10
             }, 
-            grid: { 
-              color: grid,
-              drawBorder: false
-            },
+            grid: { color: grid, drawBorder: false },
             border: { color: grid }
           },
           y: { 
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 9 },
-              padding: 8
+              font: { family: ff, size: 10 }, // ✅ Increased
+              padding: 10
             }, 
-            grid: { 
-              color: grid,
-              drawBorder: false
-            }, 
+            grid: { color: grid, drawBorder: false }, 
             border: { color: grid },
             beginAtZero: true,
             title: {
               display: true,
               text: 'Number of Companies',
               color: tick,
-              font: { family: ff, size: 10, weight: '600' }
+              font: { family: ff, size: 11, weight: '600' }, // ✅ Increased
+              padding: { top: 12 }
             }
           }
         }
@@ -1540,31 +1538,26 @@ function renderAdminCharts(data) {
             ticks: { 
               color: tick, 
               font: { family: ff, size: 10, weight: '500' },
-              padding: 8
+              padding: 10
             }, 
-            grid: { 
-              color: grid,
-              drawBorder: false
-            },
+            grid: { color: grid, drawBorder: false },
             border: { color: grid }
           },
           y: { 
             ticks: { 
               color: tick, 
               font: { family: ff, size: 10 },
-              padding: 8
+              padding: 10
             }, 
-            grid: { 
-              color: grid,
-              drawBorder: false
-            }, 
+            grid: { color: grid, drawBorder: false }, 
             border: { color: grid },
             beginAtZero: true,
             title: {
               display: true,
               text: 'Number of Companies',
               color: tick,
-              font: { family: ff, size: 10, weight: '600' }
+              font: { family: ff, size: 11, weight: '600' },
+              padding: { top: 12 }
             }
           }
         }
@@ -1623,31 +1616,26 @@ function renderAdminCharts(data) {
             ticks: { 
               color: tick, 
               font: { family: ff, size: 9 },
-              padding: 8
+              padding: 10
             }, 
-            grid: { 
-              color: grid,
-              drawBorder: false
-            }, 
+            grid: { color: grid, drawBorder: false }, 
             border: { color: grid },
             beginAtZero: true,
             title: {
               display: true,
               text: 'Submissions',
               color: tick,
-              font: { family: ff, size: 10, weight: '600' }
+              font: { family: ff, size: 10, weight: '600' },
+              padding: { top: 12 }
             }
           },
           y: { 
             ticks: { 
               color: tick, 
               font: { family: ff, size: 9, weight: '500' },
-              padding: 4
+              padding: 6
             }, 
-            grid: { 
-              color: grid,
-              drawBorder: false
-            },
+            grid: { color: grid, drawBorder: false },
             border: { color: grid }
           }
         }
@@ -1734,32 +1722,27 @@ function renderAdminCharts(data) {
             x: { 
               ticks: { 
                 color: tick, 
-                font: { family: ff, size: 8.5, weight: '500' },
-                padding: 8
+                font: { family: ff, size: 9, weight: '500' },
+                padding: 10
               }, 
-              grid: { 
-                color: grid,
-                drawBorder: false
-              },
+              grid: { color: grid, drawBorder: false },
               border: { color: grid }
             },
             y: { 
               ticks: { 
                 color: tick, 
-                font: { family: ff, size: 9 },
-                padding: 8
+                font: { family: ff, size: 10 },
+                padding: 10
               }, 
-              grid: { 
-                color: grid,
-                drawBorder: false
-              }, 
+              grid: { color: grid, drawBorder: false }, 
               border: { color: grid },
               beginAtZero: true,
               title: {
                 display: true,
                 text: 'Number of Days',
                 color: tick,
-                font: { family: ff, size: 10, weight: '600' }
+                font: { family: ff, size: 11, weight: '600' },
+                padding: { top: 12 }
               }
             }
           }

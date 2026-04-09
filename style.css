@@ -763,8 +763,8 @@ tr:hover td { background: var(--bg3); }
 /* ===== CHART CONTAINERS ===== */
 .ct-body {
   position: relative;
-  height: 280px !important;
-  min-height: 280px;
+  height: 350px !important;
+  min-height: 350px;
 }
 
 .chart-tile {
@@ -774,6 +774,7 @@ tr:hover td { background: var(--bg3); }
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+   min-height: 380px; 
 }
 
 .chart-tile:hover {
@@ -828,4 +829,14 @@ canvas#lineChart, canvas#adminChartBar {
   .ct-title {
     font-size: 0.9rem;
   }
+}
+/* Add to style.css */
+.chart-tile {
+    min-height: 380px; /* Ensure minimum height */
+}
+
+@media (max-width: 768px) {
+    .ct-body {
+        height: 300px !important; /* Better mobile height */
+    }
 }

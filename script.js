@@ -1,11 +1,7 @@
 // ============================================================
 // LABOURSHIELD — script.js FINAL VERSION (MODIFIED B5, C, D)
-// Simplified Leave Input - Single Total Leaves Field
-// Detailed Leave Compliance shown ONLY in Admin Dashboard/Report
-// User Dashboard: Score → Charts → Gaps → Details → Recommendations
-// B5: Added conditional salary date input field
-// C: Auto-fill C2-C5 as "No" if C1="No" (no female employees)
-// D: Auto-fill D2-D3 as "No" if D1="No" (no PF contribution)
+// Section C: C3-C5 visible ONLY if C1="Yes" AND C2="Yes"
+// If C1="No" OR C2="No" → C3-C5 hidden + auto-filled as "No"
 // ============================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycby7nP6aTh4rpqbTB0pZ34T4-R5kX0S4azsZqoLMI0qDcHSdPVmmIoGwM-NOmJ6HlGfpLw/exec";
@@ -112,7 +108,7 @@ function closeMobileMenu() {
   document.getElementById('mobileNavOverlay')?.classList.remove('open');
 }
 
-// ===== NEW: Toggle Salary Date Field =====
+// ===== NEW: Toggle Salary Date Field (B5) =====
 function toggleSalaryDateField(show) {
   const container = document.getElementById('sb5DateContainer');
   if (container) {
@@ -124,14 +120,36 @@ function toggleSalaryDateField(show) {
   }
 }
 
-// ===== NEW: Toggle POSH Questions (C Section) =====
-function togglePOSHQuestions(show) {
+// ===== 🔥 UPDATED: Toggle POSH Questions (C Section) - C3-C5 visible ONLY if C1="Yes" AND C2="Yes" =====
+function togglePOSHQuestions() {
+  const c1Val = getRadio('sc1');
+  const c2Val = getRadio('sc2');
   const container = document.getElementById('poshQuestions');
-  if (container) {
-    container.style.display = show ? 'block' : 'none';
-  }
-  if (!show) {
-    // Auto-fill C2-C5 as "No" when C1="No"
+  const c3c4c5Wrapper = document.getElementById('poshAdvancedQuestions'); // NEW wrapper for C3-C5
+  
+  // Show C2 only if C1="Yes", otherwise hide C2 too (optional - based on your preference)
+  const c2Block = document.querySelector('[data-qname="sc2"]')?.closest('.qblock');
+  
+  if (c1Val === 'Yes') {
+    // Show C2 question
+    if (c2Block) c2Block.style.display = 'block';
+    
+    // Show C3-C5 ONLY if C2 is also "Yes"
+    if (c2Val === 'Yes' && c3c4c5Wrapper) {
+      c3c4c5Wrapper.style.display = 'block';
+    } else if (c3c4c5Wrapper) {
+      c3c4c5Wrapper.style.display = 'none';
+      // Auto-fill C3, C4, C5 as "No" when hidden
+      ['sc3','sc4','sc5'].forEach(name => {
+        const radio = document.querySelector(`input[name="${name}"][value="No"]`);
+        if (radio) radio.checked = true;
+      });
+    }
+  } else {
+    // C1 = "No" → Hide C2 AND C3-C5, auto-fill all as "No"
+    if (c2Block) c2Block.style.display = 'none';
+    if (c3c4c5Wrapper) c3c4c5Wrapper.style.display = 'none';
+    
     ['sc2','sc3','sc4','sc5'].forEach(name => {
       const radio = document.querySelector(`input[name="${name}"][value="No"]`);
       if (radio) radio.checked = true;
@@ -182,11 +200,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   const sb5Yes = document.querySelector('input[name="sb5"][value="Yes"]');
   if (sb5Yes?.checked) toggleSalaryDateField(true);
   
-  const c1Yes = document.querySelector('input[name="sc1"][value="Yes"]');
-  if (c1Yes?.checked) togglePOSHQuestions(true);
+  // Initialize POSH questions with NEW logic
+  const c1Val = getRadio('sc1');
+  const c2Val = getRadio('sc2');
+  if (c1Val || c2Val) togglePOSHQuestions();
   
   const d1Yes = document.querySelector('input[name="sd1"][value="Yes"]');
   if (d1Yes?.checked) togglePFQuestions(true);
+  
+  // Add event listeners for C1 and C2 to trigger POSH logic
+  document.querySelectorAll('input[name="sc1"], input[name="sc2"]').forEach(radio => {
+    radio.addEventListener('change', togglePOSHQuestions);
+  });
 });
 
 document.addEventListener('visibilitychange', () => {
@@ -319,6 +344,20 @@ function goPage2() {
     else if (el) el.classList.remove('error');
   });
   if (!ok) { showToast('Please fill all required fields.','red'); return; }
+  
+  // Validate required radio buttons including C1, C2
+  const requiredRadios = ['sa1','sa2','sb1','sb2','sb4','sb5','sc1','sc2','sd1','se1','se3','sf1','sf3','sg1','sh1','sh2','sh3','sh4','sh5'];
+  let missingQ = null;
+  for (const n of requiredRadios) {
+    if (!getRadio(n)) { missingQ = n; break; }
+  }
+  if (missingQ && missingQ.startsWith('sc')) {
+    // If C1 or C2 missing, scroll to Section C
+    document.querySelector('.sec-label:has([class*="sec-num"]):nth-child(3)')?.scrollIntoView({ behavior:'smooth', block:'center' });
+    showToast(`Please answer POSH question ${missingQ.toUpperCase()}`, 'red');
+    return;
+  }
+  
   document.getElementById('pg1').style.display = 'none';
   document.getElementById('pg2').style.display = 'block';
   const sd1 = document.getElementById('sd1');
@@ -368,11 +407,11 @@ function calcScore(d) {
     d.sb2 === 'Yes',
     d.sb4 === 'Yes',
     d.sb5 === 'Yes',
-    // C (4) - if C1=No, auto-score C2-C5 as compliant (N/A)
-    d.sc1 === 'No' ? true : (d.sc2 === 'Yes'),
-    d.sc1 === 'No' ? true : (d.sc3 === 'Yes'),
-    d.sc1 === 'No' ? true : (d.sc4 === 'Yes'),
-    d.sc1 === 'No' ? true : (d.sc5 === 'Yes'),
+    // C (4) - NEW LOGIC: if C1="No" OR C2="No", score C3-C5 as compliant (N/A)
+    d.sc1 === 'No' ? true : (d.sc2 === 'No' ? true : (d.sc3 === 'Yes')),
+    d.sc1 === 'No' ? true : (d.sc2 === 'No' ? true : (d.sc4 === 'Yes')),
+    d.sc1 === 'No' ? true : (d.sc2 === 'No' ? true : (d.sc5 === 'Yes')),
+    d.sc1 === 'Yes' && d.sc2 === 'Yes' ? (d.sc2 === 'Yes') : true, // C2 scored only if C1=Yes
     // D (3) - if D1=No, auto-score D2-D3 as compliant (N/A)
     d.sd1 === 'No' ? true : (d.sd3 === 'Yes'),
     d.sd1 === 'No' ? true : (d.sd2 === 'No'),
@@ -399,11 +438,22 @@ function getSectionScores(s) {
   const lc = getLeaveComplianceStatus(s);
   const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
   
-  // Section C: if C1=No, score 100% (N/A), else calculate normally
-  const cScore = s.sc1 === 'No' ? 100 : (
-    (s.sc2 === 'Yes' ? 25 : 0) + (s.sc3 === 'Yes' ? 25 : 0) + 
-    (s.sc4 === 'Yes' ? 25 : 0) + (s.sc5 === 'Yes' ? 25 : 0)
-  );
+  // Section C: NEW LOGIC
+  // If C1="No" → entire section N/A = 100%
+  // If C1="Yes" but C2="No" → C2 scored, C3-C5 N/A
+  // If C1="Yes" AND C2="Yes" → score all C2-C5 normally
+  let cScore = 0;
+  if (s.sc1 === 'No') {
+    cScore = 100; // N/A
+  } else if (s.sc2 === 'No') {
+    cScore = 25; // Only C2 answered "No", C3-C5 N/A
+  } else {
+    // C1=Yes AND C2=Yes → score C2, C3, C4, C5 normally (25% each)
+    cScore = (s.sc2 === 'Yes' ? 25 : 0) + 
+             (s.sc3 === 'Yes' ? 25 : 0) + 
+             (s.sc4 === 'Yes' ? 25 : 0) + 
+             (s.sc5 === 'Yes' ? 25 : 0);
+  }
   
   // Section D: if D1=No, score 100% (N/A), else calculate normally
   const dScore = s.sd1 === 'No' ? 100 : (
@@ -432,13 +482,19 @@ function getGaps(d) {
   if (d.sb2 !== 'Yes') gaps.push('Unaware that statutory bonus applies only to employees with wages up to ₹21,000');
   if (d.sb4 !== 'Yes') gaps.push('No structured salary format (Basic + HRA + Allowances) in place');
   if (d.sb5 !== 'Yes') gaps.push('Salaries not paid on time — must be disbursed consistently as per employment agreements and state regulations');
-  // C - Only show gaps if C1=Yes (female employees exist)
-  if (d.sc1 === 'Yes') {
-    if (d.sc2 !== 'Yes') gaps.push('Unaware of POSH Act 2013 — mandatory if female employees are employed');
+  
+  // C - NEW LOGIC: Only show POSH gaps if C1="Yes" AND C2="Yes"
+  if (d.sc1 === 'Yes' && d.sc2 === 'Yes') {
     if (d.sc3 !== 'Yes') gaps.push('Periodic POSH awareness sessions not being conducted');
     if (d.sc4 !== 'Yes') gaps.push('Internal Committee (IC) under POSH Act 2013 not yet constituted');
     if (d.sc5 !== 'Yes') gaps.push('Annual return under POSH Act 2013 not filed');
+  } else if (d.sc1 === 'Yes' && d.sc2 !== 'Yes') {
+    // C1=Yes but C2=No → show gap about unawareness of POSH Act
+    gaps.push('Employ female staff but unaware of POSH Act 2013 applicability — mandatory compliance risk');
+  } else if (d.sc1 !== 'Yes') {
+    // C1=No → no POSH gaps (N/A)
   }
+  
   // D - Only show gaps if D1=Yes (PF is contributed)
   if (d.sd1 === 'Yes') {
     if (d.sd3 !== 'Yes') gaps.push('PF contribution not capped at ₹15,000 wage ceiling — may result in excess liability');
@@ -476,6 +532,7 @@ function getRecs(gaps) {
     'POSH awareness sessions':             'Conduct POSH awareness workshop at least once annually for all staff',
     'Internal Committee':                  'Constitute Internal Committee (IC) under POSH Act with at least 50% women members',
     'Annual return under POSH':            'File Annual Return under POSH Act 2013 with the District Officer before 31st January each year',
+    'Employ female staff but unaware':     'Since you employ female staff, immediately become aware of POSH Act 2013 requirements to avoid legal penalties',
     'PF contribution not being made':      'Register under EPFO and contribute monthly — mandatory for establishments with 20+ employees',
     'PF contribution not capped':          'Cap PF contribution at ₹15,000 basic wage ceiling to control employer liability',
     'Paying PF for employees with salary': 'Review PF applicability — above ₹15,000 basic, PF may not be mandatory for new joiners',
@@ -560,7 +617,7 @@ function normaliseItem(item) {
 async function submitAudit() {
   const requiredRadios = [
     'sa1','sa2','sb1','sb2','sb4','sb5',
-    'sc1','sc2','sc3','sc4','sc5',
+    'sc1','sc2', // C1 and C2 always required
     'sd1','sd2','sd3','se1','se3',
     'sf1','sf3','sg1',
     'sh1','sh2','sh3','sh4','sh5'
@@ -597,9 +654,12 @@ async function submitAudit() {
     sb3: document.getElementById('sb3')?.value || '',
     sb4: getRadio('sb4'), sb5: getRadio('sb5'),
     sb5Date: sb5Date,
-    // C
-    sc1: getRadio('sc1'), sc2: getRadio('sc2'), sc3: getRadio('sc3'),
-    sc4: getRadio('sc4'), sc5: getRadio('sc5'),
+    // C - NEW LOGIC: C3-C5 auto-filled as "No" if not visible
+    sc1: getRadio('sc1'), 
+    sc2: getRadio('sc2'),
+    sc3: (getRadio('sc1') === 'Yes' && getRadio('sc2') === 'Yes') ? getRadio('sc3') : 'No',
+    sc4: (getRadio('sc1') === 'Yes' && getRadio('sc2') === 'Yes') ? getRadio('sc4') : 'No',
+    sc5: (getRadio('sc1') === 'Yes' && getRadio('sc2') === 'Yes') ? getRadio('sc5') : 'No',
     // D
     sd1: getRadio('sd1'), sd2: getRadio('sd2'), sd3: getRadio('sd3'),
     // E
@@ -665,7 +725,7 @@ function resetForm() {
     el.classList?.remove('error');
   });
   toggleSalaryDateField(false);
-  togglePOSHQuestions(false);
+  togglePOSHQuestions(); // Reset POSH logic
   togglePFQuestions(false);
   
   const sd1 = document.getElementById('sd1');
@@ -715,7 +775,14 @@ function renderUserDashboard() {
     else if (v === 'No') { e.textContent='No ❌'; e.className='ust-val no'; }
     else { e.textContent=v||'—'; e.className='ust-val partial'; }
   };
-  yn(s.sd1,'ustPF'); yn(s.sf1,'ustESI'); yn(s.sc4,'ustPOSH');
+  yn(s.sd1,'ustPF'); yn(s.sf1,'ustESI'); 
+  // POSH: show IC status only if applicable
+  if (s.sc1 === 'Yes' && s.sc2 === 'Yes') {
+    yn(s.sc4,'ustPOSH');
+  } else {
+    const e = document.getElementById('ustPOSH');
+    if (e) { e.textContent = 'N/A'; e.className = 'ust-val partial'; }
+  }
   yn(s.se1,'ustLeave'); yn(s.sg1,'ustHR'); yn(s.sb1,'ustBonus');
 
   renderUserCharts(s);
@@ -751,15 +818,19 @@ function renderUserDashboard() {
     ...(s.sb5 === 'Yes' && s.sb5Date ? [['Typical Salary Payment Date', s.sb5Date]] : []),
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section C - Show N/A if C1=No
+  // Section C - NEW LOGIC
   document.getElementById('udashPOSH').innerHTML = [
     ['Female Employees', s.sc1],
     ...(s.sc1 === 'Yes' ? [
       ['Aware of POSH Act 2013', s.sc2],
-      ['POSH Awareness Sessions', s.sc3],
-      ['IC Committee Formed', s.sc4],
-      ['Annual POSH Return Filed', s.sc5],
-    ] : [['POSH Compliance', 'N/A — No female employees']]),
+      ...(s.sc2 === 'Yes' ? [
+        ['POSH Awareness Sessions', s.sc3],
+        ['IC Committee Formed', s.sc4],
+        ['Annual POSH Return Filed', s.sc5],
+      ] : [])
+    ] : []),
+    ...(s.sc1 === 'No' ? [['POSH Compliance', 'N/A — No female employees']] : 
+        (s.sc1 === 'Yes' && s.sc2 === 'No' ? [['POSH Advanced Compliance', 'N/A — POSH Act awareness not confirmed']] : []))
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
   // Section D - Show N/A if D1=No
@@ -884,13 +955,13 @@ function renderUserCharts(s) {
 
   const dc = document.getElementById('uChartDough');
   if (dc) {
-    const active = [s.sd1 === 'Yes', s.sf1 === 'Yes', s.sc4 === 'Yes', s.sb1 === 'Yes'].filter(Boolean).length;
+    const active = [s.sd1 === 'Yes', s.sf1 === 'Yes', (s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes'), s.sb1 === 'Yes'].filter(Boolean).length;
     uCharts.dough = new Chart(dc, {
       type: 'doughnut',
       data: {
         labels: ['PF Active', 'ESI Aware', 'POSH IC', 'Bonus Paid', 'Non-Compliant'],
         datasets: [{
-          data: [s.sd1==='Yes'?1:0, s.sf1==='Yes'?1:0, s.sc4==='Yes'?1:0, s.sb1==='Yes'?1:0, Math.max(0,4-active)],
+          data: [s.sd1==='Yes'?1:0, s.sf1==='Yes'?1:0, (s.sc1==='Yes' && s.sc2==='Yes' && s.sc4==='Yes')?1:0, s.sb1==='Yes'?1:0, Math.max(0,4-active)],
           backgroundColor: [C.green, C.blue, C.gold, C.purple, C.red + '88'],
           borderWidth: 0, hoverOffset: 12,
         }]
@@ -909,7 +980,8 @@ function renderUserCharts(s) {
     const vals = [
       s.sa2 === 'Yes' ? 100 : 0,
       s.sb5 === 'Yes' ? 100 : 0,
-      s.sc1 === 'No' ? 100 : (s.sc3 === 'Yes' ? 100 : 0),
+      // POSH Sessions: only scored if C1=Yes AND C2=Yes
+      (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc3 === 'Yes' ? 100 : 0) : 100,
       s.sd1 === 'No' ? 100 : (s.sd1 === 'Yes' ? 100 : 0),
       s.sd1 === 'No' ? 100 : (s.sd3 === 'Yes' ? 100 : 0),
       leaveOk ? 100 : 0,
@@ -946,9 +1018,9 @@ function renderUserCharts(s) {
         labels: ['POSH Awareness', 'IC Committee', 'POSH Return', 'HR Updated', 'Salary Restructd'],
         datasets: [{
           data: [
-            s.sc1 === 'No' ? 100 : (s.sc3 === 'Yes' ? 100 : 0),
-            s.sc1 === 'No' ? 100 : (s.sc4 === 'Yes' ? 100 : 0),
-            s.sc1 === 'No' ? 100 : (s.sc5 === 'Yes' ? 100 : 0),
+            (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc3 === 'Yes' ? 100 : 0) : 100,
+            (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc4 === 'Yes' ? 100 : 0) : 100,
+            (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc5 === 'Yes' ? 100 : 0) : 100,
             s.sg1 === 'Yes' ? 100 : s.sg1 === 'Partial' ? 60 : 0,
             s.sf3 === 'Yes' ? 100 : 0,
           ],
@@ -997,7 +1069,8 @@ function updateAdminStats(data) {
   set('ast1', data.length ? avg+'%' : '—');
   set('ast2', data.length ? Math.round(data.filter(s=>s.sd1==='Yes').length/data.length*100)+'%' : '—');
   set('ast3', data.length ? Math.round(data.filter(s=>s.sf1==='Yes').length/data.length*100)+'%' : '—');
-  set('ast4', data.length ? Math.round(data.filter(s=>s.sc4==='Yes').length/data.length*100)+'%' : '—');
+  // POSH IC: only count if C1=Yes AND C2=Yes AND C4=Yes
+  set('ast4', data.length ? Math.round(data.filter(s=>s.sc1==='Yes' && s.sc2==='Yes' && s.sc4==='Yes').length / data.filter(s=>s.sc1==='Yes' && s.sc2==='Yes').length * 100 || 0)+'%' : '—');
   set('ast5', data.length ? data.filter(s=>(s.score||0)>=70).length : '—');
   set('ast6', data.length ? data.filter(s=>(s.score||0)>=40&&(s.score||0)<70).length : '—');
   set('ast7', data.length ? data.filter(s=>(s.score||0)<40).length : '—');
@@ -1044,9 +1117,12 @@ function renderAdminCharts(data) {
     const barVals = [
       pct(d => d.filter(s => s.sa2 === 'Yes').length),
       pct(d => d.filter(s => s.sb1 === 'Yes').length),
+      // POSH Aware: C1=Yes AND C2=Yes
       pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes').length),
-      pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc4 === 'Yes').length),
-      pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc3 === 'Yes').length),
+      // POSH IC: C1=Yes AND C2=Yes AND C4=Yes
+      pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes').length),
+      // POSH Sessions: C1=Yes AND C2=Yes AND C3=Yes
+      pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc3 === 'Yes').length),
       pct(d => d.filter(s => s.sd1 === 'Yes').length),
       pct(d => d.filter(s => s.sd1 === 'Yes' && s.sd3 === 'Yes').length),
       pct(d => d.filter(s => s.se1 === 'Yes').length),
@@ -1110,9 +1186,9 @@ function renderAdminCharts(data) {
         datasets: [{
           data: [
             pct(d => d.filter(s => s.sg1 === 'Yes').length),
-            pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc4 === 'Yes').length),
-            pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc3 === 'Yes').length),
-            pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc5 === 'Yes').length),
+            pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes').length),
+            pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc3 === 'Yes').length),
+            pct(d => d.filter(s => s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc5 === 'Yes').length),
           ],
           backgroundColor: [C.green, C.blue, C.gold, C.purple], borderWidth: 0, hoverOffset: 10,
         }]
@@ -1271,7 +1347,7 @@ function deleteSubmission(id) {
   showToast('Removed from view.','gold');
 }
 
-// ===== DETAIL MODAL (ADMIN) - FIXED NESTED TEMPLATE LITERALS =====
+// ===== DETAIL MODAL (ADMIN) - UPDATED FOR NEW C LOGIC =====
 function showDetail(id) {
   const s = submissions.find(x => x.id == id);
   if (!s) return;
@@ -1360,14 +1436,16 @@ function showDetail(id) {
       ${salaryDateHTML}
     </div>
 
-    <div class="m-section">👩‍️ POSH (Section C)</div>
+    <div class="m-section">👩‍️ POSH (Section C) - NEW LOGIC</div>
     <div class="m-grid">
       <div class="m-item"><div class="m-item-label">Female Employees</div>${yn(s.sc1)}</div>
       ${s.sc1 === 'Yes' ? `
         <div class="m-item"><div class="m-item-label">Aware of POSH Act 2013</div>${yn(s.sc2)}</div>
-        <div class="m-item"><div class="m-item-label">POSH Sessions</div>${yn(s.sc3)}</div>
-        <div class="m-item"><div class="m-item-label">IC Committee Formed</div>${yn(s.sc4)}</div>
-        <div class="m-item"><div class="m-item-label">Annual POSH Return</div>${yn(s.sc5)}</div>
+        ${s.sc2 === 'Yes' ? `
+          <div class="m-item"><div class="m-item-label">POSH Sessions</div>${yn(s.sc3)}</div>
+          <div class="m-item"><div class="m-item-label">IC Committee Formed</div>${yn(s.sc4)}</div>
+          <div class="m-item"><div class="m-item-label">Annual POSH Return</div>${yn(s.sc5)}</div>
+        ` : `<div class="m-item"><div class="m-item-label">POSH Advanced Compliance</div><span class="m-item-val partial">⚪ N/A — POSH Act awareness not confirmed</span></div>`}
       ` : `<div class="m-item"><div class="m-item-label">POSH Compliance</div><span class="m-item-val partial">⚪ N/A — No female employees</span></div>`}
     </div>
 
@@ -1578,13 +1656,17 @@ async function downloadPDF(id) {
   }
   y += 2;
 
-  sec('Section C — POSH Act 2013', '👩 ️');
+  sec('Section C — POSH Act 2013 (NEW LOGIC)', '👩 ️');
   r = yn2(s.sc1); row('Female Employees Employed?', r.t, r.c);
   if (s.sc1 === 'Yes') {
     r = yn2(s.sc2); row('Aware of POSH Act 2013?', r.t, r.c);
-    r = yn2(s.sc3); row('Periodic POSH Awareness Sessions?', r.t, r.c);
-    r = yn2(s.sc4); row('Internal Committee (IC) Formed?', r.t, r.c);
-    r = yn2(s.sc5); row('Annual POSH Return Filed?', r.t, r.c);
+    if (s.sc2 === 'Yes') {
+      r = yn2(s.sc3); row('Periodic POSH Awareness Sessions?', r.t, r.c);
+      r = yn2(s.sc4); row('Internal Committee (IC) Formed?', r.t, r.c);
+      r = yn2(s.sc5); row('Annual POSH Return Filed?', r.t, r.c);
+    } else {
+      row('POSH Advanced Compliance', 'N/A — POSH Act awareness not confirmed', MUTED);
+    }
   } else {
     row('POSH Compliance', 'N/A — No female employees', MUTED);
   }

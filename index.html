@@ -251,25 +251,28 @@
 </div>
 
       <!-- SECTION C -->
+<!-- Section C: POSH — Prevention of Sexual Harassment -->
 <div class="sec-label"><span class="sec-num">C</span> POSH — Prevention of Sexual Harassment</div>
 <div class="card">
   <div class="qblock">
     <div class="qlabel">C1 — Do you also employ female employees?</div>
     <div class="opt-row">
-      <label class="opt"><input type="radio" name="sc1" value="Yes" onchange="togglePOSHQuestions(true)"><span>✅ Yes</span></label>
-      <label class="opt"><input type="radio" name="sc1" value="No" onchange="togglePOSHQuestions(false)"><span>❌ No</span></label>
+      <label class="opt"><input type="radio" name="sc1" value="Yes" onchange="togglePOSHQuestions()"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="sc1" value="No" onchange="togglePOSHQuestions()"><span>❌ No</span></label>
     </div>
   </div>
   
-  <!-- Conditional POSH questions (shown only if C1=Yes) -->
-  <div id="poshQuestions" style="display:none; margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border);">
-    <div class="qblock">
-      <div class="qlabel">C2 — Do you know there is a specific law that governs female employees — POSH Act 2013?</div>
-      <div class="opt-row">
-        <label class="opt"><input type="radio" name="sc2" value="Yes"><span>✅ Yes</span></label>
-        <label class="opt"><input type="radio" name="sc2" value="No"><span>❌ No</span></label>
-      </div>
+  <!-- C2 Question (always visible when C1=Yes) -->
+  <div class="qblock" data-qname="sc2">
+    <div class="qlabel">C2 — Do you know there is a specific law that governs female employees — POSH Act 2013?</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="sc2" value="Yes" onchange="togglePOSHQuestions()"><span>✅ Yes</span></label>
+      <label class="opt"><input type="radio" name="sc2" value="No" onchange="togglePOSHQuestions()"><span>❌ No</span></label>
     </div>
+  </div>
+  
+  <!-- 🔥 NEW: Wrapper for C3-C5 (shown ONLY if C1=Yes AND C2=Yes) -->
+  <div id="poshAdvancedQuestions" style="display:none; margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border);">
     <div class="qblock">
       <div class="qlabel">C3 — Are you conducting periodic awareness sessions under POSH Act 2013?</div>
       <div class="opt-row">
@@ -292,7 +295,7 @@
       </div>
     </div>
     <div style="font-size:0.75rem; color:var(--text2); margin-top:0.5rem">
-      ℹ️ These questions apply only if you employ female staff. POSH Act 2013 is mandatory for all organizations with women employees.
+      ℹ️ These questions apply only if you employ female staff AND are aware of POSH Act 2013.
     </div>
   </div>
 </div>

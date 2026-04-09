@@ -1,8 +1,6 @@
 // ============================================================
 // LABOURSHIELD — script.js FINAL VERSION
-// Section E: SINGLE "Total Annual Leaves" input (replaces EL/CL/SL)
-// Gap calculation: User Total vs State Mandatory Total (EL+CL+SL)
-// Section C: C3-C5 visible ONLY if C1="Yes" AND C2="Yes"
+// Leave Gap Card REMOVED from user form - Only shows in Admin Dashboard
 // ============================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycby7nP6aTh4rpqbTB0pZ34T4-R5kX0S4azsZqoLMI0qDcHSdPVmmIoGwM-NOmJ6HlGfpLw/exec";
@@ -187,271 +185,16 @@ function updateStateLeaveBadge() {
     hint.style.display = 'inline';
   }
   
-  // Update leave gap card if on page 2
-  updateLeaveGapCard();
+  // REMOVED: updateLeaveGapCard() call from form
 }
 
-// ===== UPDATED: Update Leave Gap Card (Single Total Comparison) =====
-function updateLeaveGapCard() {
-  const state = document.getElementById('state')?.value;
-  const totalGiven = parseInt(document.getElementById('se2total')?.value) || 0;
-  const card = document.getElementById('leaveGapCard');
-  
-  if (!state || !STATE_LEAVE_DATA[state] || !totalGiven) {
-    if (card) card.style.display = 'none';
-    return;
-  }
-  
-  const ld = STATE_LEAVE_DATA[state];
-  const mandatoryTotal = ld.EL + ld.CL + ld.SL;
-  const diff = totalGiven - mandatoryTotal;
-  const hasGap = totalGiven < mandatoryTotal;
-  
-  if (card) {
-    card.style.display = 'block';
-    card.className = `leave-gap-card ${hasGap ? 'gap' : 'ok'}`;
-    card.innerHTML = `
-      <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem">
-        <span style="font-size:1.25rem">${hasGap ? '⚠️' : '✅'}</span>
-        <strong style="color:var(--text)">${hasGap ? 'Leave Deficit Detected' : 'Leave Policy Compliant'}</strong>
-      </div>
-      <div style="font-size:0.85rem; color:var(--text2); margin-bottom:0.75rem">
-        ${state} law mandates minimum <strong>${mandatoryTotal} total leaves</strong> annually 
-        (EL:${ld.EL} + CL:${ld.CL} + SL:${ld.SL}) under ${ld.law}
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.82rem">
-        <div style="padding:0.5rem 0.75rem; background:var(--card-bg); border-radius:6px">
-          <div style="color:var(--text2); font-size:0.75rem">Your Total Leaves</div>
-          <div style="font-weight:700; color:var(--text)">${totalGiven} days</div>
-        </div>
-        <div style="padding:0.5rem 0.75rem; background:var(--card-bg); border-radius:6px">
-          <div style="color:var(--text2); font-size:0.75rem">Mandatory Minimum</div>
-          <div style="font-weight:700; color:var(--text)">${mandatoryTotal} days</div>
-        </div>
-      </div>
-      ${hasGap ? `<div style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(239,68,68,0.1); border-left:3px solid #ef4444; border-radius:4px; font-size:0.8rem; color:#ef4444">
-        ⚠️ You are <strong>${Math.abs(diff)} days short</strong> of the mandatory requirement. This may lead to penalties during labour inspections.
-      </div>` : `<div style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:rgba(34,197,94,0.1); border-left:3px solid #22c55e; border-radius:4px; font-size:0.8rem; color:#22c55e">
-        ✅ Your leave policy meets the state law requirement. Maintain documentation for compliance proof.
-      </div>`}
-    `;
-  }
-}
-
-// ===== INIT =====
-document.addEventListener('DOMContentLoaded', async () => {
-  const savedTheme = localStorage.getItem(LS_THEME) || 'light';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-
-  try { localSubmissions = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { localSubmissions = []; }
-  submissions = [...localSubmissions];
-
-  if (localStorage.getItem(LS_ADMIN) === 'true') {
-    isAdmin = true;
-    showAdminUI();
-  }
-
-  const lastId = localStorage.getItem(LS_LAST);
-  if (lastId) {
-    currentUserSubmission = localSubmissions.find(s => String(s.id) === lastId) || null;
-  }
-
-  await loadFromSheets(false);
-
-  if (window.location.hash === '#dashboard' && currentUserSubmission) {
-    showView('user-dashboard');
-  }
-  
-  // Initialize conditional fields
-  const sb5Yes = document.querySelector('input[name="sb5"][value="Yes"]');
-  if (sb5Yes?.checked) toggleSalaryDateField(true);
-  
-  const c1Val = getRadio('sc1');
-  const c2Val = getRadio('sc2');
-  if (c1Val || c2Val) togglePOSHQuestions();
-  
-  const d1Yes = document.querySelector('input[name="sd1"][value="Yes"]');
-  if (d1Yes?.checked) togglePFQuestions(true);
-  
-  // Event listeners
-  document.querySelectorAll('input[name="sc1"], input[name="sc2"]').forEach(radio => {
-    radio.addEventListener('change', togglePOSHQuestions);
-  });
-  
-  // State change listener for leave hint
-  document.getElementById('state')?.addEventListener('change', updateStateLeaveBadge);
-  document.getElementById('se2total')?.addEventListener('input', updateLeaveGapCard);
-});
-
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && isAdmin) loadFromSheets(true);
-});
-
-// ===== UTILITIES =====
-function showToast(msg, color = 'gold') {
-  const existing = document.getElementById('ls-toast');
-  if (existing) existing.remove();
-  const colors    = { green:'#1a8a5a', red:'#c0392b', gold:'#b8860b', blue:'#2563eb' };
-  const darkColors= { green:'#2ecc8a', red:'#e05555', gold:'#d4a843', blue:'#4e8cff' };
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const col = isDark ? (darkColors[color]||darkColors.gold) : (colors[color]||colors.gold);
-  const t = document.createElement('div');
-  t.id = 'ls-toast';
-  t.textContent = msg;
-  t.style.cssText = `position:fixed;bottom:2rem;right:1rem;z-index:9999;background:${col};color:#fff;padding:0.75rem 1.25rem;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;box-shadow:0 8px 30px rgba(0,0,0,0.25);animation:toastIn 0.3s ease;max-width:calc(100vw - 2rem);word-break:break-word;`;
-  const style = document.createElement('style');
-  style.textContent = '@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
-  document.head.appendChild(style);
-  document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(),300); }, 3500);
-}
-
-function getRadio(name) {
-  const el = document.querySelector(`input[name="${name}"]:checked`);
-  return el ? el.value : '';
-}
-
-function getCSSVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-function getTickColor() {
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? '#7a8299' : '#6b7280';
-}
-function getGridColor() {
-  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-}
-function getColors() {
-  return {
-    gold:   getCSSVar('--gold')   || '#d4a843',
-    green:  getCSSVar('--green')  || '#2ecc8a',
-    red:    getCSSVar('--red')    || '#e05555',
-    blue:   getCSSVar('--blue')   || '#4e8cff',
-    purple: getCSSVar('--purple') || '#a78bfa',
-  };
-}
-
-// ===== VIEW SWITCHING =====
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const target = document.getElementById('view-' + name);
-  if (target) target.classList.add('active');
-
-  document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
-  const pillMap = { 'form':'navForm', 'user-dashboard':'navUserDash', 'admin-dashboard':'navAdminDash' };
-  const pill = document.getElementById(pillMap[name]);
-  if (pill) pill.classList.add('active');
-
-  if (name === 'user-dashboard') renderUserDashboard();
-  if (name === 'admin-dashboard') {
-    if (!isAdmin) { showView('form'); showToast('Admin access required.','red'); return; }
-    renderAdminDashboard();
-    loadFromSheets(true);
-  }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ===== ADMIN AUTH =====
-function toggleAdminLogin() {
-  if (isAdmin) { logoutAdmin(); return; }
-  const m = document.getElementById('adminLoginModal');
-  if (m) {
-    m.classList.add('open');
-    document.getElementById('adminLoginError').style.display = 'none';
-    document.getElementById('adminUser').value = '';
-    document.getElementById('adminPass').value = '';
-    setTimeout(() => document.getElementById('adminUser')?.focus(), 150);
-  }
-}
-
-function doAdminLogin() {
-  const user = document.getElementById('adminUser')?.value.trim();
-  const pass = document.getElementById('adminPass')?.value.trim();
-  if (user === ADMIN_USER && pass === ADMIN_PASS) {
-    isAdmin = true;
-    localStorage.setItem(LS_ADMIN, 'true');
-    document.getElementById('adminLoginModal')?.classList.remove('open');
-    showAdminUI();
-    showToast('✅ Admin login successful!', 'green');
-    showView('admin-dashboard');
-  } else {
-    const err = document.getElementById('adminLoginError');
-    if (err) err.style.display = 'block';
-  }
-}
-
-function showAdminUI() {
-  const pill = document.getElementById('navAdminDash');
-  if (pill) { pill.style.display = 'flex'; pill.classList.add('admin-pill'); }
-  const btn  = document.getElementById('adminToggleBtn');
-  if (btn)  { btn.textContent = '🔓 Logout'; btn.classList.add('active-admin'); }
-}
-
-function logoutAdmin() {
-  isAdmin = false;
-  localStorage.removeItem(LS_ADMIN);
-  const pill = document.getElementById('navAdminDash');
-  if (pill) { pill.style.display = 'none'; pill.classList.remove('admin-pill'); }
-  const btn = document.getElementById('adminToggleBtn');
-  if (btn) { btn.textContent = 'Admin Login'; btn.classList.remove('active-admin'); }
-  showToast('Logged out from admin.', 'gold');
-  showView('form');
-}
-
-function closeAdminModal(force) {
-  const m = document.getElementById('adminLoginModal');
-  if (!m) return;
-  if (force === true || (force && force.target === m)) m.classList.remove('open');
-}
-
-// ===== PAGE NAV =====
-function goPage2() {
-  const fields = ['name','contact','state','location','companyName','employees','field'];
-  let ok = true;
-  fields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el && !el.value.trim()) { el.classList.add('error'); ok = false; }
-    else if (el) el.classList.remove('error');
-  });
-  if (!ok) { showToast('Please fill all required fields.','red'); return; }
-  
-  const requiredRadios = ['sa1','sa2','sb1','sb2','sb4','sb5','sc1','sc2','sd1','se1','se3','sf1','sf3','sg1','sh1','sh2','sh3','sh4','sh5'];
-  let missingQ = null;
-  for (const n of requiredRadios) {
-    if (!getRadio(n)) { missingQ = n; break; }
-  }
-  if (missingQ && missingQ.startsWith('sc')) {
-    document.querySelector('.sec-label:has([class*="sec-num"]):nth-child(3)')?.scrollIntoView({ behavior:'smooth', block:'center' });
-    showToast(`Please answer POSH question ${missingQ.toUpperCase()}`, 'red');
-    return;
-  }
-  
-  document.getElementById('pg1').style.display = 'none';
-  document.getElementById('pg2').style.display = 'block';
-  const sd1 = document.getElementById('sd1');
-  if (sd1) { sd1.classList.remove('active'); sd1.classList.add('done'); sd1.innerHTML = '<span>✓</span>'; }
-  const sr1 = document.getElementById('sr1'); if (sr1) sr1.classList.add('done');
-  const sd2 = document.getElementById('sd2'); if (sd2) sd2.classList.add('active');
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function goPage1() {
-  document.getElementById('pg1').style.display = 'block';
-  document.getElementById('pg2').style.display = 'none';
-  const sd1 = document.getElementById('sd1');
-  if (sd1) { sd1.className = 'step-dot active'; sd1.innerHTML = '<span>1</span>'; }
-  const sr1 = document.getElementById('sr1'); if (sr1) sr1.classList.remove('done');
-  const sd2 = document.getElementById('sd2'); if (sd2) sd2.classList.remove('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ===== UPDATED: LEAVE COMPLIANCE CHECK (Single Total) =====
+// ===== LEAVE COMPLIANCE CHECK (For Admin Dashboard Only) =====
 function getLeaveComplianceStatus(d) {
   const state = d.state;
   if (!state || !STATE_LEAVE_DATA[state]) return null;
   const ld = STATE_LEAVE_DATA[state];
-  const totalGiven = parseInt(d.se2total) || 0; // SINGLE TOTAL VALUE
-  const mandatoryTotal = ld.EL + ld.CL + ld.SL; // STATE MANDATORY TOTAL
+  const totalGiven = parseInt(d.se2total) || 0;
+  const mandatoryTotal = ld.EL + ld.CL + ld.SL;
   
   return {
     state, ld,
@@ -467,32 +210,24 @@ function calcScore(d) {
   const lc = getLeaveComplianceStatus(d);
   const leaveOk = lc ? !lc.hasGap : d.se1 === 'Yes';
   const checks = [
-    // A (2)
     d.sa1 !== '',
     d.sa2 === 'Yes',
-    // B (4)
     d.sb1 === 'Yes',
     d.sb2 === 'Yes',
     d.sb4 === 'Yes',
     d.sb5 === 'Yes',
-    // C (4) - NEW LOGIC
     d.sc1 === 'No' ? true : (d.sc2 === 'No' ? true : (d.sc3 === 'Yes')),
     d.sc1 === 'No' ? true : (d.sc2 === 'No' ? true : (d.sc4 === 'Yes')),
     d.sc1 === 'No' ? true : (d.sc2 === 'No' ? true : (d.sc5 === 'Yes')),
     d.sc1 === 'Yes' && d.sc2 === 'Yes' ? (d.sc2 === 'Yes') : true,
-    // D (3)
     d.sd1 === 'No' ? true : (d.sd3 === 'Yes'),
     d.sd1 === 'No' ? true : (d.sd2 === 'No'),
-    // E (3) - UPDATED: Single total comparison
     d.se1 === 'Yes',
     leaveOk,
     d.se3 === 'Yes',
-    // F (2)
     d.sf1 === 'Yes',
     d.sf3 === 'Yes',
-    // G (1)
     d.sg1 === 'Yes' || d.sg1 === 'Partial',
-    // H (4)
     d.sh1 === 'No',
     d.sh2 === 'No',
     d.sh3 === 'No',
@@ -506,7 +241,6 @@ function getSectionScores(s) {
   const lc = getLeaveComplianceStatus(s);
   const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
   
-  // Section C: NEW LOGIC
   let cScore = 0;
   if (s.sc1 === 'No') {
     cScore = 100;
@@ -538,15 +272,12 @@ function getSectionScores(s) {
 // ===== GAPS =====
 function getGaps(d) {
   const gaps = [];
-  // A
   if (d.sa2 !== 'Yes') gaps.push('License is not in the name of the owner — this may create legal complications');
-  // B
   if (d.sb1 !== 'Yes') gaps.push('Diwali / festive bonus not being paid to all employees');
   if (d.sb2 !== 'Yes') gaps.push('Unaware that statutory bonus applies only to employees with wages up to ₹21,000');
   if (d.sb4 !== 'Yes') gaps.push('No structured salary format (Basic + HRA + Allowances) in place');
   if (d.sb5 !== 'Yes') gaps.push('Salaries not paid on time — must be disbursed consistently as per employment agreements and state regulations');
   
-  // C - NEW LOGIC
   if (d.sc1 === 'Yes' && d.sc2 === 'Yes') {
     if (d.sc3 !== 'Yes') gaps.push('Periodic POSH awareness sessions not being conducted');
     if (d.sc4 !== 'Yes') gaps.push('Internal Committee (IC) under POSH Act 2013 not yet constituted');
@@ -555,13 +286,11 @@ function getGaps(d) {
     gaps.push('Employ female staff but unaware of POSH Act 2013 applicability — mandatory compliance risk');
   }
   
-  // D
   if (d.sd1 === 'Yes') {
     if (d.sd3 !== 'Yes') gaps.push('PF contribution not capped at ₹15,000 wage ceiling — may result in excess liability');
     if (d.sd2 === 'Yes') gaps.push('Paying PF for employees with salary above ₹50,000/₹75,000 — review necessity');
   }
   
-  // E - UPDATED: Single total comparison
   if (d.se1 !== 'Yes') gaps.push('Employees not receiving any statutory leaves as mandated');
   const lc = getLeaveComplianceStatus(d);
   if (lc && lc.hasGap) {
@@ -569,7 +298,6 @@ function getGaps(d) {
   }
   if (d.se3 !== 'Yes') gaps.push('Unaware that ESIC-covered employees get medical benefits — no separate sick leave needed');
   
-  // F, G, H
   if (d.sf1 !== 'Yes') gaps.push('Unaware that employees earning up to ₹42,000 gross are covered under ESI');
   if (d.sf3 !== 'Yes') gaps.push('Salary structure not restructured as per the four new Labour Codes');
   if (d.sg1 === 'No') gaps.push('HR Policy / Leave Policy / Appointment Letter not updated as per new Labour Codes');
@@ -689,7 +417,7 @@ async function submitAudit() {
   }
 
   const state = document.getElementById('state')?.value || '';
-  const totalLeaves = parseInt(document.getElementById('se2total')?.value) || 0; // SINGLE TOTAL
+  const totalLeaves = parseInt(document.getElementById('se2total')?.value) || 0;
   const sb5Date = (getRadio('sb5') === 'Yes') ? (document.getElementById('sb5Date')?.value.trim() || '') : '';
 
   const d = {
@@ -702,27 +430,21 @@ async function submitAudit() {
     employees: document.getElementById('employees')?.value || '',
     companyName: document.getElementById('companyName')?.value.trim() || '',
     field: document.getElementById('field')?.value || '',
-    // A
     sa1: getRadio('sa1'), sa2: getRadio('sa2'),
-    // B
     sb1: getRadio('sb1'), sb2: getRadio('sb2'),
     sb3: document.getElementById('sb3')?.value || '',
     sb4: getRadio('sb4'), sb5: getRadio('sb5'),
     sb5Date: sb5Date,
-    // C
     sc1: getRadio('sc1'), 
     sc2: getRadio('sc2'),
     sc3: (getRadio('sc1') === 'Yes' && getRadio('sc2') === 'Yes') ? getRadio('sc3') : 'No',
     sc4: (getRadio('sc1') === 'Yes' && getRadio('sc2') === 'Yes') ? getRadio('sc4') : 'No',
     sc5: (getRadio('sc1') === 'Yes' && getRadio('sc2') === 'Yes') ? getRadio('sc5') : 'No',
-    // D
     sd1: getRadio('sd1'), sd2: getRadio('sd2'), sd3: getRadio('sd3'),
-    // E - UPDATED: Single total leaves
     se1: getRadio('se1'),
     se2total: totalLeaves,
-    se2: `Total: ${totalLeaves} days`, // For backward compatibility
+    se2: `Total: ${totalLeaves} days`,
     se3: getRadio('se3'),
-    // F, G, H
     sf1: getRadio('sf1'), sf2: '', sf3: getRadio('sf3'),
     sg1: getRadio('sg1'), sg2: '', sg3: '', sg4: '',
     sh1: getRadio('sh1'), sh2: getRadio('sh2'), sh3: getRadio('sh3'),
@@ -870,7 +592,6 @@ function renderUserDashboard() {
     ...(s.sb5 === 'Yes' && s.sb5Date ? [['Typical Salary Payment Date', s.sb5Date]] : []),
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section C - NEW LOGIC
   document.getElementById('udashPOSH').innerHTML = [
     ['Female Employees', s.sc1],
     ...(s.sc1 === 'Yes' ? [
@@ -885,7 +606,6 @@ function renderUserDashboard() {
         (s.sc1 === 'Yes' && s.sc2 === 'No' ? [['POSH Advanced Compliance', 'N/A — POSH Act awareness not confirmed']] : []))
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section D
   document.getElementById('udashPFSection').innerHTML = [
     ['PF on Monthly Basis', s.sd1],
     ...(s.sd1 === 'Yes' ? [
@@ -894,7 +614,6 @@ function renderUserDashboard() {
     ] : [['PF Details', 'N/A — No PF contribution']]),
   ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
 
-  // Section E - UPDATED: Single Total Leaves
   document.getElementById('udashLeaves').innerHTML = [
     ['Leaves Given to Employees', s.se1],
     ['Total Annual Leaves (All Types)', s.se2total !== undefined ? `${s.se2total} days` : (s.se2||'—')],
@@ -1395,7 +1114,7 @@ function deleteSubmission(id) {
   showToast('Removed from view.','gold');
 }
 
-// ===== DETAIL MODAL (ADMIN) - UPDATED FOR SINGLE TOTAL LEAVES =====
+// ===== DETAIL MODAL (ADMIN) =====
 function showDetail(id) {
   const s = submissions.find(x => x.id == id);
   if (!s) return;
@@ -1484,7 +1203,7 @@ function showDetail(id) {
       ${salaryDateHTML}
     </div>
 
-    <div class="m-section">👩‍️ POSH (Section C) - NEW LOGIC</div>
+    <div class="m-section">👩 ️ POSH (Section C) - NEW LOGIC</div>
     <div class="m-grid">
       <div class="m-item"><div class="m-item-label">Female Employees</div>${yn(s.sc1)}</div>
       ${s.sc1 === 'Yes' ? `
@@ -1549,7 +1268,7 @@ function closeModal(force) {
   if (force === true || (force && force.target === m)) { m.classList.remove('open'); activeDetailId = null; }
 }
 
-// ===== CSV EXPORT - UPDATED HEADERS =====
+// ===== CSV EXPORT =====
 function exportToCSV() {
   if (!submissions.length) { showToast('No data to export.', 'red'); return; }
   const headers = [
@@ -1594,7 +1313,7 @@ function exportToCSV() {
   showToast('✅ CSV exported successfully!', 'green');
 }
 
-// ===== PDF DOWNLOAD - UPDATED FOR SINGLE TOTAL LEAVES =====
+// ===== PDF DOWNLOAD =====
 async function downloadPDF(id) {
   const s = id ? submissions.find(x => x.id == id) : currentUserSubmission;
   if (!s) { showToast('Submission not found', 'red'); return; }
@@ -1814,4 +1533,207 @@ function fmtDate(iso, short = false) {
 
 function toggleSidebar() {
   document.getElementById('adminSidebar')?.classList.toggle('open');
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', async () => {
+  const savedTheme = localStorage.getItem(LS_THEME) || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  try { localSubmissions = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { localSubmissions = []; }
+  submissions = [...localSubmissions];
+
+  if (localStorage.getItem(LS_ADMIN) === 'true') {
+    isAdmin = true;
+    showAdminUI();
+  }
+
+  const lastId = localStorage.getItem(LS_LAST);
+  if (lastId) {
+    currentUserSubmission = localSubmissions.find(s => String(s.id) === lastId) || null;
+  }
+
+  await loadFromSheets(false);
+
+  if (window.location.hash === '#dashboard' && currentUserSubmission) {
+    showView('user-dashboard');
+  }
+  
+  const sb5Yes = document.querySelector('input[name="sb5"][value="Yes"]');
+  if (sb5Yes?.checked) toggleSalaryDateField(true);
+  
+  const c1Val = getRadio('sc1');
+  const c2Val = getRadio('sc2');
+  if (c1Val || c2Val) togglePOSHQuestions();
+  
+  const d1Yes = document.querySelector('input[name="sd1"][value="Yes"]');
+  if (d1Yes?.checked) togglePFQuestions(true);
+  
+  document.querySelectorAll('input[name="sc1"], input[name="sc2"]').forEach(radio => {
+    radio.addEventListener('change', togglePOSHQuestions);
+  });
+  
+  document.getElementById('state')?.addEventListener('change', updateStateLeaveBadge);
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && isAdmin) loadFromSheets(true);
+});
+
+// ===== UTILITIES =====
+function showToast(msg, color = 'gold') {
+  const existing = document.getElementById('ls-toast');
+  if (existing) existing.remove();
+  const colors    = { green:'#1a8a5a', red:'#c0392b', gold:'#b8860b', blue:'#2563eb' };
+  const darkColors= { green:'#2ecc8a', red:'#e05555', gold:'#d4a843', blue:'#4e8cff' };
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const col = isDark ? (darkColors[color]||darkColors.gold) : (colors[color]||colors.gold);
+  const t = document.createElement('div');
+  t.id = 'ls-toast';
+  t.textContent = msg;
+  t.style.cssText = `position:fixed;bottom:2rem;right:1rem;z-index:9999;background:${col};color:#fff;padding:0.75rem 1.25rem;border-radius:12px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;box-shadow:0 8px 30px rgba(0,0,0,0.25);animation:toastIn 0.3s ease;max-width:calc(100vw - 2rem);word-break:break-word;`;
+  const style = document.createElement('style');
+  style.textContent = '@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
+  document.head.appendChild(style);
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(),300); }, 3500);
+}
+
+function getRadio(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : '';
+}
+
+function getCSSVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function getTickColor() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? '#7a8299' : '#6b7280';
+}
+function getGridColor() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+}
+function getColors() {
+  return {
+    gold:   getCSSVar('--gold')   || '#d4a843',
+    green:  getCSSVar('--green')  || '#2ecc8a',
+    red:    getCSSVar('--red')    || '#e05555',
+    blue:   getCSSVar('--blue')   || '#4e8cff',
+    purple: getCSSVar('--purple') || '#a78bfa',
+  };
+}
+
+// ===== VIEW SWITCHING =====
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const target = document.getElementById('view-' + name);
+  if (target) target.classList.add('active');
+
+  document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
+  const pillMap = { 'form':'navForm', 'user-dashboard':'navUserDash', 'admin-dashboard':'navAdminDash' };
+  const pill = document.getElementById(pillMap[name]);
+  if (pill) pill.classList.add('active');
+
+  if (name === 'user-dashboard') renderUserDashboard();
+  if (name === 'admin-dashboard') {
+    if (!isAdmin) { showView('form'); showToast('Admin access required.','red'); return; }
+    renderAdminDashboard();
+    loadFromSheets(true);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ===== ADMIN AUTH =====
+function toggleAdminLogin() {
+  if (isAdmin) { logoutAdmin(); return; }
+  const m = document.getElementById('adminLoginModal');
+  if (m) {
+    m.classList.add('open');
+    document.getElementById('adminLoginError').style.display = 'none';
+    document.getElementById('adminUser').value = '';
+    document.getElementById('adminPass').value = '';
+    setTimeout(() => document.getElementById('adminUser')?.focus(), 150);
+  }
+}
+
+function doAdminLogin() {
+  const user = document.getElementById('adminUser')?.value.trim();
+  const pass = document.getElementById('adminPass')?.value.trim();
+  if (user === ADMIN_USER && pass === ADMIN_PASS) {
+    isAdmin = true;
+    localStorage.setItem(LS_ADMIN, 'true');
+    document.getElementById('adminLoginModal')?.classList.remove('open');
+    showAdminUI();
+    showToast('✅ Admin login successful!', 'green');
+    showView('admin-dashboard');
+  } else {
+    const err = document.getElementById('adminLoginError');
+    if (err) err.style.display = 'block';
+  }
+}
+
+function showAdminUI() {
+  const pill = document.getElementById('navAdminDash');
+  if (pill) { pill.style.display = 'flex'; pill.classList.add('admin-pill'); }
+  const btn  = document.getElementById('adminToggleBtn');
+  if (btn)  { btn.textContent = '🔓 Logout'; btn.classList.add('active-admin'); }
+}
+
+function logoutAdmin() {
+  isAdmin = false;
+  localStorage.removeItem(LS_ADMIN);
+  const pill = document.getElementById('navAdminDash');
+  if (pill) { pill.style.display = 'none'; pill.classList.remove('admin-pill'); }
+  const btn = document.getElementById('adminToggleBtn');
+  if (btn) { btn.textContent = 'Admin Login'; btn.classList.remove('active-admin'); }
+  showToast('Logged out from admin.', 'gold');
+  showView('form');
+}
+
+function closeAdminModal(force) {
+  const m = document.getElementById('adminLoginModal');
+  if (!m) return;
+  if (force === true || (force && force.target === m)) m.classList.remove('open');
+}
+
+// ===== PAGE NAV =====
+function goPage2() {
+  const fields = ['name','contact','state','location','companyName','employees','field'];
+  let ok = true;
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value.trim()) { el.classList.add('error'); ok = false; }
+    else if (el) el.classList.remove('error');
+  });
+  if (!ok) { showToast('Please fill all required fields.','red'); return; }
+  
+  const requiredRadios = ['sa1','sa2','sb1','sb2','sb4','sb5','sc1','sc2','sd1','se1','se3','sf1','sf3','sg1','sh1','sh2','sh3','sh4','sh5'];
+  let missingQ = null;
+  for (const n of requiredRadios) {
+    if (!getRadio(n)) { missingQ = n; break; }
+  }
+  if (missingQ && missingQ.startsWith('sc')) {
+    document.querySelector('.sec-label:has([class*="sec-num"]):nth-child(3)')?.scrollIntoView({ behavior:'smooth', block:'center' });
+    showToast(`Please answer POSH question ${missingQ.toUpperCase()}`, 'red');
+    return;
+  }
+  
+  document.getElementById('pg1').style.display = 'none';
+  document.getElementById('pg2').style.display = 'block';
+  const sd1 = document.getElementById('sd1');
+  if (sd1) { sd1.classList.remove('active'); sd1.classList.add('done'); sd1.innerHTML = '<span>✓</span>'; }
+  const sr1 = document.getElementById('sr1'); if (sr1) sr1.classList.add('done');
+  const sd2 = document.getElementById('sd2'); if (sd2) sd2.classList.add('active');
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goPage1() {
+  document.getElementById('pg1').style.display = 'block';
+  document.getElementById('pg2').style.display = 'none';
+  const sd1 = document.getElementById('sd1');
+  if (sd1) { sd1.className = 'step-dot active'; sd1.innerHTML = '<span>1</span>'; }
+  const sr1 = document.getElementById('sr1'); if (sr1) sr1.classList.remove('done');
+  const sd2 = document.getElementById('sd2'); if (sd2) sd2.classList.remove('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }

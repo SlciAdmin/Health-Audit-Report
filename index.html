@@ -333,7 +333,6 @@
   </div>
 </div>
 
-      <!-- SECTION E — LEAVE POLICY (with state-specific info) -->
       <!-- SECTION E — LEAVE POLICY (Single Total Leaves Input) -->
 <div class="sec-label"><span class="sec-num">E</span> Leave Policy</div>
 
@@ -349,20 +348,16 @@
     </div>
   </div>
   
-  <!-- 🔥 SINGLE QUESTION: Total Annual Leaves (replaces EL/CL/SL separate inputs) -->
+  <!-- SINGLE QUESTION: Total Annual Leaves -->
   <div class="qblock">
     <div class="qlabel">E2 — What is the TOTAL number of annual leaves (all types combined) you provide to employees?</div>
-    <input type="number" id="se2total" placeholder="e.g. 30" class="solo-input" oninput="updateLeaveGapCard()" min="0" max="100">
+    <input type="number" id="se2total" placeholder="e.g. 30" class="solo-input" min="0" max="100">
     <div style="font-size:0.75rem; color:var(--text2); margin-top:0.35rem">
       ℹ️ Enter the combined total of Earned + Casual + Sick leaves per year. 
-      <span id="stateLeaveHint" style="display:none; color:var(--gold); font-weight:600;"> 
-        Your state (<span id="stateHintName"></span>) mandates minimum <span id="stateHintTotal"></span> days.
-      </span>
     </div>
   </div>
 
-  <!-- Live Leave Gap Card -->
-  <div id="leaveGapCard" class="leave-gap-card" style="display:none"></div>
+  <!-- Leave Gap Card REMOVED FROM FORM - Only shows in Admin Dashboard -->
 
   <div class="qblock" style="margin-top:1.5rem">
     <div class="qlabel">E3 — Do you know that employees covered under ESIC cannot be entitled to separate sick leave benefits?</div>

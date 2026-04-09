@@ -679,6 +679,7 @@ function ynHtml(v) {
 
 // ===== USER CHARTS =====
 // ===== USER CHARTS =====
+// ===== USER CHARTS =====
 function renderUserCharts(s) {
   const tick = getTickColor();
   const grid = getGridColor();
@@ -691,28 +692,29 @@ function renderUserCharts(s) {
 
   const scores = getSectionScores(s);
 
-  // 📈 CHART 1: Compliance Area Breakdown (LINE CHART - Changed from Radar)
+  // 📈 CHART 1: Compliance Area Breakdown (LINE CHART - FIXED & PROFESSIONAL)
   const rc = document.getElementById('uChartRadar');
   if (rc) {
     uCharts.radar = new Chart(rc, {
       type: 'line',
       data: {
-        labels: ['A: Licensing', 'B: Bonus/Salary', 'C: POSH', 'D: PF', 'E: Leaves', 'F: ESI', 'G: HR Policy', 'H: Inspection'],
+        labels: ['A: Licensing', 'B: Bonus', 'C: POSH', 'D: PF', 'E: Leaves', 'F: ESI', 'G: HR', 'H: Inspection'],
         datasets: [{
-          label: 'Compliance Score %',
+          label: 'Compliance Score',
           data: [scores.A, scores.B, scores.C, scores.D, scores.E, scores.F, scores.G, scores.H],
           borderColor: C.gold,
-          backgroundColor: C.gold + '33',
-          borderWidth: 3,
+          backgroundColor: C.gold + '25',
+          borderWidth: 3.5,
           pointBackgroundColor: '#fff',
           pointBorderColor: C.gold,
-          pointBorderWidth: 2.5,
-          pointRadius: 5,
-          pointHoverRadius: 8,
+          pointBorderWidth: 3,
+          pointRadius: 6,
+          pointHoverRadius: 9,
           pointHoverBackgroundColor: C.gold,
           pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 3,
           fill: true,
-          tension: 0.35,
+          tension: 0.4,
           cubicInterpolationMode: 'monotone'
         }]
       },
@@ -723,39 +725,55 @@ function renderUserCharts(s) {
           mode: 'index',
           intersect: false,
         },
+        layout: {
+          padding: {
+            top: 10,
+            bottom: 10,
+            left: 5,
+            right: 5
+          }
+        },
         scales: {
           x: {
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 9, weight: '600' },
-              padding: 8
-            },
             grid: { 
               color: grid,
-              drawBorder: false
+              drawBorder: false,
+              offset: true
+            },
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 9.5, weight: '600' },
+              padding: 10,
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 8
             },
             border: { color: grid }
           },
           y: {
             min: 0, 
             max: 100,
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 9 }, 
-              stepSize: 25,
-              callback: function(value) { return value + '%'; },
-              padding: 8
-            },
             grid: { 
               color: grid,
-              drawBorder: false
+              drawBorder: false,
+              tickLength: 0
+            },
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 10 }, 
+              stepSize: 20,
+              callback: function(value) { return value + '%'; },
+              padding: 10,
+              autoSkip: true,
+              maxTicksLimit: 6
             },
             border: { color: grid },
             title: {
               display: true,
               text: 'Score %',
               color: tick,
-              font: { family: ff, size: 10, weight: '600' }
+              font: { family: ff, size: 11, weight: '700' },
+              padding: { top: 10 }
             }
           }
         },
@@ -765,25 +783,30 @@ function renderUserCharts(s) {
             position: 'bottom', 
             labels: { 
               color: tick, 
-              font: { family: ff, size: 10, weight: '600' },
-              padding: 15,
+              font: { family: ff, size: 10.5, weight: '600' },
+              padding: 20,
               usePointStyle: true,
-              pointStyle: 'circle'
+              pointStyle: 'circle',
+              boxWidth: 12,
+              boxHeight: 12
             } 
           },
           tooltip: {
             backgroundColor: 'rgba(14, 16, 24, 0.95)',
             titleColor: '#fff',
-            titleFont: { family: ff, size: 12, weight: '700' },
+            titleFont: { family: ff, size: 13, weight: '700' },
             bodyColor: '#fff',
-            bodyFont: { family: ff, size: 11 },
+            bodyFont: { family: ff, size: 11.5 },
             borderColor: C.gold,
             borderWidth: 2,
-            padding: 12,
+            padding: 14,
             displayColors: true,
+            cornerRadius: 8,
+            titleSpacing: 0,
+            titleMarginBottom: 10,
             callbacks: {
               label: function(context) {
-                return ` ${context.dataset.label}: ${context.parsed.y}%`;
+                return ` Score: ${context.parsed.y}%`;
               },
               title: function(context) {
                 return context[0].label;
@@ -797,14 +820,14 @@ function renderUserCharts(s) {
             borderJoinStyle: 'round'
           },
           point: {
-            hitRadius: 10
+            hitRadius: 12
           }
         }
       }
     });
   }
 
-  // 🍩 CHART 2: Key Compliance Status (Doughnut - Unchanged, Enhanced)
+  // 🍩 CHART 2: Key Compliance Status (Doughnut - Enhanced)
   const dc = document.getElementById('uChartDough');
   if (dc) {
     const active = [s.sd1 === 'Yes', s.sf1 === 'Yes', (s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes'), s.sb1 === 'Yes'].filter(Boolean).length;
@@ -886,7 +909,7 @@ function renderUserCharts(s) {
     uCharts.bar = new Chart(bc, {
       type: 'bar',
       data: {
-        labels: ['License\n(Owner)', 'Timely\nSalary', 'POSH\nSessions', 'PF\nMonthly', 'PF\nCapped', 'Leave\nCompliant', 'Salary\nRestructd', 'HR Policy\nUpdated'],
+        labels: ['License', 'Salary', 'POSH', 'PF Monthly', 'PF Capped', 'Leaves', 'Salary Restr', 'HR Policy'],
         datasets: [{
           label: 'Score %',
           data: vals,
@@ -896,7 +919,9 @@ function renderUserCharts(s) {
           borderRadius: 8, 
           borderSkipped: false,
           hoverBorderColor: '#fff',
-          hoverBorderWidth: 2
+          hoverBorderWidth: 2,
+          barPercentage: 0.7,
+          categoryPercentage: 0.8
         }]
       },
       options: {
@@ -922,8 +947,8 @@ function renderUserCharts(s) {
           x: { 
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 8, weight: '500' },
-              padding: 4
+              font: { family: ff, size: 8.5, weight: '500' },
+              padding: 8
             }, 
             grid: { 
               color: grid,
@@ -991,14 +1016,17 @@ function renderUserCharts(s) {
               color: tick, 
               font: { family: ff, size: 9 }, 
               backdropColor: 'transparent',
-              callback: function(value) { return value + '%'; }
+              callback: function(value) { return value + '%'; },
+              stepSize: 25,
+              maxTicksLimit: 5
             }, 
             grid: { color: grid }, 
             min: 0, 
             max: 100,
             pointLabels: {
               color: tick,
-              font: { family: ff, size: 9, weight: '500' }
+              font: { family: ff, size: 9.5, weight: '500' },
+              padding: 10
             }
           } 
         },
@@ -1107,10 +1135,10 @@ function renderAdminCharts(data) {
 
   const pct = (fn) => data.length ? Math.round(fn(data) / data.length * 100) : 0;
 
-  // 📈 CHART 1: Overall Statutory Compliance % (LINE CHART - Changed from Bar)
+  // 📈 CHART 1: Overall Statutory Compliance % (LINE CHART - FIXED & PROFESSIONAL)
   const bc = document.getElementById('adminChartBar');
   if (bc) {
-    const labels = ['Owner\nLicense', 'Diwali\nBonus', 'POSH\nAware', 'POSH\nIC', 'POSH\nSessions', 'PF\nMonthly', 'PF\nCapped', 'Leaves\nCompliant', 'ESI\nAware', 'HR\nUpdated', 'Salary\nRestructd'];
+    const labels = ['Owner License', 'Diwali Bonus', 'POSH Aware', 'POSH IC', 'POSH Sessions', 'PF Monthly', 'PF Capped', 'Leaves OK', 'ESI Aware', 'HR Updated', 'Salary Restr'];
     const lineVals = [
       pct(d => d.filter(s => s.sa2 === 'Yes').length),
       pct(d => d.filter(s => s.sb1 === 'Yes').length),
@@ -1133,17 +1161,18 @@ function renderAdminCharts(data) {
           label: '% Compliant', 
           data: lineVals, 
           borderColor: C.gold,
-          backgroundColor: C.gold + '33',
-          borderWidth: 3,
+          backgroundColor: C.gold + '25',
+          borderWidth: 3.5,
           pointBackgroundColor: '#fff',
           pointBorderColor: C.gold,
-          pointBorderWidth: 2.5,
-          pointRadius: 5,
-          pointHoverRadius: 8,
+          pointBorderWidth: 3,
+          pointRadius: 6,
+          pointHoverRadius: 9,
           pointHoverBackgroundColor: C.gold,
           pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 3,
           fill: true,
-          tension: 0.35,
+          tension: 0.4,
           cubicInterpolationMode: 'monotone'
         }]
       },
@@ -1154,38 +1183,56 @@ function renderAdminCharts(data) {
           mode: 'index',
           intersect: false,
         },
+        layout: {
+          padding: {
+            top: 10,
+            bottom: 10,
+            left: 5,
+            right: 5
+          }
+        },
         scales: {
           x: { 
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 8, weight: '600' },
-              padding: 6
-            }, 
             grid: { 
               color: grid,
-              drawBorder: false
+              drawBorder: false,
+              offset: true
+            },
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 9, weight: '600' },
+              padding: 10,
+              maxRotation: 45,
+              minRotation: 45,
+              autoSkip: true,
+              maxTicksLimit: 11
             },
             border: { color: grid }
           },
           y: { 
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 9 },
-              callback: function(value) { return value + '%'; },
-              padding: 8
-            }, 
+            min: 0, 
+            max: 100,
             grid: { 
               color: grid,
-              drawBorder: false
+              drawBorder: false,
+              tickLength: 0
+            },
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 10 },
+              callback: function(value) { return value + '%'; },
+              padding: 10,
+              stepSize: 20,
+              autoSkip: true,
+              maxTicksLimit: 6
             }, 
             border: { color: grid },
-            beginAtZero: true, 
-            max: 100,
             title: {
               display: true,
               text: 'Compliance %',
               color: tick,
-              font: { family: ff, size: 10, weight: '600' }
+              font: { family: ff, size: 11, weight: '700' },
+              padding: { top: 10 }
             }
           }
         },
@@ -1195,25 +1242,30 @@ function renderAdminCharts(data) {
             position: 'bottom', 
             labels: { 
               color: tick, 
-              font: { family: ff, size: 10, weight: '600' },
-              padding: 15,
+              font: { family: ff, size: 10.5, weight: '600' },
+              padding: 20,
               usePointStyle: true,
-              pointStyle: 'circle'
+              pointStyle: 'circle',
+              boxWidth: 12,
+              boxHeight: 12
             } 
           },
           tooltip: {
             backgroundColor: 'rgba(14, 16, 24, 0.95)',
             titleColor: '#fff',
-            titleFont: { family: ff, size: 12, weight: '700' },
+            titleFont: { family: ff, size: 13, weight: '700' },
             bodyColor: '#fff',
-            bodyFont: { family: ff, size: 11 },
+            bodyFont: { family: ff, size: 11.5 },
             borderColor: C.gold,
             borderWidth: 2,
-            padding: 12,
+            padding: 14,
             displayColors: true,
+            cornerRadius: 8,
+            titleSpacing: 0,
+            titleMarginBottom: 10,
             callbacks: {
               label: function(context) {
-                return ` ${context.dataset.label}: ${context.parsed.y}%`;
+                return ` Compliance: ${context.parsed.y}%`;
               },
               title: function(context) {
                 return context[0].label;
@@ -1227,7 +1279,7 @@ function renderAdminCharts(data) {
             borderJoinStyle: 'round'
           },
           point: {
-            hitRadius: 10
+            hitRadius: 12
           }
         }
       }
@@ -1312,7 +1364,9 @@ function renderAdminCharts(data) {
           borderRadius: 8, 
           borderSkipped: false,
           hoverBorderColor: '#fff',
-          hoverBorderWidth: 2
+          hoverBorderWidth: 2,
+          barPercentage: 0.7,
+          categoryPercentage: 0.8
         }] 
       },
       options: {
@@ -1338,8 +1392,8 @@ function renderAdminCharts(data) {
           x: { 
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 8, weight: '500' },
-              padding: 4
+              font: { family: ff, size: 8.5, weight: '500' },
+              padding: 8
             }, 
             grid: { 
               color: grid,
@@ -1455,7 +1509,9 @@ function renderAdminCharts(data) {
           borderRadius: 8, 
           borderSkipped: false,
           hoverBorderColor: '#fff',
-          hoverBorderWidth: 2
+          hoverBorderWidth: 2,
+          barPercentage: 0.7,
+          categoryPercentage: 0.8
         }] 
       },
       options: {
@@ -1482,7 +1538,7 @@ function renderAdminCharts(data) {
             ticks: { 
               color: tick, 
               font: { family: ff, size: 10, weight: '500' },
-              padding: 4
+              padding: 8
             }, 
             grid: { 
               color: grid,
@@ -1535,7 +1591,9 @@ function renderAdminCharts(data) {
           borderRadius: 8, 
           borderSkipped: false,
           hoverBorderColor: '#fff',
-          hoverBorderWidth: 2
+          hoverBorderWidth: 2,
+          barPercentage: 0.7,
+          categoryPercentage: 0.8
         }] 
       },
       options: {
@@ -1625,7 +1683,9 @@ function renderAdminCharts(data) {
               borderColor: C.blue + '99',
               borderWidth: 1,
               borderRadius: 6, 
-              borderSkipped: false 
+              borderSkipped: false,
+              barPercentage: 0.7,
+              categoryPercentage: 0.8
             },
             { 
               label: 'Total Required (Law)', 
@@ -1634,7 +1694,9 @@ function renderAdminCharts(data) {
               borderColor: C.gold + '99',
               borderWidth: 1,
               borderRadius: 6, 
-              borderSkipped: false 
+              borderSkipped: false,
+              barPercentage: 0.7,
+              categoryPercentage: 0.8
             },
           ]
         },
@@ -1670,8 +1732,8 @@ function renderAdminCharts(data) {
             x: { 
               ticks: { 
                 color: tick, 
-                font: { family: ff, size: 8, weight: '500' },
-                padding: 4
+                font: { family: ff, size: 8.5, weight: '500' },
+                padding: 8
               }, 
               grid: { 
                 color: grid,

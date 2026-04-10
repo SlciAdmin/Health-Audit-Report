@@ -1843,17 +1843,26 @@ function exportToCSV() {
 
 // ===== PDF DOWNLOAD =====
 // ===== PROFESSIONAL PDF DOWNLOAD (Complete with Footer Info) =====
+// ===== PROFESSIONAL PDF DOWNLOAD (Complete - Real Charts + Red Gaps) =====
 async function downloadPDF(id) {
   const s = id ? submissions.find(x => x.id == id) : currentUserSubmission;
   if (!s) { showToast('Submission not found', 'red'); return; }
 
   showToast('⏳ Generating Professional PDF…', 'blue');
 
-  // Load jsPDF
+  // Load required libraries
   if (!window.jspdf?.jsPDF) {
     await new Promise((res, rej) => {
       const el = document.createElement('script');
       el.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      el.onload = res; el.onerror = rej;
+      document.head.appendChild(el);
+    });
+  }
+  if (!window.html2canvas) {
+    await new Promise((res, rej) => {
+      const el = document.createElement('script');
+      el.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
       el.onload = res; el.onerror = rej;
       document.head.appendChild(el);
     });
@@ -1892,7 +1901,7 @@ async function downloadPDF(id) {
 
   y = 45;
 
-  // ===== SECTIONS HELPERS =====
+  // ===== HELPERS =====
   const addSection = (title, emoji) => {
     doc.setFillColor(...LIGHT_GRAY);
     doc.rect(margin, y, pageWidth - 2*margin, 8, 'F');
@@ -1911,7 +1920,6 @@ async function downloadPDF(id) {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.text(label, margin + 3, y);
-    
     doc.setTextColor(...color);
     doc.setFont('helvetica', isBold ? 'bold' : 'normal');
     doc.setFontSize(9);
@@ -1931,7 +1939,7 @@ async function downloadPDF(id) {
   addRow('Establishment Type', s.sa1 || '—');
   y += 3;
 
-  // ===== SCORE CARD =====
+  // ===== NON-COMPLIANCE SCORE CARD =====
   const complianceScore = s.score || 0;
   const nonComplianceScore = 100 - complianceScore;
   const scoreColor = nonComplianceScore === 0 ? GREEN : nonComplianceScore <= 30 ? [78, 140, 255] : nonComplianceScore <= 60 ? GOLD : RED;
@@ -1951,39 +1959,115 @@ async function downloadPDF(id) {
   doc.text(verdict, pageWidth/2, y + 14, { align: 'center' });
   y += 22;
 
-  // ===== CHARTS PLACEHOLDER =====
+  // ===== CAPTURE & ADD REAL CHARTS =====
   addSection('COMPLIANCE VISUALIZATION', '📊');
   
-  const chartPlaceholder = (title, color) => {
-    if (y > 240) { doc.addPage(); y = margin; }
-    doc.setFillColor(...LIGHT_GRAY);
-    doc.rect(margin, y, (pageWidth - 2*margin - 5)/2, 100, 'F');
-    doc.setFillColor(...color);
-    doc.rect(margin + 5, y + 10, (pageWidth - 2*margin - 5)/2 - 10, 70, 'F');
-    doc.setTextColor(...MUTED);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.text(title, margin + 10, y + 50, { align: 'center' });
-    doc.text('[Chart Rendered]', margin + 10, y + 55, { align: 'center' });
-  };
+  // Create temporary divs for chart capture
+  const tempContainer = document.createElement('div');
+  tempContainer.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:400px;height:220px;background:#fff;border-radius:12px;padding:1rem;';
   
-  chartPlaceholder('Compliance Status Pie', GREEN);
-  chartPlaceholder('Section-wise Non-Compliance', RED);
-  y += 105;
+  // Pie Chart Capture
+  const pieDiv = document.createElement('div');
+  pieDiv.innerHTML = `<canvas id="tempPie" width="400" height="200"></canvas>`;
+  tempContainer.appendChild(pieDiv);
+  document.body.appendChild(tempContainer);
+  
+  // Render temporary pie chart
+  const tempPieCtx = document.getElementById('tempPie').getContext('2d');
+  const lc = getLeaveComplianceStatus(s);
+  const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
+  const checks = [
+    s.sa1 !== '', s.sa2 === 'Yes', s.sb1 === 'Yes', s.sb2 === 'Yes',
+    s.sb4 === 'Yes', s.sb5 === 'Yes',
+    s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc3 === 'Yes')),
+    s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc4 === 'Yes')),
+    s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc5 === 'Yes')),
+    s.sc1 === 'Yes' && s.sc2 === 'Yes' ? (s.sc2 === 'Yes') : true,
+    s.sd1 === 'No' ? true : (s.sd3 === 'Yes'),
+    s.sd1 === 'No' ? true : (s.sd2 === 'No'),
+    s.se1 === 'Yes', leaveOk, s.se3 === 'Yes',
+    s.sf1 === 'Yes', s.sf3 === 'Yes',
+    s.sg1 === 'Yes' || s.sg1 === 'Partial',
+    s.sh1 === 'No', s.sh2 === 'No', s.sh3 === 'No',
+    s.sh4 === 'Yes' && s.sh5 === 'No',
+  ];
+  const compliant = checks.filter(Boolean).length;
+  const nonCompliant = checks.length - compliant;
+  
+  new Chart(tempPieCtx, {
+    type: 'pie',
+    data: {
+      labels: ['Compliant', 'Non-Compliant'],
+      datasets: [{ data: [compliant, nonCompliant], backgroundColor: ['#2ecc8a', '#e05555'], borderWidth: 0 }]
+    },
+    options: { responsive: false, plugins: { legend: { position: 'bottom', labels: { color: '#333', font: { size: 10 } } } } }
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const pieImg = await html2canvas(pieDiv, { scale: 2, backgroundColor: '#ffffff' });
+  
+  // Line Chart Capture
+  const lineDiv = document.createElement('div');
+  lineDiv.innerHTML = `<canvas id="tempLine" width="400" height="200"></canvas>`;
+  tempContainer.appendChild(lineDiv);
+  
+  const scores = getSectionScores(s);
+  const tempLineCtx = document.getElementById('tempLine').getContext('2d');
+  new Chart(tempLineCtx, {
+    type: 'line',
+    data: {
+      labels: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+      datasets: [{
+        label: 'Non-Compliance',
+        data: [100-scores.A, 100-scores.B, 100-scores.C, 100-scores.D, 100-scores.E, 100-scores.F, 100-scores.G, 100-scores.H],
+        borderColor: '#e05555', backgroundColor: 'rgba(224,85,85,0.1)', borderWidth: 2, pointRadius: 3, fill: true, tension: 0.3
+      }]
+    },
+    options: { 
+      responsive: false, 
+      scales: { 
+        y: { min: 0, max: 100, ticks: { color: '#333', callback: v => v+'%' } }, 
+        x: { ticks: { color: '#333' } } 
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+  
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const lineImg = await html2canvas(lineDiv, { scale: 2, backgroundColor: '#ffffff' });
+  
+  // Add charts to PDF (side-by-side)
+  const chartWidth = 85, chartHeight = 55;
+  doc.addImage(pieImg.toDataURL('image/png'), 'PNG', margin, y, chartWidth, chartHeight);
+  doc.addImage(lineImg.toDataURL('image/png'), 'PNG', margin + chartWidth + 5, y, chartWidth, chartHeight);
+  
+  // Chart labels
+  doc.setTextColor(...MUTED);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text('📊 Compliance Status', margin + chartWidth/2, y + chartHeight + 4, { align: 'center' });
+  doc.text('📈 Section-wise Non-Compliance', margin + chartWidth + 5 + chartWidth/2, y + chartHeight + 4, { align: 'center' });
+  
+  y += chartHeight + 15;
+  
+  // Cleanup temp elements
+  document.body.removeChild(tempContainer);
 
-  // ===== COMPLIANCE GAPS =====
+  // ===== COMPLIANCE GAPS (RED THEME - SAME AS ADMIN DASHBOARD) =====
   const gaps = Array.isArray(s.gaps) && s.gaps.length ? s.gaps : getGaps(s);
   if (gaps.length) {
     addSection(`COMPLIANCE GAPS IDENTIFIED (${gaps.length})`, '⚠️');
     gaps.forEach((gap, idx) => {
       if (y > 260) { doc.addPage(); y = margin; }
+      // Red background strip for gap items
       doc.setFillColor(254, 242, 242);
       doc.rect(margin, y, pageWidth - 2*margin, 1, 'F');
+      // Red warning icon
       doc.setTextColor(...RED);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.text(`⚠ ${idx + 1}.`, margin + 3, y + 5);
-      
+      // Gap text
       doc.setTextColor(...DARK);
       doc.setFont('helvetica', 'normal');
       const wrap = doc.splitTextToSize(gap, pageWidth - 2*margin - 15);
@@ -2000,42 +2084,36 @@ async function downloadPDF(id) {
     y += 12;
   }
 
-  // ===== PROFESSIONAL FOOTER WITH COMPLETE CONTACT INFO =====
+  // ===== PROFESSIONAL FOOTER (ALL PAGES) =====
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    
     // Footer background
     doc.setFillColor(...LIGHT_GRAY);
     doc.rect(0, pageHeight - 28, pageWidth, 28, 'F');
     doc.setFillColor(...GOLD);
     doc.rect(0, pageHeight - 28, pageWidth, 2, 'F');
-    
-    // Company Name
+    // Company name
     doc.setTextColor(...NAVY);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text('SHAKTI LEGAL COMPLIANCES INDIA LLP', pageWidth/2, pageHeight - 22, { align: 'center' });
-    
-    // Address with icon
+    // Address
     doc.setTextColor(...MUTED);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.text('📍 83, DSIDC COMPLEX, Okhla I Rd, Pocket C, Okhla Phase I, New Delhi', pageWidth/2, pageHeight - 17, { align: 'center' });
-    
-    // Contact details in one line
+    // Contact line
     doc.setFontSize(7);
     const contactLine = '✉ contact@slci.in  |  📞 83739 17131  |  🌐 www.slci.in';
     doc.setTextColor(...GOLD);
     doc.setFont('helvetica', 'bold');
     doc.text(contactLine, pageWidth/2, pageHeight - 12, { align: 'center' });
-    
-    // Divider line
+    // Divider
     doc.setDrawColor(...GOLD);
     doc.setLineWidth(0.3);
     doc.line(margin, pageHeight - 9, pageWidth - margin, pageHeight - 9);
-    
-    // Page number and tagline
+    // Page info
     doc.setTextColor(...MUTED);
     doc.setFontSize(6);
     doc.setFont('helvetica', 'italic');

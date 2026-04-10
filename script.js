@@ -1560,61 +1560,45 @@ function showDetail(id) {
   // 🔥 NON-COMPLIANCE SCORE (Same calculation as User Dashboard)
   const complianceScore = s.score || 0;
   const nonComplianceScore = 100 - complianceScore;
-  
-  const scoreColor = nonComplianceScore === 0 ? 'var(--green)' : 
-                     nonComplianceScore <= 30 ? 'var(--blue)' : 
+  const scoreColor = nonComplianceScore === 0 ? 'var(--green)' :
+                     nonComplianceScore <= 30 ? 'var(--blue)' :
                      nonComplianceScore <= 60 ? 'var(--gold)' : 'var(--red)';
-  
   const verdict = nonComplianceScore === 0 ? '✅ Fully Compliant — Maintain excellence' :
                   nonComplianceScore <= 30 ? '⚠️ Low Risk — Minor gaps to address' :
                   nonComplianceScore <= 60 ? '🔶 Medium Risk — Action recommended' :
                   '🚨 High Risk — Immediate corrective action required';
 
   const gaps = Array.isArray(s.gaps) && s.gaps.length ? s.gaps : getGaps(s);
+  const gapsHTML = gaps.length ?
+    `<div class="m-section" style="margin-top:1.5rem">⚠️ Compliance Gaps Identified (${gaps.length})</div>
+     <div class="m-gaps">${gaps.map(g => `
+       <div class="m-gap-item" style="padding:0.75rem;margin-bottom:0.5rem;background:var(--card-bg);border-left:3px solid var(--red);border-radius:6px;">
+         <span style="color:var(--red);margin-right:0.5rem">⚠</span>
+         <span style="color:var(--text);font-size:0.85rem;line-height:1.5;">${g}</span>
+       </div>`).join('')}</div>` :
+    `<div class="m-section" style="margin-top:1.5rem">✅ No compliance gaps found! Great job.</div>`;
 
-  const yn = v => {
-    if (v === 'Yes')       return '<span class="m-item-val yes">✅ Yes</span>';
-    if (v === 'No')        return '<span class="m-item-val no">❌ No</span>';
-    if (v === 'Partial')   return '<span class="m-item-val partial">⚖ Partial</span>';
-    if (v === 'Partially') return '<span class="m-item-val partial">📄 Partially</span>';
-    if (v === 'N/A')       return '<span class="m-item-val partial">⚪ N/A</span>';
-    return `<span class="m-item-val">${v||'—'}</span>`;
-  };
-
-  const lc = getLeaveComplianceStatus(s);
-  const ld = lc ? lc.ld : null;
-
-  // 🔥 CHARTS HTML (Same as User Dashboard)
   const chartsHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin:1.5rem 0;">
-      <!-- Pie Chart -->
       <div style="background:var(--card-bg);border-radius:12px;padding:1rem;">
         <div style="font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;text-align:center;">📊 Compliance Status</div>
         <div style="height:200px;"><canvas id="detailChartPie"></canvas></div>
         <div style="text-align:center;margin-top:0.5rem;font-size:0.75rem;color:var(--text2);">
-          <span style="color:var(--green);font-weight:600;">● Compliant</span> &nbsp;|&nbsp; 
+          <span style="color:var(--green);font-weight:600;">● Compliant</span> &nbsp;|&nbsp;
           <span style="color:var(--red);font-weight:600;">● Non-Compliant</span>
         </div>
       </div>
-      <!-- Line Chart -->
       <div style="background:var(--card-bg);border-radius:12px;padding:1rem;">
         <div style="font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;text-align:center;">📈 Section-wise Non-Compliance</div>
         <div style="height:200px;"><canvas id="detailChartLine"></canvas></div>
       </div>
-    </div>
-  `;
-
-  // 🔥 GAPS ONLY (No Recommendations - Same as User Dashboard)
-  const gapsHTML = gaps.length ? 
-    `<div class="m-section" style="margin-top:1.5rem">⚠️ Compliance Gaps Identified (${gaps.length})</div>
-    <div class="m-gaps">${gaps.map(g => `<div class="m-gap-item" style="padding:0.75rem;margin-bottom:0.5rem;background:var(--card-bg);border-left:3px solid var(--red);border-radius:6px;"><span style="color:var(--red);margin-right:0.5rem">⚠</span><span style="color:var(--text);font-size:0.85rem">${g}</span></div>`).join('')}</div>` : 
-    `<div class="m-section" style="margin-top:1.5rem">✅ No compliance gaps found! Great job.</div>`;
+    </div>`;
 
   document.getElementById('modalContent').innerHTML = `
     <div class="m-title">🏢 ${s.companyName||'Unknown Company'}</div>
     <div class="m-sub">${s.field||'—'} · ${s.state||'—'} · ${s.employees||'—'} employees · ${fmtDate(s.submittedAt)}</div>
-
-    <!-- 🔥 NON-COMPLIANCE SCORE (Same as User Dashboard) -->
+    
+    <!-- 🔥 NON-COMPLIANCE SCORE -->
     <div class="m-score-bar" style="margin:1.5rem 0;padding:1.25rem;background:var(--card-bg);border-radius:12px;text-align:center;">
       <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text2);margin-bottom:0.5rem;">Non-Compliance Score</div>
       <div class="m-score-num" style="font-size:3rem;font-weight:800;color:${scoreColor};line-height:1;">${nonComplianceScore}%</div>
@@ -1624,17 +1608,20 @@ function showDetail(id) {
       </div>
       <div style="font-size:0.8rem;color:var(--text2);">${gaps.length} gap${gaps.length!==1?'s':''} causing non-compliance</div>
     </div>
-
+    
     ${chartsHTML}
-
-    <div class="m-actions">
+    
+    <!-- ✅ FIXED: Gaps ab yahan charts ke baad show honge -->
+    ${gapsHTML}
+    
+    <div class="m-actions" style="margin-top:1.5rem;">
       <button class="btn btn-gold" onclick="downloadPDF(${s.id})">⬇ Download PDF</button>
       <button class="btn btn-ghost" onclick="closeModal(true)">Close</button>
     </div>`;
 
   document.getElementById('modal')?.classList.add('open');
-  
-  // 🔥 RENDER CHARTS (Same as User Dashboard)
+
+  // 🔥 RENDER CHARTS
   setTimeout(() => {
     renderDetailCharts(s);
     // Animate progress bar

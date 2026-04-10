@@ -638,67 +638,84 @@ function renderUserCharts(s) {
   const scores = getSectionScores(s);
 
   // 🥧 CHART 1: Pie Chart - % Compliant vs Non-Compliant (GREEN/RED)
-  const pc = document.getElementById('uChartDough');
-  if (pc) {
-    // Calculate compliant checks out of total 22
-    const lc = getLeaveComplianceStatus(s);
-    const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
-    const checks = [
-      s.sa1 !== '', s.sa2 === 'Yes', s.sb1 === 'Yes', s.sb2 === 'Yes',
-      s.sb4 === 'Yes', s.sb5 === 'Yes',
-      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc3 === 'Yes')),
-      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc4 === 'Yes')),
-      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc5 === 'Yes')),
-      s.sc1 === 'Yes' && s.sc2 === 'Yes' ? (s.sc2 === 'Yes') : true,
-      s.sd1 === 'No' ? true : (s.sd3 === 'Yes'),
-      s.sd1 === 'No' ? true : (s.sd2 === 'No'),
-      s.se1 === 'Yes', leaveOk, s.se3 === 'Yes',
-      s.sf1 === 'Yes', s.sf3 === 'Yes',
-      s.sg1 === 'Yes' || s.sg1 === 'Partial',
-      s.sh1 === 'No', s.sh2 === 'No', s.sh3 === 'No',
-      s.sh4 === 'Yes' && s.sh5 === 'No',
-    ];
-    const compliant = checks.filter(Boolean).length;
-    const nonCompliant = checks.length - compliant;
-    
-    uCharts.pie = new Chart(pc, {
-      type: 'pie',
-      data: {
-        labels: ['Compliant ✓', 'Non-Compliant ✗'],
-        datasets: [{
-          data: [compliant, nonCompliant],
-          backgroundColor: [C.green, C.red],
-          borderWidth: 0,
-          hoverOffset: 15
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { color: tick, font: { family: ff, size: 11, weight: '600' }, padding: 15 }
-          },
-          tooltip: {
-            backgroundColor: 'rgba(14,16,24,0.95)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: C.gold,
-            borderWidth: 2,
-            padding: 12,
-            callbacks: {
-              label: function(ctx) {
-                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
-                const pct = total ? Math.round((ctx.parsed * 100) / total) : 0;
-                return ` ${ctx.label}: ${ctx.parsed} checks (${pct}%)`;
-              }
+  // 🥧 CHART 1: Pie Chart - % Compliant vs Non-Compliant (WITH PERCENTAGE LABELS)
+const pc = document.getElementById('uChartDough');
+if (pc) {
+  const lc = getLeaveComplianceStatus(s);
+  const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
+  const checks = [
+    s.sa1 !== '', s.sa2 === 'Yes', s.sb1 === 'Yes', s.sb2 === 'Yes',
+    s.sb4 === 'Yes', s.sb5 === 'Yes',
+    s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc3 === 'Yes')),
+    s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc4 === 'Yes')),
+    s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc5 === 'Yes')),
+    s.sc1 === 'Yes' && s.sc2 === 'Yes' ? (s.sc2 === 'Yes') : true,
+    s.sd1 === 'No' ? true : (s.sd3 === 'Yes'),
+    s.sd1 === 'No' ? true : (s.sd2 === 'No'),
+    s.se1 === 'Yes', leaveOk, s.se3 === 'Yes',
+    s.sf1 === 'Yes', s.sf3 === 'Yes',
+    s.sg1 === 'Yes' || s.sg1 === 'Partial',
+    s.sh1 === 'No', s.sh2 === 'No', s.sh3 === 'No',
+    s.sh4 === 'Yes' && s.sh5 === 'No',
+  ];
+  const compliant = checks.filter(Boolean).length;
+  const nonCompliant = checks.length - compliant;
+  const total = compliant + nonCompliant;
+  const compPct = total ? Math.round((compliant * 100) / total) : 0;
+  const nonCompPct = total ? Math.round((nonCompliant * 100) / total) : 0;
+  
+  uCharts.pie = new Chart(pc, {
+    type: 'pie',
+    data: {
+      labels: ['Compliant ✓', 'Non-Compliant ✗'],
+      datasets: [{
+        data: [compliant, nonCompliant],
+        backgroundColor: [C.green, C.red],
+        borderWidth: 0,
+        hoverOffset: 15
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: tick, font: { family: ff, size: 10, weight: '600' }, padding: 12 }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(14,16,24,0.95)',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          borderColor: C.gold,
+          borderWidth: 2,
+          padding: 12,
+          callbacks: {
+            label: function(ctx) {
+              const pct = ctx.parsed;
+              return ` ${ctx.label}: ${ctx.parsed} checks (${pct}%)`;
             }
           }
+        },
+        // ✅ DataLabels Plugin Configuration
+        datalabels: {
+          color: '#fff',
+          font: { family: ff, size: 13, weight: '700' },
+          formatter: (value, ctx) => {
+            const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            const pct = total ? Math.round((value * 100) / total) : 0;
+            return pct > 8 ? pct + '%' : ''; // Only show if slice is big enough
+          },
+          anchor: 'center',
+          align: 'center',
+          textShadowColor: 'rgba(0,0,0,0.3)',
+          textShadowBlur: 3
         }
       }
-    });
-  }
+    },
+    plugins: [ChartDataLabels] // ✅ Register the plugin
+  });
+}
 
   // 📈 CHART 2: Line Graph - Section-wise NON-Compliance (🔥 RED THEME)
   const lc = document.getElementById('uChartRadar');
@@ -1652,69 +1669,82 @@ function renderDetailCharts(s) {
   const scores = getSectionScores(s);
 
   // 🥧 PIE CHART: Compliant vs Non-Compliant (Same calculation)
-  const pieCanvas = document.getElementById('detailChartPie');
-  if (pieCanvas) {
-    const lc = getLeaveComplianceStatus(s);
-    const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
-    
-    // Same 22 checks as User Dashboard
-    const checks = [
-      s.sa1 !== '', s.sa2 === 'Yes', s.sb1 === 'Yes', s.sb2 === 'Yes',
-      s.sb4 === 'Yes', s.sb5 === 'Yes',
-      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc3 === 'Yes')),
-      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc4 === 'Yes')),
-      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc5 === 'Yes')),
-      s.sc1 === 'Yes' && s.sc2 === 'Yes' ? (s.sc2 === 'Yes') : true,
-      s.sd1 === 'No' ? true : (s.sd3 === 'Yes'),
-      s.sd1 === 'No' ? true : (s.sd2 === 'No'),
-      s.se1 === 'Yes', leaveOk, s.se3 === 'Yes',
-      s.sf1 === 'Yes', s.sf3 === 'Yes',
-      s.sg1 === 'Yes' || s.sg1 === 'Partial',
-      s.sh1 === 'No', s.sh2 === 'No', s.sh3 === 'No',
-      s.sh4 === 'Yes' && s.sh5 === 'No',
-    ];
-    
-    const compliant = checks.filter(Boolean).length;
-    const nonCompliant = checks.length - compliant;
-    
-    pieCanvas.chartInstance = new Chart(pieCanvas, {
-      type: 'pie',
-      data: {
-        labels: ['Compliant ✓', 'Non-Compliant ✗'],
-        datasets: [{
-          data: [compliant, nonCompliant],
-          backgroundColor: [C.green, C.red],
-          borderWidth: 0,
-          hoverOffset: 12
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { color: tick, font: { family: ff, size: 10, weight: '600' }, padding: 12 }
-          },
-          tooltip: {
-            backgroundColor: 'rgba(14,16,24,0.95)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: C.gold,
-            borderWidth: 2,
-            padding: 10,
-            callbacks: {
-              label: function(ctx) {
-                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
-                const pct = total ? Math.round((ctx.parsed * 100) / total) : 0;
-                return ` ${ctx.label}: ${ctx.parsed} checks (${pct}%)`;
-              }
+  // 🥧 PIE CHART: Compliant vs Non-Compliant (WITH PERCENTAGE LABELS)
+const pieCanvas = document.getElementById('detailChartPie');
+if (pieCanvas) {
+  const lc = getLeaveComplianceStatus(s);
+  const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
+  const checks = [
+    s.sa1 !== '', s.sa2 === 'Yes', s.sb1 === 'Yes', s.sb2 === 'Yes',
+    s.sb4 === 'Yes', s.sb5 === 'Yes',
+    s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc3 === 'Yes')),
+    s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc4 === 'Yes')),
+    s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc5 === 'Yes')),
+    s.sc1 === 'Yes' && s.sc2 === 'Yes' ? (s.sc2 === 'Yes') : true,
+    s.sd1 === 'No' ? true : (s.sd3 === 'Yes'),
+    s.sd1 === 'No' ? true : (s.sd2 === 'No'),
+    s.se1 === 'Yes', leaveOk, s.se3 === 'Yes',
+    s.sf1 === 'Yes', s.sf3 === 'Yes',
+    s.sg1 === 'Yes' || s.sg1 === 'Partial',
+    s.sh1 === 'No', s.sh2 === 'No', s.sh3 === 'No',
+    s.sh4 === 'Yes' && s.sh5 === 'No',
+  ];
+  const compliant = checks.filter(Boolean).length;
+  const nonCompliant = checks.length - compliant;
+  
+  pieCanvas.chartInstance = new Chart(pieCanvas, {
+    type: 'pie',
+    data: {
+      labels: ['Compliant ✓', 'Non-Compliant ✗'],
+      datasets: [{
+        data: [compliant, nonCompliant],
+        backgroundColor: [C.green, C.red],
+        borderWidth: 0,
+        hoverOffset: 12
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: tick, font: { family: ff, size: 10, weight: '600' }, padding: 12 }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(14,16,24,0.95)',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          borderColor: C.gold,
+          borderWidth: 2,
+          padding: 10,
+          callbacks: {
+            label: function(ctx) {
+              const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+              const pct = total ? Math.round((ctx.parsed * 100) / total) : 0;
+              return ` ${ctx.label}: ${ctx.parsed} checks (${pct}%)`;
             }
           }
+        },
+        // ✅ DataLabels for Detail Modal
+        datalabels: {
+          color: '#fff',
+          font: { family: ff, size: 13, weight: '700' },
+          formatter: (value, ctx) => {
+            const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            const pct = total ? Math.round((value * 100) / total) : 0;
+            return pct > 8 ? pct + '%' : '';
+          },
+          anchor: 'center',
+          align: 'center',
+          textShadowColor: 'rgba(0,0,0,0.3)',
+          textShadowBlur: 3
         }
       }
-    });
-  }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
 
   // 📈 LINE CHART: Section-wise Non-Compliance (RED - Same as User Dashboard)
   const lineCanvas = document.getElementById('detailChartLine');

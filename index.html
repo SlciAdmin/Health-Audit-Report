@@ -464,117 +464,59 @@
   </div>
 </div>
 
-<!-- USER DASHBOARD VIEW -->
+<!-- ===== USER DASHBOARD - CLEAN VIEW ===== -->
 <div id="view-user-dashboard" class="view">
-  <div class="udash-hero">
-    <div class="udash-hero-inner">
-      <div class="udash-hero-tag">MY COMPLIANCE REPORT</div>
-      <h2 class="udash-hero-title" id="udashTitle">Your Audit Report</h2>
-      <p class="udash-hero-sub" id="udashSub">Submit an audit to view your personalised compliance report below.</p>
-    </div>
-  </div>
-
-  <div class="udash-shell" id="udashShell">
-    <div id="udashEmpty" class="udash-empty">
-      <div class="udash-empty-icon">📋</div>
-      <div class="udash-empty-title">No Audit Submitted Yet</div>
-      <div class="udash-empty-sub">Fill in the audit form to generate your personalised compliance report with detailed graphs and recommendations.</div>
-      <button class="btn btn-gold" onclick="showView('form')" style="margin-top:1.5rem">Start Audit Now ✦</button>
+  <div class="container" style="max-width:900px;margin:0 auto;padding:2rem 1rem;">
+    
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:2rem;">
+      <h1 id="udashTitle" style="font-size:1.8rem;font-weight:800;color:var(--text);margin-bottom:0.5rem;">Your Report</h1>
+      <p id="udashSub" style="color:var(--text2);font-size:0.9rem;">— · — · Submitted on —</p>
     </div>
 
-    <div id="udashReport" style="display:none">
-
-      <!-- 1. SCORE ROW (First) -->
-      <div class="udash-score-row">
-        <div class="udash-score-main">
-          <div class="udash-score-label">Overall Compliance Score</div>
-          <div class="udash-score-num" id="udashScoreNum">—</div>
-          <div class="udash-score-verdict" id="udashVerdict">—</div>
-          <div class="udash-score-bar-wrap">
-            <div class="udash-score-bar" id="udashScoreBar"></div>
-          </div>
-          <div class="udash-score-meta" id="udashScoreMeta">—</div>
-        </div>
-        <div class="udash-score-stats">
-          <div class="udash-stat-item"><div class="ust-val" id="ustPF">—</div><div class="ust-lbl">PF Monthly</div></div>
-          <div class="udash-stat-item"><div class="ust-val" id="ustESI">—</div><div class="ust-lbl">ESI Aware</div></div>
-          <div class="udash-stat-item"><div class="ust-val" id="ustPOSH">—</div><div class="ust-lbl">POSH IC</div></div>
-          <div class="udash-stat-item"><div class="ust-val" id="ustLeave">—</div><div class="ust-lbl">Leaves Given</div></div>
-          <div class="udash-stat-item"><div class="ust-val" id="ustHR">—</div><div class="ust-lbl">HR Policy</div></div>
-          <div class="udash-stat-item"><div class="ust-val" id="ustBonus">—</div><div class="ust-lbl">Bonus Paid</div></div>
-        </div>
+    <!-- ✅ STEP 1: Overall Compliance Score -->
+    <div class="udash-score-card" style="background:var(--card-bg);border-radius:16px;padding:2rem;margin-bottom:2rem;box-shadow:0 4px 20px rgba(0,0,0,0.08);text-align:center;">
+      <div style="font-size:0.85rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text2);margin-bottom:1rem;">Overall Compliance Score</div>
+      <div id="udashScoreNum" class="udash-score-num" style="font-size:4rem;font-weight:800;color:var(--blue);line-height:1;">68%</div>
+      <div id="udashVerdict" style="font-size:1.1rem;font-weight:700;color:var(--text);margin:0.75rem 0;">Moderate — Action Required</div>
+      <div style="background:var(--bg2);border-radius:12px;height:12px;overflow:hidden;margin:1rem auto;max-width:400px;">
+        <div id="udashScoreBar" style="height:100%;background:linear-gradient(90deg,var(--gold),var(--green));width:0;transition:width 0.6s ease;"></div>
       </div>
+      <div id="udashScoreMeta" style="font-size:0.85rem;color:var(--text2);">8 compliance gaps identified</div>
+    </div>
 
-      <!-- 2. LEAVE COMPLIANCE SECTION (State-specific, Second) -->
-      <div id="udashLeaveComplianceSection" style="display:none">
-        <div class="udash-section-title">🏖 Leave Compliance — State Law vs Your Practice</div>
-        <div id="udashLeaveComplianceCard" class="leave-compliance-dashboard"></div>
-      </div>
-
-      <!-- 3. GAPS (Third - before charts) -->
-      <div id="udashGapsSection" style="display:none">
-        <div class="udash-section-title">⚠️ Compliance Gaps Identified</div>
-        <div class="m-gaps" id="udashGaps"></div>
-      </div>
-
-      <!-- 4. RECOMMENDED ACTIONS (Fourth) -->
-      <div id="udashRecsSection" style="display:none">
-        <div class="udash-section-title">✅ Recommended Actions</div>
-        <div class="m-recs" id="udashRecs"></div>
-      </div>
-
-      <!-- 5. CHARTS (Fifth) -->
-      <div class="udash-charts-row">
-        <div class="chart-tile">
-          <div class="ct-title">Compliance Area Breakdown (Radar)</div>
-          <div class="ct-body"><canvas id="uChartRadar"></canvas></div>
-        </div>
-        <div class="chart-tile">
-          <div class="ct-title">Key Compliance Status (Doughnut)</div>
-          <div class="ct-body"><canvas id="uChartDough"></canvas></div>
-        </div>
-      </div>
-      <div class="udash-charts-row">
-        <div class="chart-tile">
-          <div class="ct-title">Key Compliance Metrics (Bar)</div>
-          <div class="ct-body"><canvas id="uChartBar"></canvas></div>
-        </div>
-        <div class="chart-tile">
-          <div class="ct-title">HR Governance Score (Polar)</div>
-          <div class="ct-body"><canvas id="uChartPolar"></canvas></div>
+    <!-- ✅ STEP 2: Charts Section (Pie + Line) -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-bottom:2rem;">
+      
+      <!-- Pie Chart: Compliant vs Non-Compliant -->
+      <div style="background:var(--card-bg);border-radius:16px;padding:1.5rem;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        <h3 style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.05em;text-align:center;">📊 Compliance Status</h3>
+        <div style="height:250px;"><canvas id="uChartDough"></canvas></div>
+        <div style="text-align:center;margin-top:0.5rem;font-size:0.85rem;color:var(--text2);">
+          <span style="color:var(--green);font-weight:600;">● Compliant</span> &nbsp;|&nbsp; 
+          <span style="color:var(--red);font-weight:600;">● Non-Compliant</span>
         </div>
       </div>
 
-      <!-- 6. DETAIL SECTIONS (Sixth) -->
-      <div class="udash-section-title">📋 Business Profile</div>
-      <div class="m-grid" id="udashProfile"></div>
-
-      <div class="udash-section-title">💰 Bonus & Salary Practices (Section B)</div>
-      <div class="m-grid" id="udashBonus"></div>
-
-      <div class="udash-section-title">👩‍⚖️ POSH & Female Employment (Section C)</div>
-      <div class="m-grid" id="udashPOSH"></div>
-
-      <div class="udash-section-title">🏦 Provident Fund — PF (Section D)</div>
-      <div class="m-grid" id="udashPFSection"></div>
-
-      <div class="udash-section-title">🏖 Leave Policy — State-Specific (Section E)</div>
-      <div class="m-grid" id="udashLeaves"></div>
-
-      <div class="udash-section-title">🏥 ESI & Salary Structure (Section F)</div>
-      <div class="m-grid" id="udashESI"></div>
-
-      <div class="udash-section-title">📄 HR Policy & Documentation (Section G)</div>
-      <div class="m-grid" id="udashHR"></div>
-
-      <div class="udash-section-title">🔍 Inspections & Asset Management (Section H)</div>
-      <div class="m-grid" id="udashInspection"></div>
-
-      <div class="udash-actions">
-        <button class="btn btn-gold" id="udashPDFBtn">⬇ Download PDF Report</button>
-        <button class="btn btn-ghost" onclick="showView('form')">+ Submit New Audit</button>
+      <!-- Line Chart: Section-wise Breakdown -->
+      <div style="background:var(--card-bg);border-radius:16px;padding:1.5rem;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        <h3 style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.05em;text-align:center;">📈 Section-wise Score</h3>
+        <div style="height:250px;"><canvas id="uChartRadar"></canvas></div>
       </div>
     </div>
+
+    <!-- ✅ STEP 3: Compliance Gaps Only -->
+    <div id="udashGapsSection" style="background:var(--card-bg);border-radius:16px;padding:2rem;margin-bottom:2rem;box-shadow:0 4px 20px rgba(0,0,0,0.08);display:none;">
+      <div id="udashGaps"></div>
+    </div>
+
+    <!-- ✅ STEP 4: Download PDF Button (Centered) -->
+    <div style="text-align:center;margin:2.5rem 0 1rem;">
+      <button id="udashPDFBtn" class="btn btn-gold" style="padding:1rem 2.5rem;font-size:1rem;font-weight:700;border-radius:12px;box-shadow:0 4px 15px rgba(184,134,11,0.3);cursor:pointer;">
+        ⬇ Download Full PDF Report
+      </button>
+    </div>
+
   </div>
 </div>
 

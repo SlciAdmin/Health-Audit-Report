@@ -513,6 +513,7 @@ function resetForm() {
 }
 
 // ===== USER DASHBOARD =====
+// ===== USER DASHBOARD - CLEAN VERSION =====
 function renderUserDashboard() {
   const lastId = localStorage.getItem(LS_LAST);
   if (lastId && !currentUserSubmission) {
@@ -535,132 +536,43 @@ function renderUserDashboard() {
   const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
   const verdict = sc >= 70 ? 'Strong Compliance Posture ✦' : sc >= 40 ? 'Moderate — Action Required' : 'Critical Gaps — Immediate Action!';
 
+  // Set header info
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('udashTitle', s.companyName || 'Your Report');
-  set('udashSub', `${s.field||'—'} · ${s.state||'—'} · ${s.location||'—'} · Submitted on ${fmtDate(s.submittedAt)}`);
+  set('udashSub', `${s.field||'—'} · ${s.state||'—'} · Submitted on ${fmtDate(s.submittedAt)}`);
 
+  // Set score display
   const numEl = document.getElementById('udashScoreNum');
   if (numEl) { numEl.textContent = sc + '%'; numEl.className = 'udash-score-num ' + cls; }
   set('udashVerdict', verdict);
   const barEl = document.getElementById('udashScoreBar');
   if (barEl) { barEl.style.width = '0'; setTimeout(() => barEl.style.width = sc + '%', 300); }
-  set('udashScoreMeta', `${(s.gaps||[]).length} compliance gap${(s.gaps||[]).length!==1?'s':''} identified across all sections`);
+  set('udashScoreMeta', `${(s.gaps||[]).length} compliance gap${(s.gaps||[]).length!==1?'s':''} identified`);
 
-  const yn = (v, id) => {
-    const e = document.getElementById(id); if (!e) return;
-    if (v === 'Yes')  { e.textContent='Yes ✅'; e.className='ust-val yes'; }
-    else if (v === 'No') { e.textContent='No ❌'; e.className='ust-val no'; }
-    else { e.textContent=v||'—'; e.className='ust-val partial'; }
-  };
-  yn(s.sd1,'ustPF'); yn(s.sf1,'ustESI'); 
-  if (s.sc1 === 'Yes' && s.sc2 === 'Yes') {
-    yn(s.sc4,'ustPOSH');
-  } else {
-    const e = document.getElementById('ustPOSH');
-    if (e) { e.textContent = 'N/A'; e.className = 'ust-val partial'; }
-  }
-  yn(s.se1,'ustLeave'); yn(s.sg1,'ustHR'); yn(s.sb1,'ustBonus');
-
+  // ✅ STEP 1: Render Charts FIRST
   renderUserCharts(s);
 
+  // ✅ STEP 2: Gaps Section Only (No Recommendations)
   const gapsSection = document.getElementById('udashGapsSection');
   const gapsEl      = document.getElementById('udashGaps');
   
   if ((s.gaps||[]).length) {
     if (gapsSection) gapsSection.style.display = 'block';
     if (gapsEl) {
-      let gapsHTML = `<div style="font-weight:700; color:var(--text); margin-bottom:1rem; font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em;">Compliance Gaps Identified</div>`;
-      gapsHTML += s.gaps.map(g => `<div class="m-gap-item" style="padding:0.875rem; margin-bottom:0.75rem; background:var(--card-bg); border-left:3px solid #ef4444; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.05);"><span class="m-gap-icon" style="margin-right:0.75rem; color:#ef4444;">⚠</span><span style="color:var(--text); line-height:1.5;">${g}</span></div>`).join('');
+      let gapsHTML = `<div style="font-weight:700;color:var(--text);margin-bottom:1rem;font-size:0.95rem;text-transform:uppercase;letter-spacing:0.05em;">⚠️ Compliance Gaps Identified</div>`;
+      gapsHTML += s.gaps.map(g => `
+        <div class="m-gap-item" style="padding:0.875rem;margin-bottom:0.75rem;background:var(--card-bg);border-left:3px solid #ef4444;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <span class="m-gap-icon" style="margin-right:0.75rem;color:#ef4444;">⚠</span>
+          <span style="color:var(--text);line-height:1.5;">${g}</span>
+        </div>`).join('');
       gapsEl.innerHTML = gapsHTML;
     }
   } else {
     if (gapsSection) gapsSection.style.display = 'none';
+    if (gapsEl) gapsEl.innerHTML = `<div style="color:var(--green);font-weight:600;">✅ No compliance gaps found! Great job.</div>`;
   }
 
-  document.getElementById('udashProfile').innerHTML = [
-    ['Company', s.companyName], ['Contact Person', s.name], ['Phone', s.contact],
-    ['Location', (s.location||'')+(s.state?', '+s.state:'')], ['Industry', s.field],
-    ['Employees', s.employees], ['Est. Type', s.sa1||'—'],
-    ['License in Owner Name', s.sa2||'—'],
-    ['Submitted On', fmtDate(s.submittedAt)],
-  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div><div class="m-item-val">${v||'—'}</div></div>`).join('');
-
-  document.getElementById('udashBonus').innerHTML = [
-    ['Bonus on Diwali', s.sb1], 
-    ['Aware ₹21,000 Bonus Rule', s.sb2],
-    ['Structured Salary Format', s.sb4], 
-    ['Salaries Paid On Time', s.sb5],
-    ['Starting Salary', s.sb3 ? '₹'+Number(s.sb3).toLocaleString('en-IN') : '—'],
-    ...(s.sb5 === 'Yes' && s.sb5Date ? [['Typical Salary Payment Date', s.sb5Date]] : []),
-  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
-
-  document.getElementById('udashPOSH').innerHTML = [
-    ['Female Employees', s.sc1],
-    ...(s.sc1 === 'Yes' ? [
-      ['Aware of POSH Act 2013', s.sc2],
-      ...(s.sc2 === 'Yes' ? [
-        ['POSH Awareness Sessions', s.sc3],
-        ['IC Committee Formed', s.sc4],
-        ['Annual POSH Return Filed', s.sc5],
-      ] : [])
-    ] : []),
-    ...(s.sc1 === 'No' ? [['POSH Compliance', 'N/A — No female employees']] : 
-        (s.sc1 === 'Yes' && s.sc2 === 'No' ? [['POSH Advanced Compliance', 'N/A — POSH Act awareness not confirmed']] : []))
-  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
-
-  document.getElementById('udashPFSection').innerHTML = [
-    ['PF on Monthly Basis', s.sd1],
-    ...(s.sd1 === 'Yes' ? [
-      ['PF Capped at ₹15,000', s.sd3],
-      ['PF on >₹50k/₹75k Salary', s.sd2],
-    ] : [['PF Details', 'N/A — No PF contribution']]),
-  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
-
-  document.getElementById('udashLeaves').innerHTML = [
-    ['Leaves Given to Employees', s.se1],
-    ['Total Annual Leaves (All Types)', s.se2total !== undefined ? `${s.se2total} days` : (s.se2||'—')],
-    ['State', s.state || '—'],
-    ['Aware: ESIC Sick Leave Rule', s.se3],
-  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
-
-  document.getElementById('udashESI').innerHTML = [
-    ['Aware ESI Coverage ₹42,000', s.sf1],
-    ['Salary Restructured per Codes', s.sf3],
-  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
-
-  document.getElementById('udashHR').innerHTML = [
-    ['HR/Leave/Appt Letter Updated', s.sg1],
-  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
-
-  document.getElementById('udashInspection').innerHTML = [
-    ['Faced Labour Inspector Issues', s.sh1],
-    ['Pending Notices / Cases', s.sh2],
-    ['Notice Period Issues', s.sh3],
-    ['Issues Assets to Employees', s.sh4],
-    ['Asset Damage / Loss Faced', s.sh5],
-  ].map(([l,v]) => `<div class="m-item"><div class="m-item-label">${l}</div>${ynHtml(v)}</div>`).join('');
-
-  const recsSection = document.getElementById('udashRecsSection');
-  const recsEl      = document.getElementById('udashRecs');
-  if ((s.recs||[]).length) {
-    if (recsSection) recsSection.style.display = 'block';
-    if (recsEl) {
-      recsEl.innerHTML = `
-        <div style="margin-bottom:1rem; font-weight:700; color:var(--text); font-size:0.95rem; text-transform:uppercase; letter-spacing:0.05em;">Action Items to Achieve Compliance</div>
-        ${s.recs.map((r, idx) => `
-          <div class="m-rec-item" style="padding:1rem; margin-bottom:0.75rem; background:linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left:4px solid #10b981; border-radius:6px; box-shadow:0 1px 3px rgba(16,185,129,0.1);">
-            <div style="display:flex; gap:0.75rem; align-items:flex-start;">
-              <span style="flex-shrink:0; width:24px; height:24px; background:#10b981; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">${idx+1}</span>
-              <span style="color:#065f46; line-height:1.6; flex:1;">${r}</span>
-            </div>
-          </div>
-        `).join('')}
-      `;
-    }
-  } else {
-    if (recsSection) recsSection.style.display = 'none';
-  }
-
+  // ✅ STEP 3: PDF Button at Bottom
   const pdfBtn = document.getElementById('udashPDFBtn');
   if (pdfBtn) pdfBtn.onclick = () => downloadPDF(s.id);
 }
@@ -680,9 +592,7 @@ function ynHtml(v) {
 }
 
 // ===== USER CHARTS =====
-// ===== USER CHARTS =====
-// ===== USER CHARTS =====
-// ===== USER CHARTS =====
+// ===== USER CHARTS - CLEAN VERSION =====
 function renderUserCharts(s) {
   const tick = getTickColor();
   const grid = getGridColor();
@@ -692,371 +602,130 @@ function renderUserCharts(s) {
   // Destroy existing charts
   Object.values(uCharts).forEach(c => { try { c.destroy(); } catch(e){} });
   uCharts = {};
-
   const scores = getSectionScores(s);
 
-  // 📈 CHART 1: Compliance Area Breakdown (LINE CHART - FIXED & PROFESSIONAL)
-  const rc = document.getElementById('uChartRadar');
-  if (rc) {
-    uCharts.radar = new Chart(rc, {
+  // 🥧 CHART 1: Pie Chart - % Compliant vs Non-Compliant (GREEN/RED)
+  const pc = document.getElementById('uChartDough');
+  if (pc) {
+    // Calculate compliant checks out of total 22
+    const lc = getLeaveComplianceStatus(s);
+    const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
+    const checks = [
+      s.sa1 !== '', s.sa2 === 'Yes', s.sb1 === 'Yes', s.sb2 === 'Yes',
+      s.sb4 === 'Yes', s.sb5 === 'Yes',
+      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc3 === 'Yes')),
+      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc4 === 'Yes')),
+      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc5 === 'Yes')),
+      s.sc1 === 'Yes' && s.sc2 === 'Yes' ? (s.sc2 === 'Yes') : true,
+      s.sd1 === 'No' ? true : (s.sd3 === 'Yes'),
+      s.sd1 === 'No' ? true : (s.sd2 === 'No'),
+      s.se1 === 'Yes', leaveOk, s.se3 === 'Yes',
+      s.sf1 === 'Yes', s.sf3 === 'Yes',
+      s.sg1 === 'Yes' || s.sg1 === 'Partial',
+      s.sh1 === 'No', s.sh2 === 'No', s.sh3 === 'No',
+      s.sh4 === 'Yes' && s.sh5 === 'No',
+    ];
+    const compliant = checks.filter(Boolean).length;
+    const nonCompliant = checks.length - compliant;
+    
+    uCharts.pie = new Chart(pc, {
+      type: 'pie',
+      data: {
+        labels: ['Compliant ✓', 'Non-Compliant ✗'],
+        datasets: [{
+          data: [compliant, nonCompliant],
+          backgroundColor: [C.green, C.red],
+          borderWidth: 0,
+          hoverOffset: 15
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: tick, font: { family: ff, size: 11, weight: '600' }, padding: 15 }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(14,16,24,0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: C.gold,
+            borderWidth: 2,
+            padding: 12,
+            callbacks: {
+              label: function(ctx) {
+                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                const pct = total ? Math.round((ctx.parsed * 100) / total) : 0;
+                return ` ${ctx.label}: ${ctx.parsed} checks (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // 📈 CHART 2: Line Graph - Section-wise Compliance (A to H)
+  const lc = document.getElementById('uChartRadar');
+  if (lc) {
+    uCharts.line = new Chart(lc, {
       type: 'line',
       data: {
-        labels: ['A: Licensing', 'B: Bonus', 'C: POSH', 'D: PF', 'E: Leaves', 'F: ESI', 'G: HR', 'H: Inspection'],
+        labels: ['A: License', 'B: Bonus', 'C: POSH', 'D: PF', 'E: Leaves', 'F: ESI', 'G: HR', 'H: Inspection'],
         datasets: [{
           label: 'Compliance Score',
           data: [scores.A, scores.B, scores.C, scores.D, scores.E, scores.F, scores.G, scores.H],
           borderColor: C.gold,
           backgroundColor: C.gold + '25',
-          borderWidth: 3.5,
+          borderWidth: 3,
           pointBackgroundColor: '#fff',
           pointBorderColor: C.gold,
           pointBorderWidth: 3,
-          pointRadius: 6,
-          pointHoverRadius: 9,
-          pointHoverBackgroundColor: C.gold,
-          pointHoverBorderColor: '#fff',
-          pointHoverBorderWidth: 3,
+          pointRadius: 5,
+          pointHoverRadius: 8,
           fill: true,
-          tension: 0.4,
-          cubicInterpolationMode: 'monotone'
+          tension: 0.3
         }]
       },
       options: {
-        responsive: true, 
+        responsive: true,
         maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false,
-        },
-        layout: {
-          padding: {
-            top: 20,      // ✅ Increased from 10
-            bottom: 20,   // ✅ Increased from 10
-            left: 10,
-            right: 10
-          }
-        },
         scales: {
           x: {
-            grid: { 
-              color: grid,
-              drawBorder: false,
-              offset: true
-            },
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 10, weight: '600' }, // ✅ Increased from 9.5
-              padding: 12,  // ✅ Increased from 10
-              maxRotation: 0,
-              autoSkip: true,
-              maxTicksLimit: 8
-            },
-            border: { color: grid }
+            grid: { color: grid, drawBorder: false },
+            ticks: { color: tick, font: { family: ff, size: 9, weight: '600' }, padding: 10 }
           },
           y: {
-            min: 0, 
-            max: 100,
-            grid: { 
-              color: grid,
-              drawBorder: false,
-              tickLength: 0
-            },
+            min: 0, max: 100,
+            grid: { color: grid, drawBorder: false },
             ticks: { 
               color: tick, 
-              font: { family: ff, size: 11 }, // ✅ Increased from 10
-              stepSize: 20,
-              callback: function(value) { return value + '%'; },
-              padding: 12,  // ✅ Increased from 10
-              autoSkip: true,
-              maxTicksLimit: 6
+              font: { family: ff, size: 10 },
+              callback: v => v + '%',
+              padding: 10
             },
-            border: { color: grid },
             title: {
               display: true,
               text: 'Score %',
               color: tick,
-              font: { family: ff, size: 12, weight: '700' }, // ✅ Increased from 11
-              padding: { top: 15 } // ✅ Increased from 10
+              font: { family: ff, size: 11, weight: '700' },
+              padding: { top: 10 }
             }
           }
         },
         plugins: {
-          legend: { 
-            display: true, 
-            position: 'bottom', 
-            labels: { 
-              color: tick, 
-              font: { family: ff, size: 10.5, weight: '600' },
-              padding: 20,
-              usePointStyle: true,
-              pointStyle: 'circle',
-              boxWidth: 12,
-              boxHeight: 12
-            } 
-          },
-          tooltip: {
-            backgroundColor: 'rgba(14, 16, 24, 0.95)',
-            titleColor: '#fff',
-            titleFont: { family: ff, size: 13, weight: '700' },
-            bodyColor: '#fff',
-            bodyFont: { family: ff, size: 11.5 },
-            borderColor: C.gold,
-            borderWidth: 2,
-            padding: 14,
-            displayColors: true,
-            cornerRadius: 8,
-            titleSpacing: 0,
-            titleMarginBottom: 10,
-            callbacks: {
-              label: function(context) {
-                return ` Score: ${context.parsed.y}%`;
-              },
-              title: function(context) {
-                return context[0].label;
-              }
-            }
-          }
-        },
-        elements: {
-          line: {
-            borderCapStyle: 'round',
-            borderJoinStyle: 'round'
-          },
-          point: {
-            hitRadius: 12
-          }
-        }
-      }
-    });
-  }
-
-  // 🍩 CHART 2: Key Compliance Status (Doughnut - Enhanced)
-  const dc = document.getElementById('uChartDough');
-  if (dc) {
-    const active = [s.sd1 === 'Yes', s.sf1 === 'Yes', (s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes'), s.sb1 === 'Yes'].filter(Boolean).length;
-    const doughData = [
-      s.sd1 === 'Yes' ? 1 : 0, 
-      s.sf1 === 'Yes' ? 1 : 0, 
-      (s.sc1 === 'Yes' && s.sc2 === 'Yes' && s.sc4 === 'Yes') ? 1 : 0, 
-      s.sb1 === 'Yes' ? 1 : 0, 
-      Math.max(0, 4 - active)
-    ];
-    const doughLabels = ['PF Active', 'ESI Aware', 'POSH IC', 'Bonus Paid', 'Non-Compliant'];
-    const doughColors = [C.green, C.blue, C.gold, C.purple, C.red + '88'];
-    
-    uCharts.dough = new Chart(dc, {
-      type: 'doughnut',
-      data: {
-        labels: doughLabels,
-        datasets: [{
-          data: doughData,
-          backgroundColor: doughColors,
-          borderWidth: 0, 
-          hoverOffset: 12,
-          hoverBorderColor: '#fff',
-          hoverBorderWidth: 3
-        }]
-      },
-      options: {
-        responsive: true, 
-        maintainAspectRatio: false, 
-        cutout: '60%',  // ✅ Changed from 70% to 60% for better visibility
-        plugins: { 
-          legend: { 
-            position: 'bottom', 
-            labels: { 
-              color: tick, 
-              font: { family: ff, size: 11, weight: '500' }, // ✅ Increased from 10
-              padding: 12,
-              usePointStyle: true,
-              pointStyle: 'circle'
-            } 
-          },
-          tooltip: {
-            backgroundColor: 'rgba(14, 16, 24, 0.95)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: C.gold,
-            borderWidth: 2,
-            padding: 12,
-            callbacks: {
-              label: function(context) {
-                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                const pct = total > 0 ? Math.round((context.parsed * 100) / total) : 0;
-                return ` ${context.label}: ${context.parsed} (${pct}%)`;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // 📊 CHART 3: Key Compliance Metrics (Bar - Enhanced)
-  const bc = document.getElementById('uChartBar');
-  if (bc) {
-    const lc = getLeaveComplianceStatus(s);
-    const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
-    const vals = [
-      s.sa2 === 'Yes' ? 100 : 0,
-      s.sb5 === 'Yes' ? 100 : 0,
-      (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc3 === 'Yes' ? 100 : 0) : 100,
-      s.sd1 === 'No' ? 100 : (s.sd1 === 'Yes' ? 100 : 0),
-      s.sd1 === 'No' ? 100 : (s.sd3 === 'Yes' ? 100 : 0),
-      leaveOk ? 100 : 0,
-      s.sf3 === 'Yes' ? 100 : 0,
-      s.sg1 === 'Yes' ? 100 : s.sg1 === 'Partial' ? 60 : 0,
-    ];
-    const barColors = vals.map(v => v >= 80 ? C.green : v >= 50 ? C.gold : C.red);
-    
-    uCharts.bar = new Chart(bc, {
-      type: 'bar',
-      data: {
-        labels: ['License', 'Salary', 'POSH', 'PF Monthly', 'PF Capped', 'Leaves', 'Salary Restr', 'HR Policy'],
-        datasets: [{
-          label: 'Score %',
-          data: vals,
-          backgroundColor: barColors,
-          borderColor: barColors.map(c => c + 'cc'),
-          borderWidth: 1,
-          borderRadius: 8, 
-          borderSkipped: false,
-          hoverBorderColor: '#fff',
-          hoverBorderWidth: 2,
-          barPercentage: 0.7,
-          categoryPercentage: 0.8
-        }]
-      },
-      options: {
-        responsive: true, 
-        maintainAspectRatio: false,
-        plugins: { 
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(14, 16, 24, 0.95)',
+            backgroundColor: 'rgba(14,16,24,0.95)',
             titleColor: '#fff',
             bodyColor: '#fff',
             borderColor: C.gold,
             borderWidth: 2,
             padding: 12,
             callbacks: {
-              label: function(context) {
-                return ` ${context.dataset.label}: ${context.parsed.y}%`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: { 
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 9, weight: '500' }, // ✅ Increased from 8.5
-              padding: 10  // ✅ Increased from 8
-            }, 
-            grid: { 
-              color: grid,
-              drawBorder: false
-            },
-            border: { color: grid }
-          },
-          y: { 
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 10 }, // ✅ Increased from 9
-              callback: function(value) { return value + '%'; },
-              padding: 10  // ✅ Increased from 8
-            }, 
-            grid: { 
-              color: grid,
-              drawBorder: false
-            }, 
-            border: { color: grid },
-            beginAtZero: true, 
-            max: 100,
-            title: {
-              display: true,
-              text: 'Score %',
-              color: tick,
-              font: { family: ff, size: 11, weight: '600' }, // ✅ Increased from 10
-              padding: { top: 12 }  // ✅ Added
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // 🎯 CHART 4: HR Governance Score (Polar - Enhanced)
-  const pc = document.getElementById('uChartPolar');
-  if (pc) {
-    const polarData = [
-      (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc3 === 'Yes' ? 100 : 0) : 100,
-      (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc4 === 'Yes' ? 100 : 0) : 100,
-      (s.sc1 === 'Yes' && s.sc2 === 'Yes') ? (s.sc5 === 'Yes' ? 100 : 0) : 100,
-      s.sg1 === 'Yes' ? 100 : s.sg1 === 'Partial' ? 60 : 0,
-      s.sf3 === 'Yes' ? 100 : 0,
-    ];
-    const polarColors = [C.gold+'88', C.blue+'88', C.green+'88', C.purple+'88', C.green+'66'];
-    const polarLabels = ['POSH Awareness', 'IC Committee', 'POSH Return', 'HR Updated', 'Salary Restructd'];
-    
-    uCharts.polar = new Chart(pc, {
-      type: 'polarArea',
-      data: {
-        labels: polarLabels,
-        datasets: [{
-          data: polarData,
-          backgroundColor: polarColors,
-          borderWidth: 0,
-          hoverBorderColor: '#fff',
-          hoverBorderWidth: 3
-        }]
-      },
-      options: {
-        responsive: true, 
-        maintainAspectRatio: false,
-        scales: { 
-          r: { 
-            ticks: { 
-              color: tick, 
-              font: { family: ff, size: 10 }, // ✅ Increased from 9
-              backdropColor: 'transparent',
-              callback: function(value) { return value + '%'; },
-              stepSize: 25,
-              maxTicksLimit: 5,
-              padding: 8  // ✅ Added
-            }, 
-            grid: { color: grid }, 
-            min: 0, 
-            max: 100,
-            pointLabels: {
-              color: tick,
-              font: { family: ff, size: 10, weight: '500' }, // ✅ Increased from 9.5
-              padding: 12  // ✅ Increased from 10
-            }
-          } 
-        },
-        plugins: { 
-          legend: { 
-            position: 'bottom', 
-            labels: { 
-              color: tick, 
-              font: { family: ff, size: 10, weight: '500' }, // ✅ Increased from 9
-              padding: 12,
-              usePointStyle: true,
-              pointStyle: 'circle'
-            } 
-          },
-          tooltip: {
-            backgroundColor: 'rgba(14, 16, 24, 0.95)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: C.gold,
-            borderWidth: 2,
-            padding: 12,
-            callbacks: {
-              label: function(context) {
-                return ` ${context.label}: ${context.parsed}%`;
-              }
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%`
             }
           }
         }

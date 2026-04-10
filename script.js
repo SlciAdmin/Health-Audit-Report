@@ -406,6 +406,7 @@ function normaliseItem(item) {
 
 // ===== FORM SUBMISSION =====
 async function submitAudit() {
+  // 🔍 Validation: Check required radio questions
   const requiredRadios = ['sa1','sa2','sb1','sb2','sb4','sb5','sc1','sc2','sd1','se1','se3','sf1','sf3','sg1','sh1','sh2','sh3','sh4','sh5'];
   let missingQ = null;
   for (const n of requiredRadios) {
@@ -418,6 +419,7 @@ async function submitAudit() {
     return;
   }
 
+  // 📥 Collect form data
   const state = document.getElementById('state')?.value || '';
   const totalLeaves = parseInt(document.getElementById('se2total')?.value) || 0;
   const sb5Date = (getRadio('sb5') === 'Yes') ? (document.getElementById('sb5Date')?.value.trim() || '') : '';
@@ -453,40 +455,56 @@ async function submitAudit() {
     sh4: getRadio('sh4'), sh5: getRadio('sh5'),
   };
 
+  // 🧮 Calculate score and generate gaps/recommendations
   d.score = calcScore(d);
   d.gaps  = getGaps(d);
   d.recs  = getRecs(d.gaps);
 
+  // 🔘 Disable submit button during processing
   const submitBtn = document.getElementById('submitBtn');
   if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '⏳ Saving...'; }
 
   try {
+    // 💾 Save to local storage and update state
     localSubmissions.unshift(d);
     localStorage.setItem(LS_KEY, JSON.stringify(localSubmissions));
     localStorage.setItem(LS_LAST, String(d.id));
     submissions.unshift(d);
     currentUserSubmission = d;
 
+    // ☁️ Async sync to Google Sheets
     sendToSheets(d).then(result => {
       if (result.success) showToast('✅ Synced to cloud!', 'green');
       else showToast('⚠️ Saved locally. Will sync when online.', 'gold');
     });
 
+    // 🎯 Show success page with NON-COMPLIANCE focused display 🔥
     document.getElementById('pg2').style.display = 'none';
-    const sc  = d.score;
-    const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
-    const lbl = sc >= 70 ? 'Good Standing ✦' : sc >= 40 ? 'Needs Improvement' : 'Critical Attention Required';
+    
+    // 🔥 NON-COMPLIANCE METRICS (replaces original compliance display)
+    const complianceScore = d.score || 0;
+    const nonComplianceScore = 100 - complianceScore;
+    const ncCls = 'low';  // Always red for non-compliance focus
+    const ncLbl = nonComplianceScore === 0 ? '✅ Fully Compliant' : 
+                  nonComplianceScore <= 30 ? '⚠️ Low Risk' : 
+                  nonComplianceScore <= 60 ? '🔶 Medium Risk' : '🚨 High Risk';
+
     const box = document.getElementById('successScoreBox');
     if (box) {
       box.innerHTML = `
-        <div class="score-pill ${cls}">${sc}%</div>
-        <div style="font-size:0.82rem;color:var(--text2);margin-bottom:0.5rem;">${lbl}</div>
-        <div style="font-size:0.8rem;color:var(--text2);">${d.gaps.length} gap${d.gaps.length!==1?'s':''} identified</div>`;
+        <div class="score-pill ${ncCls}" style="background:var(--red, #ef4444);color:#fff;font-weight:700">${nonComplianceScore}%</div>
+        <div style="font-size:0.82rem;color:var(--text2);margin-bottom:0.5rem;">${ncLbl}</div>
+        <div style="font-size:0.8rem;color:var(--text2);">${d.gaps.length} gap${d.gaps.length!==1?'s':''} causing non-compliance</div>
+      `;
     }
+    
     document.getElementById('pgSuccess').style.display = 'block';
+    
   } catch(err) {
+    console.error('Submit error:', err);
     showToast('Error saving. Please try again.', 'red');
   } finally {
+    // 🔘 Re-enable submit button
     if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Submit Audit ✦'; }
   }
 }
@@ -532,22 +550,37 @@ function renderUserDashboard() {
   if (report) report.style.display = 'block';
 
   const s  = currentUserSubmission;
-  const sc = s.score || 0;
-  const cls = sc >= 70 ? 'good' : sc >= 40 ? 'mid' : 'low';
-  const verdict = sc >= 70 ? 'Strong Compliance Posture ✦' : sc >= 40 ? 'Moderate — Action Required' : 'Critical Gaps — Immediate Action!';
+  const complianceScore = s.score || 0;
+  const nonComplianceScore = 100 - complianceScore;  // 🔥 NON-COMPLIANCE %
+  
+  // 🔥 Always use red styling for non-compliance focus
+  const cls = 'low';
 
   // Set header info
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('udashTitle', s.companyName || 'Your Report');
   set('udashSub', `${s.field||'—'} · ${s.state||'—'} · Submitted on ${fmtDate(s.submittedAt)}`);
 
-  // Set score display
+  // 🔥 Set score display to show NON-COMPLIANCE percentage in RED
   const numEl = document.getElementById('udashScoreNum');
-  if (numEl) { numEl.textContent = sc + '%'; numEl.className = 'udash-score-num ' + cls; }
-  set('udashVerdict', verdict);
+  if (numEl) { 
+    numEl.textContent = nonComplianceScore + '%'; 
+    numEl.className = 'udash-score-num low';  // Force red color class
+  }
+  
+  // 🔥 Updated verdict focused on non-compliance percentage
+  set('udashVerdict', `📉 Your Non-Compliance: ${nonComplianceScore}%`);
+  
+  // 🔥 Progress bar shows NON-COMPLIANCE (red fill with gradient)
   const barEl = document.getElementById('udashScoreBar');
-  if (barEl) { barEl.style.width = '0'; setTimeout(() => barEl.style.width = sc + '%', 300); }
-  set('udashScoreMeta', `${(s.gaps||[]).length} compliance gap${(s.gaps||[]).length!==1?'s':''} identified`);
+  if (barEl) { 
+    barEl.style.width = '0'; 
+    barEl.style.background = `linear-gradient(90deg, var(--red, #ef4444), #ff6b6b)`;  // Red gradient fallback
+    setTimeout(() => barEl.style.width = nonComplianceScore + '%', 300); 
+  }
+  
+  // 🔥 Updated meta text emphasizing action to reduce non-compliance
+  set('udashScoreMeta', `${(s.gaps||[]).length} compliance gap${(s.gaps||[]).length!==1?'s':''} identified — Fix these to reduce non-compliance`);
 
   // ✅ STEP 1: Render Charts FIRST
   renderUserCharts(s);
@@ -667,7 +700,7 @@ function renderUserCharts(s) {
     });
   }
 
-  // 📈 CHART 2: Line Graph - Section-wise Compliance (A to H)
+  // 📈 CHART 2: Line Graph - Section-wise NON-Compliance (🔥 RED THEME)
   const lc = document.getElementById('uChartRadar');
   if (lc) {
     uCharts.line = new Chart(lc, {
@@ -675,13 +708,22 @@ function renderUserCharts(s) {
       data: {
         labels: ['A: License', 'B: Bonus', 'C: POSH', 'D: PF', 'E: Leaves', 'F: ESI', 'G: HR', 'H: Inspection'],
         datasets: [{
-          label: 'Compliance Score',
-          data: [scores.A, scores.B, scores.C, scores.D, scores.E, scores.F, scores.G, scores.H],
-          borderColor: C.gold,
-          backgroundColor: C.gold + '25',
+          label: 'Non-Compliance Score',  // 🔥 Changed label
+          data: [
+            100 - scores.A, 
+            100 - scores.B, 
+            100 - scores.C, 
+            100 - scores.D, 
+            100 - scores.E, 
+            100 - scores.F, 
+            100 - scores.G, 
+            100 - scores.H
+          ],  // 🔥 Inverted scores: higher = more non-compliance
+          borderColor: C.red,              // 🔥 Red line for non-compliance
+          backgroundColor: C.red + '25',   // 🔥 Red translucent fill
           borderWidth: 3,
           pointBackgroundColor: '#fff',
-          pointBorderColor: C.gold,
+          pointBorderColor: C.red,         // 🔥 Red point border
           pointBorderWidth: 3,
           pointRadius: 5,
           pointHoverRadius: 8,
@@ -708,7 +750,7 @@ function renderUserCharts(s) {
             },
             title: {
               display: true,
-              text: 'Score %',
+              text: 'Non-Compliance %',  // 🔥 Updated axis label
               color: tick,
               font: { family: ff, size: 11, weight: '700' },
               padding: { top: 10 }
@@ -721,11 +763,11 @@ function renderUserCharts(s) {
             backgroundColor: 'rgba(14,16,24,0.95)',
             titleColor: '#fff',
             bodyColor: '#fff',
-            borderColor: C.gold,
+            borderColor: C.red,           // 🔥 Red tooltip border
             borderWidth: 2,
             padding: 12,
             callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%`
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}% non-compliant`  // 🔥 Updated tooltip text
             }
           }
         }

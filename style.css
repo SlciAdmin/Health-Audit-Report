@@ -890,3 +890,21 @@ canvas#lineChart, canvas#adminChartBar {
 .score-pill:hover {
   animation-play-state: paused;
 }
+/* Detail Modal Charts */
+#modalContent canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
+/* Non-compliance score emphasis */
+.m-score-num {
+  transition: color 0.3s ease;
+}
+
+/* Gap items styling consistency */
+.m-gap-item {
+  transition: transform 0.2s ease;
+}
+.m-gap-item:hover {
+  transform: translateX(3px);
+}

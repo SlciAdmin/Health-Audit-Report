@@ -500,7 +500,7 @@ async function submitAudit() {
     
     document.getElementById('pgSuccess').style.display = 'block';
     
-  } catch(err) {
+  } catch(err) { 
     console.error('Submit error:', err);
     showToast('Error saving. Please try again.', 'red');
   } finally {
@@ -1549,27 +1549,34 @@ async function deleteSubmission(id) {
 }
 
 // ===== DETAIL MODAL (ADMIN) =====
+// ===== DETAIL MODAL (ADMIN) - NON-COMPLIANCE FOCUSED =====
+// ===== DETAIL MODAL (ADMIN) - MATCHES USER DASHBOARD EXACTLY =====
 function showDetail(id) {
   const s = submissions.find(x => x.id == id);
   if (!s) return;
   activeDetailId = id;
   renderAdminSidebar();
 
-  const sc      = s.score || 0;
-  const color   = sc >= 70 ? 'var(--green)' : sc >= 40 ? 'var(--blue)' : 'var(--red)';
-  const verdict = sc >= 70 ? 'Strong compliance posture. Continue maintaining documentation and annual reviews.'
-    : sc >= 40 ? 'Moderate compliance. Address highlighted gaps to avoid regulatory risk.'
-    : 'Critical compliance gaps detected. Immediate corrective action required.';
+  // 🔥 NON-COMPLIANCE SCORE (Same calculation as User Dashboard)
+  const complianceScore = s.score || 0;
+  const nonComplianceScore = 100 - complianceScore;
+  
+  const scoreColor = nonComplianceScore === 0 ? 'var(--green)' : 
+                     nonComplianceScore <= 30 ? 'var(--blue)' : 
+                     nonComplianceScore <= 60 ? 'var(--gold)' : 'var(--red)';
+  
+  const verdict = nonComplianceScore === 0 ? '✅ Fully Compliant — Maintain excellence' :
+                  nonComplianceScore <= 30 ? '⚠️ Low Risk — Minor gaps to address' :
+                  nonComplianceScore <= 60 ? '🔶 Medium Risk — Action recommended' :
+                  '🚨 High Risk — Immediate corrective action required';
 
   const gaps = Array.isArray(s.gaps) && s.gaps.length ? s.gaps : getGaps(s);
-  const recs  = Array.isArray(s.recs) && s.recs.length ? s.recs  : getRecs(gaps);
 
   const yn = v => {
     if (v === 'Yes')       return '<span class="m-item-val yes">✅ Yes</span>';
     if (v === 'No')        return '<span class="m-item-val no">❌ No</span>';
     if (v === 'Partial')   return '<span class="m-item-val partial">⚖ Partial</span>';
     if (v === 'Partially') return '<span class="m-item-val partial">📄 Partially</span>';
-    if (v === 'In Progress') return '<span class="m-item-val partial">🔄 In Progress</span>';
     if (v === 'N/A')       return '<span class="m-item-val partial">⚪ N/A</span>';
     return `<span class="m-item-val">${v||'—'}</span>`;
   };
@@ -1577,112 +1584,48 @@ function showDetail(id) {
   const lc = getLeaveComplianceStatus(s);
   const ld = lc ? lc.ld : null;
 
-  const leaveHTML = lc ? `
-    <div class="m-section">🏖 Leave Policy — State Law vs Practice (Section E)</div>
-    <div class="modal-leave-compliance">
-      <div class="mlc-header ${lc.hasGap ? 'gap' : 'ok'}">
-        ${lc.hasGap ? '⚠️ Leave Deficit' : '✅ Compliant'} — ${lc.state} · ${ld.law}
+  // 🔥 CHARTS HTML (Same as User Dashboard)
+  const chartsHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin:1.5rem 0;">
+      <!-- Pie Chart -->
+      <div style="background:var(--card-bg);border-radius:12px;padding:1rem;">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;text-align:center;">📊 Compliance Status</div>
+        <div style="height:200px;"><canvas id="detailChartPie"></canvas></div>
+        <div style="text-align:center;margin-top:0.5rem;font-size:0.75rem;color:var(--text2);">
+          <span style="color:var(--green);font-weight:600;">● Compliant</span> &nbsp;|&nbsp; 
+          <span style="color:var(--red);font-weight:600;">● Non-Compliant</span>
+        </div>
       </div>
-      <div class="m-grid">
-        <div class="m-item"><div class="m-item-label">Your Total Leaves Given</div><div class="m-item-val">${lc.totalGiven} days</div></div>
-        <div class="m-item"><div class="m-item-label">Mandatory Minimum (Law)</div><div class="m-item-val">${lc.mandatoryTotal} days (EL:${ld.EL}+CL:${ld.CL}+SL:${ld.SL})</div></div>
-        <div class="m-item"><div class="m-item-label">Compliance Status</div><div class="m-item-val ${lc.hasGap ? 'no' : 'yes'}">${lc.hasGap ? '❌ '+Math.abs(lc.diff)+' days SHORT' : '✅ Compliant'}</div></div>
+      <!-- Line Chart -->
+      <div style="background:var(--card-bg);border-radius:12px;padding:1rem;">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;text-align:center;">📈 Section-wise Non-Compliance</div>
+        <div style="height:200px;"><canvas id="detailChartLine"></canvas></div>
       </div>
-    </div>` : `
-    <div class="m-section">🏖 Leaves (Section E)</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">Leaves Given</div>${yn(s.se1)}</div>
-      ${mi('Total Annual Leaves', s.se2total ? `${s.se2total} days` : (s.se2||'—'))}
-      <div class="m-item"><div class="m-item-label">Aware: ESIC Sick Leave</div>${yn(s.se3)}</div>
-    </div>`;
+    </div>
+  `;
 
-  const salaryDateHTML = s.sb5 === 'Yes' && s.sb5Date ? 
-    `<div class="m-item"><div class="m-item-label">Typical Payment Date</div><span class="m-item-val">📅 ${s.sb5Date}</span></div>` : '';
-
+  // 🔥 GAPS ONLY (No Recommendations - Same as User Dashboard)
   const gapsHTML = gaps.length ? 
-    `<div class="m-section">⚠️ Compliance Gaps (${gaps.length})</div>
-    <div class="m-gaps">${gaps.map(g => `<div class="m-gap-item"><span class="m-gap-icon">⚠</span><span>${g}</span></div>`).join('')}</div>` : '';
-
-  const recsHTML = recs.length ?
-    `<div class="m-section">✅ Recommended Actions</div>
-    <div class="m-recs">${recs.map(r => `<div class="m-rec-item"><span class="m-rec-icon">→</span><span>${r}</span></div>`).join('')}</div>` : '';
+    `<div class="m-section" style="margin-top:1.5rem">⚠️ Compliance Gaps Identified (${gaps.length})</div>
+    <div class="m-gaps">${gaps.map(g => `<div class="m-gap-item" style="padding:0.75rem;margin-bottom:0.5rem;background:var(--card-bg);border-left:3px solid var(--red);border-radius:6px;"><span style="color:var(--red);margin-right:0.5rem">⚠</span><span style="color:var(--text);font-size:0.85rem">${g}</span></div>`).join('')}</div>` : 
+    `<div class="m-section" style="margin-top:1.5rem">✅ No compliance gaps found! Great job.</div>`;
 
   document.getElementById('modalContent').innerHTML = `
     <div class="m-title">🏢 ${s.companyName||'Unknown Company'}</div>
     <div class="m-sub">${s.field||'—'} · ${s.state||'—'} · ${s.employees||'—'} employees · ${fmtDate(s.submittedAt)}</div>
 
-    <div class="m-score-bar">
-      <div class="m-score-num" style="color:${color}">${sc}%</div>
-      <div class="m-score-info">
-        <div class="m-score-label">Compliance Score — Sections A to H</div>
-        <div class="m-bar"><div class="m-bar-fill" style="width:${sc}%"></div></div>
-        <div class="m-verdict">${verdict}</div>
+    <!-- 🔥 NON-COMPLIANCE SCORE (Same as User Dashboard) -->
+    <div class="m-score-bar" style="margin:1.5rem 0;padding:1.25rem;background:var(--card-bg);border-radius:12px;text-align:center;">
+      <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text2);margin-bottom:0.5rem;">Non-Compliance Score</div>
+      <div class="m-score-num" style="font-size:3rem;font-weight:800;color:${scoreColor};line-height:1;">${nonComplianceScore}%</div>
+      <div style="font-size:0.95rem;font-weight:700;color:var(--text);margin:0.75rem 0;">${verdict}</div>
+      <div style="background:var(--bg2);border-radius:10px;height:10px;overflow:hidden;margin:1rem auto;max-width:300px;">
+        <div id="detailProgressBar" style="height:100%;background:linear-gradient(90deg,var(--red),#ff6b6b);width:0;transition:width 0.6s ease;"></div>
       </div>
+      <div style="font-size:0.8rem;color:var(--text2);">${gaps.length} gap${gaps.length!==1?'s':''} causing non-compliance</div>
     </div>
 
-    <div class="m-section">📋 Business Profile</div>
-    <div class="m-grid">
-      ${mi('Contact', s.name)} ${mi('Phone', s.contact)} ${mi('Location', (s.location||'')+(s.state?', '+s.state:''))}
-      ${mi('Est. Type', s.sa1)} <div class="m-item"><div class="m-item-label">License in Owner Name</div>${yn(s.sa2)}</div>
-      ${mi('Industry', s.field)} ${mi('Employees', s.employees)}
-    </div>
-
-    <div class="m-section">💰 Bonus & Salary (Section B)</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">Diwali Bonus</div>${yn(s.sb1)}</div>
-      <div class="m-item"><div class="m-item-label">Aware ₹21,000 Rule</div>${yn(s.sb2)}</div>
-      <div class="m-item"><div class="m-item-label">Structured Salary</div>${yn(s.sb4)}</div>
-      <div class="m-item"><div class="m-item-label">Salaries Paid On Time</div>${yn(s.sb5)}</div>
-      ${mi('Starting Salary', s.sb3 ? '₹' + Number(s.sb3).toLocaleString('en-IN') : '—')}
-      ${salaryDateHTML}
-    </div>
-
-    <div class="m-section">👩 ️ POSH (Section C) - NEW LOGIC</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">Female Employees</div>${yn(s.sc1)}</div>
-      ${s.sc1 === 'Yes' ? `
-        <div class="m-item"><div class="m-item-label">Aware of POSH Act 2013</div>${yn(s.sc2)}</div>
-        ${s.sc2 === 'Yes' ? `
-          <div class="m-item"><div class="m-item-label">POSH Sessions</div>${yn(s.sc3)}</div>
-          <div class="m-item"><div class="m-item-label">IC Committee Formed</div>${yn(s.sc4)}</div>
-          <div class="m-item"><div class="m-item-label">Annual POSH Return</div>${yn(s.sc5)}</div>
-        ` : `<div class="m-item"><div class="m-item-label">POSH Advanced Compliance</div><span class="m-item-val partial">⚪ N/A — POSH Act awareness not confirmed</span></div>`}
-      ` : `<div class="m-item"><div class="m-item-label">POSH Compliance</div><span class="m-item-val partial">⚪ N/A — No female employees</span></div>`}
-    </div>
-
-    <div class="m-section">🏦 Provident Fund (Section D)</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">PF Monthly</div>${yn(s.sd1)}</div>
-      ${s.sd1 === 'Yes' ? `
-        <div class="m-item"><div class="m-item-label">PF Capped ₹15,000</div>${yn(s.sd3)}</div>
-        <div class="m-item"><div class="m-item-label">PF on >₹50k/₹75k</div>${yn(s.sd2)}</div>
-      ` : `<div class="m-item"><div class="m-item-label">PF Details</div><span class="m-item-val partial">⚪ N/A — No PF contribution</span></div>`}
-    </div>
-
-    ${leaveHTML}
-
-    <div class="m-section">🏥 ESI & Salary (Section F)</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">ESI Aware ₹42,000</div>${yn(s.sf1)}</div>
-      <div class="m-item"><div class="m-item-label">Salary Restructured</div>${yn(s.sf3)}</div>
-    </div>
-
-    <div class="m-section">📄 HR Policy (Section G)</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">HR/Leave/Appt Updated</div>${yn(s.sg1)}</div>
-    </div>
-
-    <div class="m-section">🔍 Inspections & Assets (Section H)</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-item-label">Labour Inspector Issues</div>${yn(s.sh1)}</div>
-      <div class="m-item"><div class="m-item-label">Pending Notices/Cases</div>${yn(s.sh2)}</div>
-      <div class="m-item"><div class="m-item-label">Notice Period Issues</div>${yn(s.sh3)}</div>
-      <div class="m-item"><div class="m-item-label">Issues Assets</div>${yn(s.sh4)}</div>
-      <div class="m-item"><div class="m-item-label">Asset Damage/Loss</div>${yn(s.sh5)}</div>
-    </div>
-
-    ${gapsHTML}
-    ${recsHTML}
+    ${chartsHTML}
 
     <div class="m-actions">
       <button class="btn btn-gold" onclick="downloadPDF(${s.id})">⬇ Download PDF</button>
@@ -1690,6 +1633,170 @@ function showDetail(id) {
     </div>`;
 
   document.getElementById('modal')?.classList.add('open');
+  
+  // 🔥 RENDER CHARTS (Same as User Dashboard)
+  setTimeout(() => {
+    renderDetailCharts(s);
+    // Animate progress bar
+    setTimeout(() => {
+      const progressBar = document.getElementById('detailProgressBar');
+      if (progressBar) progressBar.style.width = nonComplianceScore + '%';
+    }, 100);
+  }, 150);
+}
+
+// ===== DETAIL MODAL CHARTS (Same as User Dashboard) =====
+// ===== DETAIL MODAL CHARTS (Exact Same as User Dashboard) =====
+function renderDetailCharts(s) {
+  const tick = getTickColor();
+  const grid = getGridColor();
+  const ff = 'Syne';
+  const C = getColors();
+  
+  // Destroy existing charts
+  ['detailPie', 'detailLine'].forEach(id => {
+    const canvas = document.getElementById(`detailChart${id === 'detailPie' ? 'Pie' : 'Line'}`);
+    if (canvas?.chartInstance) {
+      try { canvas.chartInstance.destroy(); } catch(e) {}
+      canvas.chartInstance = null;
+    }
+  });
+
+  const scores = getSectionScores(s);
+
+  // 🥧 PIE CHART: Compliant vs Non-Compliant (Same calculation)
+  const pieCanvas = document.getElementById('detailChartPie');
+  if (pieCanvas) {
+    const lc = getLeaveComplianceStatus(s);
+    const leaveOk = lc ? !lc.hasGap : s.se1 === 'Yes';
+    
+    // Same 22 checks as User Dashboard
+    const checks = [
+      s.sa1 !== '', s.sa2 === 'Yes', s.sb1 === 'Yes', s.sb2 === 'Yes',
+      s.sb4 === 'Yes', s.sb5 === 'Yes',
+      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc3 === 'Yes')),
+      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc4 === 'Yes')),
+      s.sc1 === 'No' ? true : (s.sc2 === 'No' ? true : (s.sc5 === 'Yes')),
+      s.sc1 === 'Yes' && s.sc2 === 'Yes' ? (s.sc2 === 'Yes') : true,
+      s.sd1 === 'No' ? true : (s.sd3 === 'Yes'),
+      s.sd1 === 'No' ? true : (s.sd2 === 'No'),
+      s.se1 === 'Yes', leaveOk, s.se3 === 'Yes',
+      s.sf1 === 'Yes', s.sf3 === 'Yes',
+      s.sg1 === 'Yes' || s.sg1 === 'Partial',
+      s.sh1 === 'No', s.sh2 === 'No', s.sh3 === 'No',
+      s.sh4 === 'Yes' && s.sh5 === 'No',
+    ];
+    
+    const compliant = checks.filter(Boolean).length;
+    const nonCompliant = checks.length - compliant;
+    
+    pieCanvas.chartInstance = new Chart(pieCanvas, {
+      type: 'pie',
+      data: {
+        labels: ['Compliant ✓', 'Non-Compliant ✗'],
+        datasets: [{
+          data: [compliant, nonCompliant],
+          backgroundColor: [C.green, C.red],
+          borderWidth: 0,
+          hoverOffset: 12
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: tick, font: { family: ff, size: 10, weight: '600' }, padding: 12 }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(14,16,24,0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: C.gold,
+            borderWidth: 2,
+            padding: 10,
+            callbacks: {
+              label: function(ctx) {
+                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                const pct = total ? Math.round((ctx.parsed * 100) / total) : 0;
+                return ` ${ctx.label}: ${ctx.parsed} checks (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // 📈 LINE CHART: Section-wise Non-Compliance (RED - Same as User Dashboard)
+  const lineCanvas = document.getElementById('detailChartLine');
+  if (lineCanvas) {
+    lineCanvas.chartInstance = new Chart(lineCanvas, {
+      type: 'line',
+      data: {
+        labels: ['A: License', 'B: Bonus', 'C: POSH', 'D: PF', 'E: Leaves', 'F: ESI', 'G: HR', 'H: Inspection'],
+        datasets: [{
+          label: 'Non-Compliance Score',
+          data: [
+            100 - scores.A, 100 - scores.B, 100 - scores.C, 100 - scores.D,
+            100 - scores.E, 100 - scores.F, 100 - scores.G, 100 - scores.H
+          ],
+          borderColor: C.red,
+          backgroundColor: C.red + '25',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: C.red,
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            grid: { color: grid, drawBorder: false },
+            ticks: { color: tick, font: { family: ff, size: 8, weight: '600' }, padding: 8, maxRotation: 45, minRotation: 45 }
+          },
+          y: {
+            min: 0, max: 100,
+            grid: { color: grid, drawBorder: false },
+            ticks: { 
+              color: tick, 
+              font: { family: ff, size: 9 },
+              callback: v => v + '%',
+              padding: 8
+            },
+            title: {
+              display: true,
+              text: 'Non-Compliance %',
+              color: tick,
+              font: { family: ff, size: 10, weight: '700' },
+              padding: { top: 8 }
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(14,16,24,0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: C.red,
+            borderWidth: 2,
+            padding: 10,
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}% non-compliant`
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 function mi(label, val) {
